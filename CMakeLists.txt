@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 2.8)
 
 project(ESL CXX)
 
-add_library(ESL INTERFACE)
+add_library(esl INTERFACE)
 
-target_include_directories(ESL INTERFACE 
+target_include_directories(esl INTERFACE 
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 		$<INSTALL_INTERFACE:include>
 	)
