@@ -2,8 +2,16 @@
 #ifndef ESL_MEMORY_HPP
 #define ESL_MEMORY_HPP
 
+#include "macros.hpp"
+
 #include <memory>
 #include <cstdlib> 
+
+#ifdef ESL_COMPILER_MSVC
+	#define ESL_ALLOCA(n) _alloca(n)
+#else
+	#define ESL_ALLOCA(n) __builtin_alloca(n)
+#endif
 
 namespace esl {
 

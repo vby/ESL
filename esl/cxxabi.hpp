@@ -2,7 +2,7 @@
 #ifndef ESL_CXXABI_HPP
 #define ESL_CXXABI_HPP
 
-#ifdef __GNUC__
+#if __has_include(<cxxabi.h>)
 #define ESL_HAS_DEMANGLE
 
 #include "string.hpp"
@@ -29,7 +29,7 @@ inline c_unique_string demangle(const char* abi_name) {
 
 } // namespace esl
 
-#endif // __GNUC__ 
+#endif 
 
 namespace esl {
 

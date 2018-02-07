@@ -2,6 +2,41 @@
 #ifndef ESL_TYPE_TRAITS_HPP
 #define ESL_TYPE_TRAITS_HPP
 
+#include "macros.hpp"
+
+// C++20
+#if __has_include(<endian.h>) || __has_include(<sys/endian.h>)
+
+#if __has_include(<endian.h>)
+	#include <endian.h>
+#else
+	#include <sys/endian.h>
+#endif
+
+namespace esl {
+
+enum class endian {
+	little = __LITTLE_ENDIAN,
+	big    = __BIG_ENDIAN, 
+	native = __BYTE_ORDER,
+};
+
+} // namespace esl
+
+#else // Assume always little-endian 
+
+namespace esl {
+
+enum class endian {
+	little = 1234,
+	big    = 4321, 
+	native = 1234,
+};
+
+} // namespace esl
+
+#endif 
+
 namespace esl {
 
 // member_allocator_type: T::allocator_type

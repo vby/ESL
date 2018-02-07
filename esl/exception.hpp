@@ -2,7 +2,7 @@
 #ifndef ESL_EXCEPTION_HPP
 #define ESL_EXCEPTION_HPP
 
-#include "std_ext.hpp"
+#include "memory.hpp"
 
 #include <cstdarg>
 #include <cinttypes>
