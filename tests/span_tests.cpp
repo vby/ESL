@@ -61,6 +61,48 @@ TEST(SpanTest, fixed_span_constructor) {
 #endif
 }
 
+TEST(SpanTest, span_cast) { 
+	int arr[100];
+	{
+		esl::span<int, 10> sf(arr);
+
+		// fix -> fix 
+		esl::span<int, 10> sf2(sf);
+		ASSERT_TRUE(sf2.size() == 10);
+
+		// fix -> fix (change type)
+		esl::span<const int, 10> sf3(sf);
+		ASSERT_TRUE(sf3.size() == 10);
+
+#ifdef ESL_COMPILATION_ERROR
+		// fix -> fix (change size)
+		esl::span<int, 5> sf4(sf);
+#endif
+
+		// fix -> dyn
+		esl::span<int> s(sf);
+		ASSERT_TRUE(s.size() == 10);
+
+		// fix -> dyn (change type)
+		esl::span<const int> s2(s);
+		ASSERT_TRUE(s2.size() == 10);
+
+		// dyn -> dyn
+		esl::span<int> s3(s);
+		ASSERT_TRUE(s3.size() == 10);
+
+		// dyn -> dyn (change type)
+		esl::span<const int> s4(s);
+		ASSERT_TRUE(s4.size() == 10);
+
+#ifdef ESL_COMPILATION_ERROR
+		// dyn -> fix
+		esl::span<int, 5> s5(s);
+#endif
+
+	}
+}
+
 TEST(SpanTest, size_optimization) {
 	ASSERT_TRUE(sizeof(esl::span<int>) == sizeof(int*) + sizeof(std::size_t));
 	ASSERT_TRUE(sizeof(esl::span<int, 0>) == sizeof(int*));

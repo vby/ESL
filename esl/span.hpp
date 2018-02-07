@@ -1,19 +1,24 @@
 
+#ifndef ESL_SPAN_HPP
+#define ESL_SPAN_HPP
+
+#include "exception.hpp"
+
+#include <string>
 #include <limits>
 #include <type_traits>
+#include <iterator>
 #include <stdexcept>
 #include <algorithm>
 #include <array>
 #include <vector>
 #include <tuple>
 
-#define _ESL_THROW_OUT_OF_RANGE(func) throw std::out_of_range(func " out of range")
-
 namespace esl {
 
 namespace details {
 
-static constexpr std::size_t span_npos = std::numeric_limits<std::size_t>::max();
+static constexpr std::size_t span_npos = std::string::npos; 
 
 // span_storage
 template <class pointer, std::size_t N>
@@ -60,12 +65,14 @@ public:
 	using value_type = std::remove_cv_t<T>;
 	using size_type = std::size_t;
 	using difference_type = std::ptrdiff_t;
-	using reference = element_type&;
-	using pointer = element_type*;
-	using iterator = element_type*;
-	using const_iterator = const element_type*;
-    using reverse_iterator = iterator;
-    using const_reverse_iterator = const_iterator;
+	using reference = T&;
+	using const_reference = std::add_const_t<T>&;
+	using pointer = T*;
+	using const_pointer = std::add_const_t<T>*;
+	using iterator = pointer;
+	using const_iterator = const_pointer;
+    using reverse_iterator = std::reverse_iterator<iterator>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 public:
 	static constexpr size_type npos = span_npos;
@@ -77,68 +84,89 @@ public:
 	// Dynamic
 	constexpr span(pointer data, size_type size) noexcept: storage_(data, size) {}
 
-	template <size_type M>
-	constexpr span(const span<T, M>& span) noexcept: storage_(span.data(), span.size()) {}
+	template <class T1, size_type M>
+	constexpr span(const span<T1, M>& s) noexcept: storage_(s.data(), s.size()) {}
 
 	// Fixed
 	constexpr span(pointer data) noexcept: storage_(data) {}
 
-	// Copy & Move
+	template <class T1, class = std::enable_if_t<!std::is_same<T, T1>::value && N != npos>>
+	constexpr span(const span<T1, N>& s) noexcept: storage_(s.data()) {}
+
 	constexpr span(const span&) noexcept = default;
-	constexpr span(span&&) noexcept = default;
 
 	~span() noexcept = default;
 
-	// Copy & Move
 	constexpr span& operator=(const span&) noexcept = default;
-	constexpr span& operator=(span&&) noexcept = default;
 
 	// Element access
 
 	// Exceptions: std::out_of_range if N == npos && pos >= size()
 	template <size_type Pos>
 	constexpr reference at() const noexcept(N != npos);
+
 	// Exceptions: std::out_of_range if pos >= size()
-	constexpr reference at(size_type pos) const {
-		if (pos >= size()) {
-			_ESL_THROW_OUT_OF_RANGE("esl::span::at");
-		}
-		return data()[pos];
+	constexpr reference at(size_type pos) const { 
+		this->at_with_location(pos, "esl::span::at"); 
 	}
 
 	constexpr reference operator[](size_type pos) const noexcept { return data()[pos]; }
+
 	constexpr reference front() const noexcept { return *begin(); }
+
 	constexpr reference back() const noexcept { return *rbegin(); }
+
 	constexpr pointer data() const noexcept { return storage_.data(); }
 
 	// Exceptions: std::out_of_range if N == npos && pos > size()
 	template <size_type Pos, size_type Cnt=npos, size_type Size=details::span_subspan_size<N, Pos, Cnt>::value>
 	constexpr span<T, Size> subspan() const noexcept(N != npos);
+
 	// Exceptions: std::out_of_range if pos > size()
-	constexpr span<T> subspan(size_type pos, size_type cnt = span_npos) const {
-		if (pos > size()) {
-			_ESL_THROW_OUT_OF_RANGE("esl::span::subspan");
-		}
-		size_type rcnt = size() - pos;
-		return span<T>{data() + pos, std::min(rcnt, cnt)};
+	constexpr span<T> subspan(size_type pos, size_type count = span_npos) const {
+		return this->subspan_with_location(pos, count, "esl::span::subspan");
 	}
 
 	// Capacity
-	constexpr bool empty() const noexcept { return size() == 0; }
+
 	constexpr size_type size() const noexcept { return storage_.size(); }
 
+	constexpr size_type max_size() const noexcept { return std::numeric_limits<std::size_t>::max() / sizeof(value_type); }
+
+	constexpr bool empty() const noexcept { return size() == 0; }
+
+	// Modifers
+
+	constexpr void swap(span& s) noexcept { std::swap(*this, s); }
+
 	// Iterators
-	iterator begin() const noexcept { return data(); }
-	iterator end() const noexcept { return data() + size(); }
+	constexpr iterator begin() const noexcept { return data(); }
 
-	const_iterator cbegin() const noexcept { return begin(); }
-	const_iterator cend() const noexcept { return end(); }
+	constexpr iterator end() const noexcept { return data() + size(); }
 
-	reverse_iterator rbegin() const noexcept { return data() - 1 + size(); }
-	reverse_iterator rend() const noexcept { return data() - 1; }
+	constexpr const_iterator cbegin() const noexcept { return data(); }
 
-	const_reverse_iterator crbegin() const noexcept { return rbegin(); }
-	const_reverse_iterator crend() const noexcept { return rend(); }
+	constexpr const_iterator cend() const noexcept { return data() + size(); }
+
+	constexpr reverse_iterator rbegin() const noexcept { return end(); }
+
+	constexpr reverse_iterator rend() const noexcept { return begin(); }
+
+	constexpr const_reverse_iterator crbegin() const noexcept { return cend(); }
+
+	constexpr const_reverse_iterator crend() const noexcept { return cbegin(); }
+
+protected:
+	ESL_FORCEINLINE constexpr reference at_with_location(size_type pos, const char* location) const {
+		ESL_TRHOW_OUT_OF_RANGE_IF(pos, >=, this->size(), location);
+		return data()[pos];
+	}
+
+	ESL_FORCEINLINE constexpr span<T> subspan_with_location(size_type pos, size_type count, const char* location) const {
+		ESL_TRHOW_OUT_OF_RANGE_IF(pos, >, this->size(), location);
+		size_type rcount = size() - pos;
+		return span<T>{data() + pos, std::min(rcount, count)};
+	}
 
 private:
 	details::span_storage<pointer, N> storage_;
@@ -214,8 +242,8 @@ inline constexpr span<const T, N> make_span(const std::array<T, N>& arr) noexcep
 	return span<const T, N>{arr.data()};
 }
 template <class T>
-inline constexpr span<T> make_span(T* data, std::size_t cnt) noexcept {
-	return span<T>{data, cnt};
+inline constexpr span<T> make_span(T* data, std::size_t count) noexcept {
+	return span<T>{data, count};
 }
 template <class T>
 inline constexpr span<T> make_span(T* first, T* last) noexcept {
@@ -249,4 +277,5 @@ inline constexpr typename esl::span<T, N>::reference get(const esl::span<T, N>& 
 
 } // namespace std
 
+#endif //ESL_SPAN_HPP
 

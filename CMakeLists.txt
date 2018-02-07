@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.1)
 
 project(ESL CXX)
 
@@ -8,6 +8,8 @@ target_include_directories(esl INTERFACE
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 		$<INSTALL_INTERFACE:include>
 	)
+
+target_compile_features(esl INTERFACE cxx_std_17)
 
 install(DIRECTORY esl DESTINATION include)
 
