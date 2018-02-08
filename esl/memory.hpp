@@ -9,7 +9,7 @@
 
 #ifdef ESL_COMPILER_MSVC
 	#define ESL_ALLOCA(n) _alloca(n)
-#else
+#elif defined ESL_COMPILER_GNU
 	#define ESL_ALLOCA(n) __builtin_alloca(n)
 #endif
 

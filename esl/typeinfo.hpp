@@ -1,6 +1,6 @@
 
-#ifndef ESL_CXXABI_HPP
-#define ESL_CXXABI_HPP
+#ifndef ESL_TYPEINFO_HPP
+#define ESL_TYPEINFO_HPP
 
 #if __has_include(<cxxabi.h>)
 #define ESL_HAS_DEMANGLE
@@ -33,27 +33,31 @@ inline c_unique_string demangle(const char* abi_name) {
 
 namespace esl {
 
-template <class T>
-inline const std::string& object_name(T&& o) { 
+inline const std::string& typeid_name(const std::type_info& type_info) { 
 #ifdef ESL_HAS_DEMANGLE
-	static std::string name_ = demangle(typeid(o).name()); 
+	static std::string name_ = demangle(type_info.name()); 
 #else
-	static std::string name_ = typeid(o).name(); 
-#endif // ESL_HAS_DEMANGLE
+	static std::string name_ = type_info.name(); 
+#endif
 	return name_; 
 } 
 
 template <class T>
-inline const std::string& type_name() { 
+inline const std::string& typeid_name(T&& o) { 
+	return typeid_name(typeid(o));
+} 
+
+template <class T>
+inline const std::string& typeid_name() { 
 #ifdef ESL_HAS_DEMANGLE
 	static std::string name_ = demangle(typeid(T).name()); 
 #else
 	static std::string name_ = typeid(T).name(); 
-#endif // ESL_HAS_DEMANGLE
+#endif
 	return name_; 
 } 
 
 } // namespace esl
 
-#endif //ESL_CXXABI_HPP
+#endif //ESL_TYPEINFO_HPP
 

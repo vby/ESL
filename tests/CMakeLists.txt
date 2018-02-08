@@ -39,6 +39,6 @@ endfunction()
 
 esl_add_test(span_tests)
 esl_add_test(string_tests)
-esl_add_test(cxxabi_tests)
+esl_add_test(typeinfo_tests)
 esl_add_test(source_location_tests)
 

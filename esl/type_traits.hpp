@@ -4,7 +4,8 @@
 
 #include "macros.hpp"
 
-// C++20
+// C++20 endian
+
 #if __has_include(<endian.h>) || __has_include(<sys/endian.h>)
 
 #if __has_include(<endian.h>)
@@ -23,7 +24,7 @@ enum class endian {
 
 } // namespace esl
 
-#else // Assume always little-endian 
+#else // FIXME: Assume always little-endian 
 
 namespace esl {
 

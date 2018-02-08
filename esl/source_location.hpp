@@ -39,7 +39,7 @@ public:
 			const char* file,
 			const char* func,
 			std::uint_least32_t line,
-			std::uint_least32_t column
+			std::uint_least32_t column = 0
 		#endif
 			) noexcept {
 		source_location sl;
@@ -53,7 +53,7 @@ public:
 
 } // namespace esl
 
-#define ESL_SOURCE_LOCATION_CURRENT() (::esl::source_location::current(__FILE__, __func__, __LINE__, 0))
+#define ESL_SOURCE_LOCATION_CURRENT() (::esl::source_location::current(__FILE__, __func__, __LINE__))
 
 #endif // ESL_SOURCE_LOCATION_HPP
 
