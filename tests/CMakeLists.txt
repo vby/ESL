@@ -37,8 +37,9 @@ function(esl_add_test name)
 	endforeach()
 endfunction()
 
-esl_add_test(span_tests)
-esl_add_test(string_tests)
+esl_add_test(type_traits_tests)
 esl_add_test(typeinfo_tests)
 esl_add_test(source_location_tests)
+esl_add_test(span_tests)
+esl_add_test(string_tests)
 

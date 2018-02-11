@@ -51,12 +51,12 @@ template <class SV, class Traits = typename SV::traits_type>
 using string_string_view_t = typename string_string_view<SV, Traits>::type; 
 
 template <class SV, class Traits = typename SV::traits_type, 
-		class Allocator = member_allocator_type_fallback_t<SV, std::allocator<typename SV::value_type>>>
+		class Allocator = member_type_allocator_type_t<SV, std::allocator<typename SV::value_type>>>
 struct string_view_string {
 	using type = std::basic_string<typename SV::value_type, Traits, Allocator>;
 };
 template <class SV, class Traits = typename SV::traits_type, 
-		class Allocator = member_allocator_type_fallback_t<SV, std::allocator<typename SV::value_type>>>
+		class Allocator = member_type_allocator_type_t<SV, std::allocator<typename SV::value_type>>>
 using string_view_string_t = typename string_view_string<SV, Traits, Allocator>::type;
 
 template <class CharT, class Traits, class Allocator>
