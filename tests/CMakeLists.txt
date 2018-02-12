@@ -43,3 +43,10 @@ esl_add_test(source_location_tests)
 esl_add_test(span_tests)
 esl_add_test(string_tests)
 
+add_library(dynamic_library_tests_dl SHARED dynamic_library_tests_dl.cpp)
+target_link_libraries(dynamic_library_tests_dl esl)
+esl_add_test(dynamic_library_tests)
+target_link_libraries(dynamic_library_tests dl)
+target_compile_definitions(dynamic_library_tests PRIVATE "ESL_TESTS_DL_FILENAME=$<TARGET_FILE:dynamic_library_tests_dl>")
+add_dependencies(dynamic_library_tests dynamic_library_tests_dl)
+
