@@ -56,6 +56,9 @@
 #ifdef _GNU_SOURCE
 	#define ESL_SOURCE_GNU
 #endif
+#ifdef _BSD_SOURCE
+	#define ESL_SOURCE_BSD
+#endif
 
 // Compiler extensions
 #ifdef ESL_COMPILER_MSVC
