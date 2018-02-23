@@ -2,29 +2,45 @@
 #ifndef ESL_EXCEPTION_HPP
 #define ESL_EXCEPTION_HPP
 
-#include "memory.hpp"
+#include "alloca.hpp"
+#include "scope.hpp"
 
-#include <cstdarg>
 #include <cinttypes>
-
-extern int vsnprintf(char* buffer, size_t buf_size, const char* format, va_list vlist); 
+#include <sstream>
 
 namespace esl {
 
-template <class T, std::size_t Size = 1024>
-[[noreturn]] void throw_exception_format(const char* fmt, ...) {
-	char* const s = static_cast<char*>(ESL_ALLOCA(Size));
-	va_list ap; 
-	va_start(ap, fmt);
-	::vsnprintf(s, Size, fmt, ap);
-	throw T(s);
-	va_end(ap);  // Not reached.
-}
+template <class Excetpion, class OStream = std::ostringstream>
+class throw_stream {
+public:
+	using stream_type = OStream;
+	using exception_type = Excetpion;
+
+private:
+	OStream stream_;
+
+public:
+	explicit throw_stream() = default;
+
+	explicit throw_stream(const std::string& str): stream_(str) {}
+
+	throw_stream(throw_stream&&) = default;
+
+	~throw_stream() noexcept(false) { throw Excetpion(stream_.str()); }
+
+	OStream& stream() noexcept { return stream_; }
+
+	template <class T>
+	throw_stream& operator<<(T&& t) {
+		stream_ << std::forward<T>(t);
+		return *this;
+	}
+};
 
 #define ESL_TRHOW_OUT_OF_RANGE_IF(lhs, op, rhs, location) \
 	if ((lhs) op (rhs)) { \
-		throw_exception_format<std::out_of_range>("%s: " #lhs " (which is %" PRIdMAX ") " \
-			#op " " #rhs " (which is %" PRIdMAX ")", (location), (lhs), (rhs)); \
+		throw_stream<std::out_of_range>{} << (location) << ": " #lhs " (which is " << (lhs) \
+			<< ") " #op " " #rhs " (which is " << (rhs) << ")"; \
 	}
 
 } // namespace esl

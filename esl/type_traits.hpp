@@ -8,40 +8,6 @@
 #include <iterator>
 #include <tuple>
 
-// C++20 endian
-
-#if __has_include(<endian.h>) || __has_include(<sys/endian.h>)
-
-#if __has_include(<endian.h>)
-	#include <endian.h>
-#else
-	#include <sys/endian.h>
-#endif
-
-namespace esl {
-
-enum class endian {
-	little = __LITTLE_ENDIAN,
-	big    = __BIG_ENDIAN, 
-	native = __BYTE_ORDER,
-};
-
-} // namespace esl
-
-#else // FIXME: Assume always little-endian 
-
-namespace esl {
-
-enum class endian {
-	little = 1234,
-	big    = 4321, 
-	native = 1234,
-};
-
-} // namespace esl
-
-#endif 
-
 namespace esl {
 
 // ESL_TRAITS_WELL_FORMED
@@ -129,6 +95,7 @@ ESL_TRAITS_MEMBER_TYPE_ESL_(const_reverse_iterator)
 ESL_TRAITS_MEMBER_TYPE_ESL_(traits_type)
 ESL_TRAITS_MEMBER_TYPE_ESL_(element_type)
 ESL_TRAITS_MEMBER_TYPE_ESL_(deleter_type)
+ESL_TRAITS_MEMBER_TYPE_ESL_(is_always_equal)
 ESL_TRAITS_MEMBER_TYPE_ESL_(weak_type)
 ESL_TRAITS_MEMBER_TYPE_ESL_(native_handle_type)
 ESL_TRAITS_MEMBER_TYPE_ESL_(mutex_type)
@@ -161,7 +128,7 @@ using remove_const_cv_reference_t = typename remove_const_cv_reference<T>::type;
 template <class T>
 using is_function_or_function_pointer = std::is_function<std::remove_pointer_t<T>>;
 template <class T>
-inline constexpr bool is_function_or_function_pointer_v = is_function_or_function_pointer<T>::value; 
+inline constexpr bool is_function_or_function_pointer_v = is_function_or_function_pointer<T>::value;
 
 // is_function_pointer, is_function_pointer_v
 template <class T>
@@ -183,73 +150,73 @@ using is_non_overloaded_invocable = std::bool_constant<is_primitive_function_v<T
 template <class T>
 inline constexpr bool is_non_overloaded_invocable_v = is_non_overloaded_invocable<T>::value;
 
-// function_of, function_of_t, function_of_noexcept_t 
+// function_of, function_of_t, noexcept_function_of_t
 template <class T, class Ret, class... Args>
-struct function_of { 
+struct function_of {
 	using type = Ret(Args...);
 	using noexcept_type = Ret(Args...) noexcept;
 };
 template <class T, class Ret, class... Args>
-struct function_of<T&, Ret, Args...> { 
-	using type = Ret(Args...)&;
-	using noexcept_type = Ret(Args...)& noexcept;
+struct function_of<T&, Ret, Args...> {
+	using type = Ret(Args...) &;
+	using noexcept_type = Ret(Args...) & noexcept;
 };
 template <class T, class Ret, class... Args>
-struct function_of<T&&, Ret, Args...> { 
-	using type = Ret(Args...)&&;
-	using noexcept_type = Ret(Args...)&& noexcept;
+struct function_of<T&&, Ret, Args...> {
+	using type = Ret(Args...) &&;
+	using noexcept_type = Ret(Args...) && noexcept;
 };
 template <class T, class Ret, class... Args>
-struct function_of<const T, Ret, Args...> { 
-	using type = Ret(Args...)const;
-	using noexcept_type = Ret(Args...)const noexcept;
+struct function_of<const T, Ret, Args...> {
+	using type = Ret(Args...) const;
+	using noexcept_type = Ret(Args...) const noexcept;
 };
 template <class T, class Ret, class... Args>
-struct function_of<const T&, Ret, Args...> { 
-	using type = Ret(Args...)const&;
-	using noexcept_type = Ret(Args...)const& noexcept;
+struct function_of<const T&, Ret, Args...> {
+	using type = Ret(Args...) const&;
+	using noexcept_type = Ret(Args...) const& noexcept;
 };
 template <class T, class Ret, class... Args>
-struct function_of<const T&&, Ret, Args...> { 
-	using type = Ret(Args...)const&&;
-	using noexcept_type = Ret(Args...)const&& noexcept;
+struct function_of<const T&&, Ret, Args...> {
+	using type = Ret(Args...) const&&;
+	using noexcept_type = Ret(Args...) const&& noexcept;
 };
 template <class T, class Ret, class... Args>
-struct function_of<volatile T, Ret, Args...> { 
-	using type = Ret(Args...)volatile;
-	using noexcept_type = Ret(Args...)volatile noexcept;
+struct function_of<volatile T, Ret, Args...> {
+	using type = Ret(Args...) volatile;
+	using noexcept_type = Ret(Args...) volatile noexcept;
 };
 template <class T, class Ret, class... Args>
-struct function_of<volatile T&, Ret, Args...> { 
-	using type = Ret(Args...)volatile&;
-	using noexcept_type = Ret(Args...)volatile& noexcept;
+struct function_of<volatile T&, Ret, Args...> {
+	using type = Ret(Args...) volatile&;
+	using noexcept_type = Ret(Args...) volatile& noexcept;
 };
 template <class T, class Ret, class... Args>
-struct function_of<volatile T&&, Ret, Args...> { 
-	using type = Ret(Args...)volatile&&;
-	using noexcept_type = Ret(Args...)volatile&& noexcept;
+struct function_of<volatile T&&, Ret, Args...> {
+	using type = Ret(Args...) volatile&&;
+	using noexcept_type = Ret(Args...) volatile&& noexcept;
 };
 template <class T, class Ret, class... Args>
-struct function_of<const volatile T, Ret, Args...> { 
-	using type = Ret(Args...)const volatile;
-	using noexcept_type = Ret(Args...)const volatile noexcept;
+struct function_of<const volatile T, Ret, Args...> {
+	using type = Ret(Args...) const volatile;
+	using noexcept_type = Ret(Args...) const volatile noexcept;
 };
 template <class T, class Ret, class... Args>
-struct function_of<const volatile T&, Ret, Args...> { 
-	using type = Ret(Args...)const volatile&;
-	using noexcept_type = Ret(Args...)const volatile& noexcept;
+struct function_of<const volatile T&, Ret, Args...> {
+	using type = Ret(Args...) const volatile&;
+	using noexcept_type = Ret(Args...) const volatile& noexcept;
 };
 template <class T, class Ret, class... Args>
-struct function_of<const volatile T&&, Ret, Args...> { 
-	using type = Ret(Args...)const volatile&&;
-	using noexcept_type = Ret(Args...)const volatile&& noexcept;
+struct function_of<const volatile T&&, Ret, Args...> {
+	using type = Ret(Args...) const volatile&&;
+	using noexcept_type = Ret(Args...) const volatile&& noexcept;
 };
 template <class T, class Ret, class... Args>
 using function_of_t = typename function_of<T, Ret, Args...>::type;
 template <class T, class Ret, class... Args>
-using function_of_noexcept_t = typename function_of<T, Ret, Args...>::noexcept_type;
+using noexcept_function_of_t = typename function_of<T, Ret, Args...>::noexcept_type;
 
-// member_function_pointer_of, member_function_pointer_of_t, member_function_pointer_of_noexcept_t
+// member_function_pointer_of, member_function_pointer_of_t, noexcept_member_function_pointer_t
 template <class T, class Ret, class... Args>
 struct member_function_pointer_of {
 private:
@@ -262,59 +229,74 @@ public:
 template <class T, class Ret, class... Args>
 using member_function_pointer_of_t = typename member_function_pointer_of<T, Ret, Args...>::type;
 template <class T, class Ret, class... Args>
-using member_function_pointer_of_noexcept_t = typename member_function_pointer_of<T, Ret, Args...>::noexcept_type;
+using noexcept_member_function_pointer_t = typename member_function_pointer_of<T, Ret, Args...>::noexcept_type;
 
 // function_traits
-template <class T, template <class...> class args_container, class Ret, class... Args>
+template <class T, template <class...> class ArgsC, bool IsNoexcept, class Ret, class... Args>
 struct function_traits_base_ {
 	using function_type = T;
-	using return_type = Ret;
-	using args_type = args_container<Args...>;
+	using result_type = Ret;
+	using args_type = ArgsC<Args...>;
+	using is_noexcept = std::bool_constant<IsNoexcept>;
 };
-template <class T, template <class...> class args_container = std::tuple, class = T>
+template <class T, template <class...> class ArgsC = std::tuple, class = T>
 struct function_traits;
-template <class T, class Ret, template <class...> class args_container, class... Args>
-struct function_traits<T, args_container, Ret(Args...)>
-	: function_traits_base_<T, args_container, Ret, Args...> {};
-template <class T, class Ret, template <class...> class args_container, class... Args>
-struct function_traits<T, args_container, Ret(Args...)&>
-	: function_traits_base_<T, args_container, Ret, Args...> {};
-template <class T, class Ret, template <class...> class args_container, class... Args>
-struct function_traits<T, args_container, Ret(Args...)&&>
-	: function_traits_base_<T, args_container, Ret, Args...> {};
-template <class T, class Ret, template <class...> class args_container, class... Args>
-struct function_traits<T, args_container, Ret(Args...)const>
-	: function_traits_base_<T, args_container, Ret, Args...> {};
-template <class T, class Ret, template <class...> class args_container, class... Args>
-struct function_traits<T, args_container, Ret(Args...)const&>
-	: function_traits_base_<T, args_container, Ret, Args...> {};
-template <class T, class Ret, template <class...> class args_container, class... Args>
-struct function_traits<T, args_container, Ret(Args...)const&&>
-	: function_traits_base_<T, args_container, Ret, Args...> {};
-template <class T, class Ret, template <class...> class args_container, class... Args>
-struct function_traits<T, args_container, Ret(Args...)volatile>
-	: function_traits_base_<T, args_container, Ret, Args...> {};
-template <class T, class Ret, template <class...> class args_container, class... Args>
-struct function_traits<T, args_container, Ret(Args...)volatile &>
-	: function_traits_base_<T, args_container, Ret, Args...> {};
-template <class T, class Ret, template <class...> class args_container, class... Args>
-struct function_traits<T, args_container, Ret(Args...)volatile &&>
-	: function_traits_base_<T, args_container, Ret, Args...> {};
-template <class T, class Ret, template <class...> class args_container, class... Args>
-struct function_traits<T, args_container, Ret(Args...)const volatile>
-	: function_traits_base_<T, args_container, Ret, Args...> {};
-template <class T, class Ret, template <class...> class args_container, class... Args>
-struct function_traits<T, args_container, Ret(Args...)const volatile&>
-	: function_traits_base_<T, args_container, Ret, Args...> {};
-template <class T, class Ret, template <class...> class args_container, class... Args>
-struct function_traits<T, args_container, Ret(Args...)const volatile&&>
-	: function_traits_base_<T, args_container, Ret, Args...> {};
+// not noexcept
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...)>: function_traits_base_<T, ArgsC, false, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) &>: function_traits_base_<T, ArgsC, false, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) &&>: function_traits_base_<T, ArgsC, false, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) const>: function_traits_base_<T, ArgsC, false, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) const&>: function_traits_base_<T, ArgsC, false, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) const&&>: function_traits_base_<T, ArgsC, false, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) volatile>: function_traits_base_<T, ArgsC, false, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) volatile &>: function_traits_base_<T, ArgsC, false, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) volatile &&>: function_traits_base_<T, ArgsC, false, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) const volatile>: function_traits_base_<T, ArgsC, false, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) const volatile&>: function_traits_base_<T, ArgsC, false, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) const volatile&&>: function_traits_base_<T, ArgsC, false, Ret, Args...> {};
+// noexcept
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) noexcept>: function_traits_base_<T, ArgsC, true, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) & noexcept>: function_traits_base_<T, ArgsC, true, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) && noexcept>: function_traits_base_<T, ArgsC, true, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) const noexcept>: function_traits_base_<T, ArgsC, true, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) const& noexcept>: function_traits_base_<T, ArgsC, true, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) const&& noexcept>: function_traits_base_<T, ArgsC, true, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) volatile noexcept>: function_traits_base_<T, ArgsC, true, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) volatile & noexcept>: function_traits_base_<T, ArgsC, true, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) volatile && noexcept>: function_traits_base_<T, ArgsC, true, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) const volatile noexcept>: function_traits_base_<T, ArgsC, true, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) const volatile& noexcept>: function_traits_base_<T, ArgsC, true, Ret, Args...> {};
+template <class T, template <class...> class ArgsC, class Ret, class... Args>
+struct function_traits<T, ArgsC, Ret(Args...) const volatile&& noexcept>: function_traits_base_<T, ArgsC, true, Ret, Args...> {};
 
 // member_function_pointer_traits
-template <class T, template <class...> class args_container = std::tuple>
+template <class T, template <class...> class ArgsC = std::tuple>
 struct member_function_pointer_traits;
-template <class F, class T, template <class...> class args_container>
-struct member_function_pointer_traits<F T::*, args_container>: function_traits<F, args_container> {
+template <class F, class T, template <class...> class ArgsC>
+struct member_function_pointer_traits<F T::*, ArgsC>: function_traits<F, ArgsC> {
 	using member_function_pointer_type = F T::*;
 	using class_type = T;
 };

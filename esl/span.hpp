@@ -157,12 +157,12 @@ public:
 	constexpr const_reverse_iterator crend() const noexcept { return cbegin(); }
 
 protected:
-	ESL_FORCEINLINE constexpr reference at_with_location(size_type pos, const char* location) const {
+	constexpr reference at_with_location(size_type pos, const char* location) const {
 		ESL_TRHOW_OUT_OF_RANGE_IF(pos, >=, this->size(), location);
 		return data()[pos];
 	}
 
-	ESL_FORCEINLINE constexpr span<T> subspan_with_location(size_type pos, size_type count, const char* location) const {
+	constexpr span<T> subspan_with_location(size_type pos, size_type count, const char* location) const {
 		ESL_TRHOW_OUT_OF_RANGE_IF(pos, >, this->size(), location);
 		size_type rcount = size() - pos;
 		return span<T>{data() + pos, std::min(rcount, count)};

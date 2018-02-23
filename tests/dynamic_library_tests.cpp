@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 #include <esl/dynamic_library.hpp>
 
-#define DL_FILENAME ESL_STRING(ESL_TESTS_DL_FILENAME) 
+#define DL_FILENAME ESL_STRINGIFY(ESL_TESTS_DL_FILENAME)
 
 TEST(DynamicLibraryTest, succ_open_close) {
 	esl::dynamic_library dl;
@@ -47,7 +47,7 @@ TEST(DynamicLibraryTest, symbol) {
 	ASSERT_TRUE(add_ptr);
 	ASSERT_TRUE(dl.good());
 
-	auto add = dl.symbol<int(*)(int, int)>("dynamic_library_tests_dl_func_add");
+	auto add = dl.symbol<int(int, int)>("dynamic_library_tests_dl_func_add");
 	ASSERT_TRUE(add);
 	ASSERT_TRUE(dl.good());
 	ASSERT_EQ(add(1, 2), 3);

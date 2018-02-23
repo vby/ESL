@@ -66,13 +66,13 @@ public:
 	void close();
 
 	template <class T = void>
-	T symbol(const char* name) const noexcept { return reinterpret_cast<T*>(dl::symbol(handle_, name)); }
+	T* symbol(const char* name) const noexcept { return reinterpret_cast<T*>(dl::symbol(handle_, name)); }
 
 	template <class T = void>
-	T symbol(const std::string& name) const noexcept { return symbol<T>(name.c_str()); }
+	T* symbol(const std::string& name) const noexcept { return symbol<T>(name.c_str()); }
 
 	template <class T = void>
-	T symbol(const char* name, std::string& error_message) const {
+	T* symbol(const char* name, std::string& error_message) const {
 		void* sym = dl::symbol(handle_, name);
 		if (!sym) {
 			error_message = dl::error_message();
@@ -81,7 +81,7 @@ public:
 	}
 
 	template <class T = void>
-	T symbol(const std::string& name, std::string& error_message) const {
+	T* symbol(const std::string& name, std::string& error_message) const {
 		return symbol<T>(name.c_str(), error_message);
 	}
 

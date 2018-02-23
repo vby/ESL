@@ -2,6 +2,8 @@
 #ifndef ESL_SCOPE_HPP
 #define ESL_SCOPE_HPP
 
+#include <functional>
+
 namespace esl {
 
 class unique_function {
@@ -14,7 +16,7 @@ public:
 	unique_function() noexcept = default;
 
 	template <class F>
-	unique_function(F&& f): f_(std::forward<F>(f); {} 
+	unique_function(F&& f): f_(std::forward<F>(f)) {}
 
 	unique_function(const unique_function&) = delete;
 
@@ -41,7 +43,7 @@ public:
 
 	void release() noexcept { f_ = nullptr; }
 
-	explicit operator bool() noexcept { return static_cast<bool>(f_); }
+	operator bool() noexcept { return static_cast<bool>(f_); }
 };
 
 } // namespace esl
