@@ -2,6 +2,8 @@
 #ifndef ESL_DYNAMIC_LIBRARY_HPP
 #define ESL_DYNAMIC_LIBRARY_HPP
 
+// posix -ldl
+
 #include "macros.hpp"
 
 #ifdef ESL_SOURCE_WIN32
@@ -63,23 +65,23 @@ public:
 
 	void close();
 
-	template <class T = void*>
-	T symbol(const char* name) noexcept { return reinterpret_cast<T>(dl::symbol(handle_, name)); }
+	template <class T = void>
+	T symbol(const char* name) const noexcept { return reinterpret_cast<T*>(dl::symbol(handle_, name)); }
 
-	template <class T = void*>
-	T symbol(const std::string& name) noexcept { return symbol<T>(name.c_str()); }
+	template <class T = void>
+	T symbol(const std::string& name) const noexcept { return symbol<T>(name.c_str()); }
 
-	template <class T = void*>
-	T symbol(const char* name, std::string& error_message) {
+	template <class T = void>
+	T symbol(const char* name, std::string& error_message) const {
 		void* sym = dl::symbol(handle_, name);
 		if (!sym) {
 			error_message = dl::error_message();
 		}
-		return reinterpret_cast<T>(sym);
+		return reinterpret_cast<T*>(sym);
 	}
 
-	template <class T = void*>
-	T symbol(const std::string& name, std::string& error_message) {
+	template <class T = void>
+	T symbol(const std::string& name, std::string& error_message) const {
 		return symbol<T>(name.c_str(), error_message);
 	}
 
@@ -92,6 +94,8 @@ public:
 	bool good() const noexcept { return error_message_.empty(); }
 
 	operator bool() const noexcept { return this->is_open() && this->good(); }
+
+	std::string& error_message() noexcept { return error_message_; }
 
 	const std::string& error_message() const noexcept { return error_message_; }
 };
