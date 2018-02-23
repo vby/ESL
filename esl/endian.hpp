@@ -22,7 +22,7 @@ namespace esl {
 	enum class endian {
 		little = 1234,
 		big    = 4321,
-		native = 1234,
+		native = little,
 	};
 #endif
 
