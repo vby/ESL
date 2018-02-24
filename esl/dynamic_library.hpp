@@ -14,7 +14,7 @@
 	#error "Not implemented."
 #endif
 
-#include <string>
+#include <memory>
 #include <cassert>
 
 namespace esl {
@@ -46,7 +46,8 @@ public:
 
 	~dynamic_library() noexcept {
 		if (dl::valid(handle_)) {
-			assert(dl::close(handle_));
+			[[maybe_unused]] bool ok = dl::close(handle_);
+			assert(ok);
 		}
 	}
 

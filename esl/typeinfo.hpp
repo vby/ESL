@@ -6,6 +6,7 @@
 #define ESL_HAS_DEMANGLE
 
 #include "string.hpp"
+
 #include <cxxabi.h>
 #include <typeinfo>
 

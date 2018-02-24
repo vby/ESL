@@ -2,10 +2,13 @@
 #ifndef ESL_SCOPE_HPP
 #define ESL_SCOPE_HPP
 
+#include <memory>
 #include <functional>
+#include <cstdio>
 
 namespace esl {
 
+// unique_function
 class unique_function {
 private:
 	std::function<void()> f_;
@@ -43,7 +46,7 @@ public:
 
 	void release() noexcept { f_ = nullptr; }
 
-	operator bool() noexcept { return static_cast<bool>(f_); }
+	operator bool() const noexcept { return static_cast<bool>(f_); }
 };
 
 } // namespace esl

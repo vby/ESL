@@ -37,10 +37,10 @@ using wunique_chars = basic_unique_chars<wchar_t>;
 using u16unique_chars = basic_unique_chars<char16_t>;
 using u32unique_chars = basic_unique_chars<char32_t>;
 
-using c_unique_chars = basic_unique_chars<char, c_default_delete>;
-using c_wunique_chars = basic_unique_chars<wchar_t, c_default_delete>;
-using c_u16unique_chars = basic_unique_chars<char16_t, c_default_delete>;
-using c_u32unique_chars = basic_unique_chars<char32_t, c_default_delete>;
+using c_unique_chars = basic_unique_chars<char, c_free_delete>;
+using c_wunique_chars = basic_unique_chars<wchar_t, c_free_delete>;
+using c_u16unique_chars = basic_unique_chars<char16_t, c_free_delete>;
+using c_u32unique_chars = basic_unique_chars<char32_t, c_free_delete>;
 
 // Traits
 

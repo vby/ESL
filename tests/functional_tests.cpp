@@ -7,6 +7,10 @@ TEST(FuntionalTest, hash_value) {
 		int a = 100;
 		ASSERT_EQ(esl::hash_value(a), std::hash<int>{}(a));
 	}
+	{
+		int a[100];
+		ASSERT_NE(esl::hash_value(a, sizeof(a)), 0);
+	}
 }
 
 TEST(FuntionalTest, hash_combine) {
@@ -43,17 +47,18 @@ TEST(FuntionalTest, hash_tuple) {
 	{
 		std::tuple<> tup;
 		auto h = esl::hash_value(tup);
-		ASSERT_EQ(h, 0);
-	}
-	{
-		std::tuple<int, std::string, bool> tup { 10, "hello", false };
-		auto h = esl::hash_value(tup);
 		ASSERT_NE(h, 0);
+
+		std::tuple<int, std::string, bool> tup1 { 10, "hello", false };
+		auto h1 = esl::hash_value(tup1);
+		ASSERT_NE(h1, 0);
+		ASSERT_NE(h1, h);
 
 		std::tuple<int, std::string, bool> tup2 { 10, "hello2", false };
 		auto h2 = esl::hash_value(tup2);
-		ASSERT_NE(h, 0);
+		ASSERT_NE(h2, 0);
 		ASSERT_NE(h2, h);
+		ASSERT_NE(h2, h1);
 	}
 }
 

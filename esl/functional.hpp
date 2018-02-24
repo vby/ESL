@@ -1,3 +1,8 @@
+/*
+ * This file contains code from boost under Boost Software License - Version 1.0,
+ * http://www.boost.org/LICENSE_1_0.txt
+ *
+ */
 #ifndef ESL_FUNCTIONAL_HPP
 #define ESL_FUNCTIONAL_HPP
 
@@ -14,6 +19,9 @@ namespace esl {
 template <class T>
 inline std::size_t hash_value(const T& value) noexcept {
 	return std::hash<T>{}(value);
+}
+inline std::size_t hash_value(const void* p, std::size_t size) noexcept {
+	return std::hash<std::string_view>{}(std::string_view(static_cast<const char*>(p), size));
 }
 
 // hash_value_combine_
@@ -85,7 +93,7 @@ struct hash<std::tuple<Ts...>> {
 private:
 	template <std::size_t... I>
 	std::size_t hash_(const std::tuple<Ts...>& t, std::index_sequence<I...>) const noexcept {
-		return ::esl::hash_combine(0, std::get<I>(t)...);
+		return ::esl::hash_combine(0xe6546b64U, std::get<I>(t)...);
 	}
 };
 
