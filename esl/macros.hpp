@@ -57,5 +57,17 @@
 #define ESL_QUOTE(name) #name
 #define ESL_STRINGIFY(name) ESL_QUOTE(name)
 
+#ifdef ESL_COMPILER_MSVC
+	#define ESL_ROTL32(x, s) _rotl(x, s)
+	#define ESL_ROTL64(x, s) _rotl64(x, s)
+	#define ESL_ROTR32(x, s) _rotr(x, s)
+	#define ESL_ROTR64(x, s) _rotr64(x, s)
+#else
+	#define ESL_ROTL32(x, s) ((x << s) | (x >> (32 - s)))
+	#define ESL_ROTL64(x, s) ((x << s) | (x >> (64 - s)))
+	#define ESL_ROTR32(x, s) ((x >> s) | (x << (32 - s)))
+	#define ESL_ROTR64(x, s) ((x >> s) | (x << (64 - s)))
+#endif
+
 #endif // ESL_MACROS_HPP
 

@@ -2,9 +2,6 @@
 #ifndef ESL_EXCEPTION_HPP
 #define ESL_EXCEPTION_HPP
 
-#include "alloca.hpp"
-#include "scope.hpp"
-
 #include <cinttypes>
 #include <sstream>
 
