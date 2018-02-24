@@ -9,7 +9,7 @@ namespace esl::details {
 
 class dynamic_library {
 public:
-	using native_handle_type = HANDLE;
+	using native_handle_type = HMODULE;
 
 	static constexpr native_handle_type invalid_handle = 0;
 
@@ -30,7 +30,7 @@ public:
 	}
 
 	static std::error_code error_code() noexcept {
-		return std::error_code(static_cast<int>(::GetLastError(), std::system_category());
+		return std::error_code(static_cast<int>(::GetLastError()), std::system_category());
 	}
 
 	static std::string error_message() {

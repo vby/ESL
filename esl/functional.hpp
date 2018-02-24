@@ -18,7 +18,7 @@ inline std::size_t hash_value(const T& value) noexcept {
 
 // hash_value_combine_
 // Modified from boost/container_hash/hash.hpp
-inline constexpr void hash_value_combine_(std::uint64_t& h, std::uint64_t k) noexcept {
+inline void hash_value_combine_(std::uint64_t& h, std::uint64_t k) noexcept {
 	const std::uint64_t m = 0xc6a4a7935bd1e995U;
 
 	k *= m;
@@ -33,7 +33,7 @@ inline constexpr void hash_value_combine_(std::uint64_t& h, std::uint64_t k) noe
 	h += 0xe6546b64U;
 }
 
-inline constexpr void hash_value_combine_(std::uint32_t& h, std::uint32_t k) noexcept {
+inline void hash_value_combine_(std::uint32_t& h, std::uint32_t k) noexcept {
 	const std::uint32_t c1 = 0xcc9e2d51U;
 	const std::uint32_t c2 = 0x1b873593U;
 
@@ -47,13 +47,13 @@ inline constexpr void hash_value_combine_(std::uint32_t& h, std::uint32_t k) noe
 }
 
 template <class Int, class Int2>
-inline constexpr void hash_value_combine_(Int& h, Int2 k) noexcept {
+inline void hash_value_combine_(Int& h, Int2 k) noexcept {
 	h ^= k + 0x9e3779b9 + (h << 6) + (h >> 2);
 }
 
 // hash_value_combine
 template <class Int, class... Ints>
-inline constexpr Int hash_value_combine(Int h, Ints... ks) noexcept {
+inline Int hash_value_combine(Int h, Ints... ks) noexcept {
 	(..., hash_value_combine_(h, ks));
 	return h;
 }

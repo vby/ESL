@@ -4,6 +4,7 @@ project(ESL_tests CXX)
 
 set(BUILD_GTEST ON CACHE BOOL "Build gtest")
 set(BUILD_GMOCK OFF CACHE BOOL "Build gmock")
+set(gtest_force_shared_crt ON CACHE BOOL "Force shared CRT")
 add_subdirectory(googletest)
 
 function(esl_has_cxx feat)
@@ -46,9 +47,9 @@ esl_add_test(string_tests)
 esl_add_test(endian_tests)
 
 esl_add_test(dynamic_library_tests)
+target_link_libraries(dynamic_library_tests ${CMAKE_DL_LIBS})
 add_library(dynamic_library_tests_dl SHARED dynamic_library_tests_dl.cpp)
 target_link_libraries(dynamic_library_tests_dl esl)
-target_link_libraries(dynamic_library_tests dl)
 target_compile_definitions(dynamic_library_tests PRIVATE "ESL_TESTS_DL_FILENAME=$<TARGET_FILE:dynamic_library_tests_dl>")
 add_dependencies(dynamic_library_tests dynamic_library_tests_dl)
 

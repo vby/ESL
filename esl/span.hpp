@@ -178,12 +178,13 @@ template <class T, std::size_t N>
 struct span_helper {
 	using Span = span<T, N>;
 
-	template <std::size_t Pos, class = std::enable_if_t<Pos < N>>
+	template <std::size_t Pos, class = std::enable_if_t<(Pos < N)>>
 	static constexpr typename Span::reference at(const Span& sp) noexcept { return sp[Pos]; }
 
 	template <std::size_t Pos, std::size_t Cnt, std::size_t Size>
-	static constexpr span<T, Size> subspan(const Span& sp) noexcept { return span<T, Size>{&sp[Pos]}; }
+	static constexpr span<T, Size> subspan(const Span& sp) noexcept { return span<T, Size>(&sp[Pos]); }
 };
+
 template <class T>
 struct span_helper<T, span_npos> {
 	using Span = span<T>;
