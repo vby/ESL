@@ -124,6 +124,18 @@ using remove_const_cv_reference = std::remove_const<remove_cv_reference<T>>;
 template <class T>
 using remove_const_cv_reference_t = typename remove_const_cv_reference<T>::type;
 
+// to_lvalue_reference, to_lvalue_reference_t
+template <class T>
+using to_lvalue_reference = std::add_lvalue_reference<remove_cv_reference_t<T>>;
+template <class T>
+using to_lvalue_reference_t = typename to_lvalue_reference<T>::type;
+
+// to_rvalue_reference, to_rvalue_reference_t
+template <class T>
+using to_rvalue_reference = std::add_rvalue_reference<remove_cv_reference_t<T>>;
+template <class T>
+using to_rvalue_reference_t = typename to_rvalue_reference<T>::type;
+
 // is_function_or_function_pointer, is_function_or_function_pointer_v
 template <class T>
 using is_function_or_function_pointer = std::is_function<std::remove_pointer_t<T>>;

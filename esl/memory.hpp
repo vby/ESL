@@ -10,10 +10,13 @@
 
 namespace esl {
 
+// c_allocator
+// A deleter that use std::free with no destructor called
 struct c_default_delete {
 	void operator()(void* p) const noexcept { std::free(p); }
 };
 
+// c_unique_ptr
 // c_unique_ptr<T> <=> c_unique_ptr<T[]> <=> std::unique_ptr<T[], c_default_delete>
 template <class T>
 struct c_unique_ptr_ { using type = std::unique_ptr<T[], c_default_delete>; };
@@ -22,6 +25,8 @@ struct c_unique_ptr_<T[]> { using type = std::unique_ptr<T[], c_default_delete>;
 template <class T>
 using c_unique_ptr = typename c_unique_ptr_<T>::type;
 
+// c_allocator
+// A allocator that use std::malloc and std::free
 template <class T>
 class c_allocator {
 public:
