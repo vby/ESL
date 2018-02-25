@@ -31,8 +31,7 @@ TEST(SharedLibraryTest, open_on_construct) {
 		ASSERT_TRUE(dl.is_open());
 	}
 	{
-		std::system_error err;
-		ASSERT_FALSE(err.code());
+		std::system_error err(std::error_code{});
 		try {
 			esl::shared_library dl("no_such_file");
 		} catch(const std::system_error& e) {
