@@ -47,7 +47,7 @@ TEST(FuntionalTest, hash_tuple) {
 	{
 		std::tuple<> tup;
 		auto h = esl::hash_value(tup);
-		ASSERT_NE(h, 0);
+		ASSERT_EQ(h, 0);
 
 		std::tuple<int, std::string, bool> tup1 { 10, "hello", false };
 		auto h1 = esl::hash_value(tup1);

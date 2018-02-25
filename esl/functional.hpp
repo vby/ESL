@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <string_view>
 #include <utility>
 #include <tuple>
 
@@ -24,9 +25,10 @@ inline std::size_t hash_value(const void* p, std::size_t size) noexcept {
 	return std::hash<std::string_view>{}(std::string_view(static_cast<const char*>(p), size));
 }
 
-// hash_value_combine_
+#ifdef ESL_SIZE_64
+
 // Modified from boost/container_hash/hash.hpp
-inline void hash_value_combine_(std::uint64_t& h, std::uint64_t k) noexcept {
+inline constexpr void hash_value_combine_(std::uint64_t& h, std::uint64_t k) noexcept {
 	const std::uint64_t m = 0xc6a4a7935bd1e995U;
 
 	k *= m;
@@ -41,7 +43,9 @@ inline void hash_value_combine_(std::uint64_t& h, std::uint64_t k) noexcept {
 	h += 0xe6546b64U;
 }
 
-inline void hash_value_combine_(std::uint32_t& h, std::uint32_t k) noexcept {
+#else
+
+inline constexpr void hash_value_combine_(std::uint32_t& h, std::uint32_t k) noexcept {
 	const std::uint32_t c1 = 0xcc9e2d51U;
 	const std::uint32_t c2 = 0x1b873593U;
 
@@ -54,22 +58,59 @@ inline void hash_value_combine_(std::uint32_t& h, std::uint32_t k) noexcept {
 	h = h * 5 + 0xe6546b64U;
 }
 
-template <class Int, class Int2>
-inline void hash_value_combine_(Int& h, Int2 k) noexcept {
-	h ^= k + 0x9e3779b9 + (h << 6) + (h >> 2);
-}
+#endif
+
+// hash_combiner
+// operator|: combine two hash value
+// operator+: combine hash value with a object
+class hash_combiner {
+private:
+	std::size_t h_;
+
+public:
+	constexpr hash_combiner() noexcept: h_(0) {}
+
+	constexpr hash_combiner(std::size_t h) noexcept: h_(h) {}
+
+	constexpr std::size_t value() const noexcept { return h_; }
+
+	constexpr operator std::size_t() const noexcept { return h_; }
+
+	constexpr hash_combiner operator|(std::size_t k) const noexcept {
+		std::size_t h = h_;
+		hash_value_combine_(h, k);
+		return h;
+	}
+
+	constexpr hash_combiner& operator|=(std::size_t k) noexcept {
+		hash_value_combine_(h_, k);
+		return *this;
+	}
+
+	template <class T>
+	constexpr hash_combiner operator+(const T& value) const noexcept {
+		std::size_t h = h_;
+		hash_value_combine_(h, hash_value(value));
+		return h;
+	}
+
+	template <class T>
+	constexpr hash_combiner& operator+=(const T& value) noexcept {
+		hash_value_combine_(h_, hash_value(value));
+		return *this;
+	}
+};
 
 // hash_value_combine
-template <class Int, class... Ints>
-inline Int hash_value_combine(Int h, Ints... ks) noexcept {
-	(..., hash_value_combine_(h, ks));
+inline std::size_t hash_value_combine(std::size_t h, std::size_t k) noexcept {
+	hash_value_combine_(h, k);
 	return h;
 }
 
 // hash_combine
-template <class... Ts>
-inline std::size_t hash_combine(std::size_t h, const Ts&... ts) noexcept {
-	return hash_value_combine(h, hash_value(ts)...);
+template <class T>
+inline std::size_t hash_combine(std::size_t h, const T& value) noexcept {
+	return hash_value_combine(h, hash_value(value));
 }
 
 } // namespace esl
@@ -80,11 +121,11 @@ namespace std {
 template <class T1, class T2>
 struct hash<std::pair<T1, T2>> {
 	std::size_t operator()(const std::pair<T1, T2>& p) const noexcept {
-		std::size_t h = ::esl::hash_value(p.first);
-		return ::esl::hash_combine(h, p.second);
+		return ::esl::hash_combine(::esl::hash_value(p.first), p.second);
 	}
 };
 
+// hash<std::tuple<Ts..>>
 template <class... Ts>
 struct hash<std::tuple<Ts...>> {
 	std::size_t operator()(const std::tuple<Ts...>& t) const noexcept {
@@ -93,7 +134,8 @@ struct hash<std::tuple<Ts...>> {
 private:
 	template <std::size_t... I>
 	std::size_t hash_(const std::tuple<Ts...>& t, std::index_sequence<I...>) const noexcept {
-		return ::esl::hash_combine(0xe6546b64U, std::get<I>(t)...);
+		::esl::hash_combiner hc;
+		return (0, ..., (hc += std::get<I>(t)));
 	}
 };
 
