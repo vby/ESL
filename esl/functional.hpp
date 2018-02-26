@@ -135,7 +135,7 @@ private:
 	template <std::size_t... I>
 	std::size_t hash_(const std::tuple<Ts...>& t, std::index_sequence<I...>) const noexcept {
 		::esl::hash_combiner hc;
-		return (0, ..., (hc += std::get<I>(t)));
+		return (hc += ... += std::get<I>(t));
 	}
 };
 

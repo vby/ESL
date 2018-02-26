@@ -8,7 +8,7 @@ struct TypeinfoTestClassBase {
 struct TypeinfoTestClassA : TypeinfoTestClassBase {
 	struct ClassB {};
 	using int_type = int;
-	bool func(int, const ClassB*) {}
+	bool func(int, const ClassB*) { return false; }
 };
 
 #ifdef ESL_HAS_DEMANGLE

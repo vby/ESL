@@ -141,7 +141,7 @@ template <class CharT, class Traits, class Allocator, class OutputIt>
 inline OutputIt split(const std::basic_string<CharT, Traits, Allocator>& s, CharT delim, OutputIt d_first) {
 	return split(std::basic_string_view<CharT, Traits>(s), delim, d_first);
 }
-template <class CharT, class OutputIt, class Traits = std::char_traits<CharT>>
+template <class CharT, class Traits = std::char_traits<CharT>, class OutputIt>
 inline OutputIt split(const CharT* s, CharT delim, OutputIt d_first) {
 	return split(std::basic_string_view<CharT, Traits>(s), delim, d_first);
 }
@@ -172,7 +172,7 @@ template <class CharT, class Traits, class Allocator, class SV, class OutputIt>
 inline OutputIt split(const std::basic_string<CharT, Traits, Allocator>& s, const SV& delim, OutputIt d_first) {
 	return split_(std::basic_string_view<CharT, Traits>(s), std::basic_string_view<CharT, Traits>(delim), d_first);
 }
-template <class CharT, class SV, class OutputIt, class Traits = std::char_traits<CharT>>
+template <class CharT, class Traits = std::char_traits<CharT>, class SV, class OutputIt>
 inline OutputIt split(const CharT* s, const SV& delim, OutputIt d_first) {
 	return split_(std::basic_string_view<CharT, Traits>(s), std::basic_string_view<CharT, Traits>(delim), d_first);
 }
@@ -191,7 +191,7 @@ std::basic_string<CharT, Traits, Allocator> join_(const std::basic_string_view<C
 	}
 	return std::move(str);
 }
-template <class CharT, class Traits, class InputIt, class Allocator = std::allocator<CharT>>
+template <class CharT, class Allocator = std::allocator<CharT>, class Traits, class InputIt>
 inline std::basic_string<CharT, Traits, Allocator> join_(const std::basic_string_view<CharT, Traits>& delim, InputIt first, InputIt last) {
 	return join_<Allocator>(delim, first, last);
 }
@@ -199,7 +199,7 @@ template <class CharT, class Traits, class Allocator, class InputIt>
 inline std::basic_string<CharT, Traits, Allocator> join(const std::basic_string<CharT, Traits, Allocator>& delim, InputIt first, InputIt last) {
 	return join_<Allocator>(std::basic_string_view<CharT, Traits>(delim), first, last);
 }
-template <class CharT, class InputIt, class Traits = std::char_traits<CharT>, class Allocator = std::allocator<CharT>>
+template <class CharT, class Traits = std::char_traits<CharT>, class Allocator = std::allocator<CharT>, class InputIt>
 inline std::basic_string<CharT, Traits, Allocator> join(const CharT* delim, InputIt first, InputIt last) {
 	return join_<Allocator>(std::basic_string_view<CharT, Traits>(delim), first, last);
 }

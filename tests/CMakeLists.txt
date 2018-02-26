@@ -45,6 +45,7 @@ esl_add_test(functional_tests)
 esl_add_test(span_tests)
 esl_add_test(string_tests)
 esl_add_test(endian_tests)
+esl_add_test(map_utils_tests)
 
 esl_add_test(shared_library_tests)
 target_link_libraries(shared_library_tests ${CMAKE_DL_LIBS})

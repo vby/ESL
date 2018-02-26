@@ -7,6 +7,7 @@
 #include "macros.hpp"
 
 #include <system_error>
+#include <stdexcept>
 #include <memory>
 #include <cassert>
 
@@ -121,7 +122,7 @@ inline void shared_library::open(const char* filename) {
 	this->close();
 
 	if (!filename || filename[0] == '\0') {
-		throw std::system_error(std::make_error_code(std::errc::invalid_argument));
+		throw std::invalid_argument("shared_library::open: argument is null or empty");
 	}
 
 	std::error_code ec;

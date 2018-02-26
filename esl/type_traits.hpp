@@ -106,35 +106,87 @@ using add_const_lvalue_reference = std::add_lvalue_reference<std::add_const_t<T>
 template <class T>
 using add_const_lvalue_reference_t = typename add_const_lvalue_reference<T>::type;
 
-// remove_const_cv_reference
-template <class T>
-using remove_const_cv = std::remove_const<std::remove_cv_t<T>>;
-template <class T>
-using remove_const_cv_t = typename remove_const_cv<T>::type;
-
 // remove_cv_reference, remove_cv_reference_t
 template <class T>
 using remove_cv_reference = std::remove_cv<std::remove_reference_t<T>>;
 template <class T>
 using remove_cv_reference_t = typename remove_cv_reference<T>::type;
 
-// remove_const_cv_reference
+// remove_rp, remove_rp_t
 template <class T>
-using remove_const_cv_reference = std::remove_const<remove_cv_reference<T>>;
+using remove_rp = std::remove_pointer<std::remove_reference_t<T>>;
 template <class T>
-using remove_const_cv_reference_t = typename remove_const_cv_reference<T>::type;
+using remove_rp_t = typename remove_rp<T>::type;
+
+// remove_cv_rp, remove_cv_rp_t
+template <class T>
+using remove_cv_rp = std::remove_cv<remove_rp_t<T>>;
+template <class T>
+using remove_cv_rp_t = typename remove_cv_rp<T>::type;
 
 // to_lvalue_reference, to_lvalue_reference_t
 template <class T>
-using to_lvalue_reference = std::add_lvalue_reference<remove_cv_reference_t<T>>;
+using to_lvalue_reference = std::add_lvalue_reference<std::remove_reference_t<T>>;
 template <class T>
 using to_lvalue_reference_t = typename to_lvalue_reference<T>::type;
 
 // to_rvalue_reference, to_rvalue_reference_t
 template <class T>
-using to_rvalue_reference = std::add_rvalue_reference<remove_cv_reference_t<T>>;
+using to_rvalue_reference = std::add_rvalue_reference<std::remove_reference_t<T>>;
 template <class T>
 using to_rvalue_reference_t = typename to_rvalue_reference<T>::type;
+
+// is_low_const, is_low_const_v
+template <class T>
+using is_low_const = std::is_const<remove_rp_t<T>>;
+template <class T>
+inline constexpr bool is_low_const_v = is_low_const<T>::value;
+
+// is_const_or_low_const, is_const_or_low_const_v
+template <class T>
+using is_const_or_low_const = std::bool_constant<std::is_const_v<T> || is_low_const_v<T>>;
+template <class T>
+inline constexpr bool is_const_or_low_const_v = is_const_or_low_const<T>::value;
+
+// is_pointer_or_reference, is_pointer_or_reference_v
+template <class T>
+using is_pointer_or_reference = std::bool_constant<std::is_pointer_v<T> || std::is_reference_v<T>>;
+template <class T>
+inline constexpr bool is_pointer_or_reference_v = is_pointer_or_reference<T>::value;
+
+// is_const_or_volatile, is_const_or_volatile_v
+template <class T>
+using is_const_or_volatile = std::bool_constant<std::is_const_v<T> || std::is_volatile_v<T>>;
+template <class T>
+inline constexpr bool is_const_or_volatile_v = is_const_or_volatile<T>::value;
+
+// as_const_as, as_const_as_t
+template <class T, class Ref, bool = std::is_const_v<Ref>>
+struct as_const_as {
+	using type = std::remove_const_t<T>;
+};
+template <class T, class Ref>
+struct as_const_as<T, Ref, true> {
+	using type = std::add_const_t<T>;
+};
+template <class T, class Ref>
+using as_const_as_t = typename as_const_as<T, Ref>::type;
+
+// as_reference_as, as_reference_as_t
+template <class T, class Ref, bool = std::is_lvalue_reference_v<Ref>, bool = std::is_rvalue_reference_v<Ref>>
+struct as_reference_as {
+	using type = std::remove_reference_t<T>;
+};
+template <class T, class Ref>
+struct as_reference_as<T, Ref, true, false> {
+	using type = to_lvalue_reference_t<T>;
+};
+template <class T, class Ref>
+struct as_reference_as<T, Ref, false, true> {
+	using type = to_rvalue_reference_t<T>;
+};
+template <class T, class Ref>
+using as_reference_as_t = typename as_reference_as<T, Ref>::type;
 
 // is_function_or_function_pointer, is_function_or_function_pointer_v
 template <class T>

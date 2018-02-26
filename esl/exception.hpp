@@ -2,10 +2,16 @@
 #ifndef ESL_EXCEPTION_HPP
 #define ESL_EXCEPTION_HPP
 
+#include <stdexcept>
 #include <cinttypes>
 #include <sstream>
 
 namespace esl {
+
+class key_not_found: public std::logic_error {
+public:
+	using std::logic_error::logic_error;
+};
 
 template <class Excetpion, class OStream = std::ostringstream>
 class throw_stream {
