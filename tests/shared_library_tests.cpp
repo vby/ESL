@@ -20,7 +20,7 @@ TEST(SharedLibraryTest, fail_open_close) {
 	esl::shared_library dl;
 	ASSERT_FALSE(dl.is_open());
 
-	ASSERT_THROW(dl.open(nullptr), std::system_error);
+	ASSERT_THROW(dl.open(nullptr), std::invalid_argument);
 
 	ASSERT_THROW(dl.open("no_such_file"), std::system_error);
 }

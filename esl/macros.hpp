@@ -40,8 +40,6 @@
 	#define ESL_SOURCE_WIN32
 	#ifdef _WIN64
 		#define ESL_SOURCE_WIN64
-	#else
-		#define ESL_SOURCE_WIN32_NOT_WIN64
 	#endif
 #endif
 #ifdef _POSIX_SOURCE
@@ -109,7 +107,7 @@
 
 // ESL_FAST_ROT*
 #ifdef ESL_COMPILER_MSVC
-	#include <stdlib.h>
+	#include <cstdlib>
 	#define ESL_FAST_ROTL32(x, s) _rotl(x, s)
 	#define ESL_FAST_ROTL64(x, s) _rotl64(x, s)
 	#define ESL_FAST_ROTR32(x, s) _rotr(x, s)
