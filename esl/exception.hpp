@@ -13,37 +13,37 @@ public:
 	using std::logic_error::logic_error;
 };
 
-template <class Excetpion, class OStream = std::ostringstream>
-class throw_stream {
-public:
-	using stream_type = OStream;
-	using exception_type = Excetpion;
-
+template <class CharT, class Traits = std::char_traits<CharT>, class Allocator = std::allocator<CharT>>
+class basic_exceptionstream: public std::basic_ostringstream<CharT, Traits, Allocator> {
 private:
-	OStream stream_;
+	using stream_type = std::basic_ostringstream<CharT, Traits, Allocator>;
 
 public:
-	explicit throw_stream() = default;
+	explicit basic_exceptionstream() = default;
 
-	explicit throw_stream(const std::string& str): stream_(str) {}
-
-	throw_stream(throw_stream&&) = default;
-
-	~throw_stream() noexcept(false) { throw Excetpion(stream_.str()); }
-
-	OStream& stream() noexcept { return stream_; }
+	explicit basic_exceptionstream(const stream_type& str): stream_type(str) {}
 
 	template <class T>
-	throw_stream& operator<<(T&& t) {
-		stream_ << std::forward<T>(t);
+	basic_exceptionstream& operator<<(T&& value) {
+		this->stream_type::operator<<(std::forward<T>(value));
 		return *this;
 	}
+
+	void operator<<(void (*f)(stream_type&)) { f(*this); }
 };
+
+using exceptionstream = basic_exceptionstream<char>;
+using wexceptionstream = basic_exceptionstream<wchar_t>;
+
+template <class Excetpion, class CharT, class Traits, class Allocator>
+void throw_exception(std::basic_ostringstream<CharT, Traits, Allocator>& oss) {
+	throw Excetpion(oss.str().c_str());
+}
 
 #define ESL_TRHOW_OUT_OF_RANGE_IF(lhs, op, rhs, location) \
 	if ((lhs) op (rhs)) { \
-		throw_stream<std::out_of_range>{} << (location) << ": " #lhs " (which is " << (lhs) \
-			<< ") " #op " " #rhs " (which is " << (rhs) << ")"; \
+		exceptionstream{} << (location) << ": " #lhs " (which is " << (lhs) \
+			<< ") " #op " " #rhs " (which is " << (rhs) << ")" << throw_exception<std::out_of_range>; \
 	}
 
 } // namespace esl

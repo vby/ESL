@@ -2,9 +2,10 @@ cmake_minimum_required(VERSION 2.8)
 
 project(ESL_tests CXX)
 
-set(BUILD_GTEST ON CACHE BOOL "Build gtest")
-set(BUILD_GMOCK OFF CACHE BOOL "Build gmock")
-set(gtest_force_shared_crt ON CACHE BOOL "Force shared CRT")
+set(BUILD_GTEST ON CACHE BOOL "")
+set(BUILD_GMOCK OFF CACHE BOOL "")
+set(INSTALL_GTEST OFF CACHE BOOL "")
+set(gtest_force_shared_crt ON CACHE BOOL "")
 add_subdirectory(googletest)
 
 function(esl_has_cxx feat)
