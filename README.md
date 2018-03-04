@@ -1,4 +1,4 @@
-# ESL: ESsential Library
+# ESL: ESsential Library [![Build Status](https://travis-ci.org/vby/ESL.svg?branch=master)](https://travis-ci.org/vby/ESL)
 
 The entire implementation is provided inline in the headers under the [esl](./esl) directory. 
 

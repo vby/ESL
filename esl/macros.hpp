@@ -51,6 +51,9 @@
 #ifdef _BSD_SOURCE
 	#define ESL_SOURCE_BSD
 #endif
+#ifdef __APPLE__
+	#define ESL_SOURCE_APPLE
+#endif
 
 // ESL_COUNTER, ESL_PRETTY_FUNCTION
 #ifdef ESL_COMPILER_MSVC

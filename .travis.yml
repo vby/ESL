@@ -1,0 +1,49 @@
+
+language: cpp
+
+os: linux
+dist: trusty
+
+git:
+  submodules: true
+
+matrix:
+  include:
+    # Clang 5.0
+    - env: COMPILER=clang++-5.0 BUILD_TYPE=Debug
+      addons: &clang50
+        apt:
+          packages:
+            - clang-5.0
+            - libstdc++-7-dev
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-trusty-5.0
+    - env: COMPILER=clang++-5.0 BUILD_TYPE=Release
+      addons: *clang50
+
+    # GCC 7
+    - env: COMPILER=g++-7 BUILD_TYPE=Debug
+      addons: &gcc70
+        apt:
+          packages:
+            - g++-7
+          sources:
+            - ubuntu-toolchain-r-test
+    - env: COMPILER=g++-7 BUILD_TYPE=Release
+      addons: *gcc70
+
+before_install:
+  - export CXX=${COMPILER}
+  - ${CXX} --version
+  - cmake --version
+
+before_script:
+  - cd "${TRAVIS_BUILD_DIR}"
+  - mkdir build && cd build
+  - cmake .. -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
+
+script:
+  - cmake --build . -- -j2 
+  - ctest --output-on-failure -j2
+
