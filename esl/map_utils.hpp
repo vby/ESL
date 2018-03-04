@@ -5,7 +5,6 @@
 #include "exception.hpp"
 #include "type_traits.hpp"
 
-#include <new> // std::nothrow_t
 #include <utility>
 #include <tuple>
 
@@ -29,15 +28,15 @@ auto map_get(Map&& m, const Key& key) -> map_mapped_t<Map>& {
 	return it->second;
 }
 template <class Map, class Key, class Mapped>
-auto map_get(Map&& m, const Key& key, Mapped& def_mapped) -> map_mapped_t<Map>& {
+inline auto map_get(Map&& m, const Key& key, Mapped& def_mapped) -> map_mapped_t<Map>& {
 	auto it = m.find(key);
 	return it != m.end() ? it->second : def_mapped;
 }
 
-// map_get_value
+// map_getv
 // Return a copy of Map::mapped_type
 template <class Map, class Key>
-typename Map::mapped_type map_get_value(std::nothrow_t, const Map& m, const Key& key) {
+typename Map::mapped_type map_getv_nothrow(const Map& m, const Key& key) {
 	auto it = m.find(key);
 	if (it == m.end()) {
 		return typename Map::mapped_type{};
@@ -46,44 +45,44 @@ typename Map::mapped_type map_get_value(std::nothrow_t, const Map& m, const Key&
 }
 // Exceptions: esl::key_not_found
 template <class Map, class Key>
-typename Map::mapped_type map_get_value(const Map& m, const Key& key) {
+typename Map::mapped_type map_getv(const Map& m, const Key& key) {
 	auto it = m.find(key);
 	if (it == m.end()) {
-		throw key_not_found("esl::map_get_value");
+		throw key_not_found("esl::map_getv");
 	}
 	return it->second;
 }
 template <class Map, class Key, class Mapped>
-typename Map::mapped_type map_get_value(const Map& m, const Key& key, const Mapped& def_mapped) {
+inline typename Map::mapped_type map_getv(const Map& m, const Key& key, const Mapped& def_mapped) {
 	auto it = m.find(key);
 	return it != m.end() ? it->second : def_mapped;
 }
 
-// map_get_ptr
+// map_getp
 // Return a ptr of map_mapped_t<Map>
 template <class Map, class Key>
-auto map_get_ptr(std::nothrow_t, Map&& m, const Key& key) -> map_mapped_t<Map>* {
+inline auto map_getp_nothrow(Map&& m, const Key& key) -> map_mapped_t<Map>* {
 	auto it = m.find(key);
 	return it != m.end() ? &it->second : nullptr;
 }
 // Exceptions: esl::key_not_found
 template <class Map, class Key>
-auto map_get_ptr(Map&& m, const Key& key) -> map_mapped_t<Map>* {
+auto map_getp(Map&& m, const Key& key) -> map_mapped_t<Map>* {
 	auto it = m.find(key);
 	if (it == m.end()) {
-		throw key_not_found("esl::map_get_ptr");
+		throw key_not_found("esl::map_getp");
 	}
 	return &it->second;
 }
 template <class Map, class Key, class Mapped>
-auto map_get_ptr(Map&& m, const Key& key, Mapped* def_mapped_ptr) -> map_mapped_t<Map>* {
+inline auto map_getp(Map&& m, const Key& key, Mapped* def_mapped_ptr) -> map_mapped_t<Map>* {
 	auto it = m.find(key);
 	return it != m.end() ? &it->second : def_mapped_ptr;
 }
 
 // map_contains
 template <class Map, class Key>
-bool map_contains(const Map& m, const Key& key) {
+inline bool map_contains(const Map& m, const Key& key) {
 	return m.find(key) != m.end();
 }
 

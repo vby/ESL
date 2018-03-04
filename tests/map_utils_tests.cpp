@@ -28,29 +28,29 @@ void test_map_get(Map&& m) {
 	}
 
 	{
-		auto v1 = esl::map_get_value(m, "k1");
+		auto v1 = esl::map_getv(m, "k1");
 		ASSERT_EQ(v1.v, 11);
 
-		ASSERT_THROW(esl::map_get_value(m, "k0"), esl::key_not_found);
+		ASSERT_THROW(esl::map_getv(m, "k0"), esl::key_not_found);
 
-		auto v2 = esl::map_get_value(std::nothrow, m, "k0");
+		auto v2 = esl::map_getv_nothrow(m, "k0");
 		ASSERT_EQ(v2.v, 1);
 
-		auto v3 = esl::map_get_value(m, "k0", MapValue(5));
+		auto v3 = esl::map_getv(m, "k0", MapValue(5));
 		ASSERT_EQ(v3.v, 5);
 	}
 
 	{
-		auto v1 = esl::map_get_ptr(m, "k1");
+		auto v1 = esl::map_getp(m, "k1");
 		ASSERT_EQ(v1->v, 11);
 
-		ASSERT_THROW(esl::map_get_ptr(m, "k0"), esl::key_not_found);
+		ASSERT_THROW(esl::map_getp(m, "k0"), esl::key_not_found);
 
-		auto v2 = esl::map_get_ptr(std::nothrow, m, "k0");
+		auto v2 = esl::map_getp_nothrow(m, "k0");
 		ASSERT_EQ(v2, nullptr);
 
 		MapValue def(5);
-		auto v3 = esl::map_get_ptr(m, "k0", &def);
+		auto v3 = esl::map_getp(m, "k0", &def);
 		ASSERT_EQ(v3, &def);
 		ASSERT_EQ(v3->v, 5);
 	}
@@ -59,14 +59,14 @@ void test_map_get(Map&& m) {
 template <class Map>
 void test_map_get_non_const(Map&& m) {
 	{
-		auto v1 = esl::map_get_ptr(m, "k1");
+		auto v1 = esl::map_getp(m, "k1");
 		ASSERT_EQ(v1->v, 11);
 
 		v1->v = 111;
 		ASSERT_EQ(v1->v, 111);
 
 		MapValue def(5);
-		auto v3 = esl::map_get_ptr(m, "k0", &def);
+		auto v3 = esl::map_getp(m, "k0", &def);
 		ASSERT_EQ(v3->v, 5);
 
 		v3->v = 333;
@@ -89,7 +89,7 @@ void test_map_get_non_const(Map&& m) {
 	}
 }
 
-TEST(MapUtilsTest, map_get_value) {
+TEST(MapUtilsTest, map_getv) {
 	std::map<std::string, MapValue> m;
 	m.emplace("k1", 11);
 	m.emplace("k2", 12);
