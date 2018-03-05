@@ -4,6 +4,9 @@ language: cpp
 os: linux
 dist: trusty
 
+notifications:
+  email: false
+
 git:
   submodules: true
 
