@@ -7,7 +7,28 @@
 #include <vector>
 #include <iterator>
 
-TEST(StringViewTest, substr) {
+TEST(StringTest, constexpr_str_functions) {
+	static_assert(esl::constexpr_strlen("") == 0);
+	static_assert(esl::constexpr_strlen("abcdefgh") == 8);
+
+	static_assert(esl::constexpr_strcmp("", "") == 0);
+	static_assert(esl::constexpr_strcmp("", "a") < 0);
+	static_assert(esl::constexpr_strcmp("a", "") > 0);
+	static_assert(esl::constexpr_strcmp("abc", "abc") == 0);
+	static_assert(esl::constexpr_strcmp("abcd", "abc") > 0);
+	static_assert(esl::constexpr_strcmp("abc", "abcd") < 0);
+
+	static_assert(esl::constexpr_strncmp("", "", 0) == 0);
+	static_assert(esl::constexpr_strncmp("", "", 2) == 0);
+	static_assert(esl::constexpr_strncmp("abc", "abcd", 3) == 0);
+	static_assert(esl::constexpr_strncmp("abc", "abcd", 4) < 0);
+	static_assert(esl::constexpr_strncmp("abc", "abcd", 5) < 0);
+	static_assert(esl::constexpr_strncmp("abcd", "abc", 3) == 0);
+	static_assert(esl::constexpr_strncmp("abcd", "abc", 4) > 0);
+	static_assert(esl::constexpr_strncmp("abcd", "abc", 5) > 0);
+}
+
+TEST(StringTest, substr) {
 	{
 		std::string str("adbcdef");
 		std::string_view sv(str.data(), str.size());

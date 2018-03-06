@@ -11,6 +11,55 @@
 
 namespace esl {
 
+// constexpr_strlen, constexpr_wcslen
+template <class CharT>
+inline constexpr std::size_t constexpr_strlen_(const CharT* s, std::size_t len = 0) {
+	return *s == CharT(0) ? len : constexpr_strlen_(s + 1, len + 1);
+}
+inline constexpr std::size_t constexpr_strlen(const char* s) {
+#ifdef ESL_COMPILER_GNU
+	return __builtin_strlen(s);
+#else
+	return constexpr_strlen_(s);
+#endif
+}
+inline constexpr std::size_t constexpr_wcslen(const wchar_t* s) {
+	return constexpr_strlen_(s);
+}
+
+#define ESL_CONSTEXPR_STRCMP_OR_(l, r) (*l == '\0' || *l != *r) ? static_cast<int>(*l - *r)
+
+// constexpr_strcmp, constexpr_wcscmp
+template <class CharT>
+inline constexpr int constexpr_strcmp_(const CharT* l, const CharT* r) {
+	return ESL_CONSTEXPR_STRCMP_OR_(l, r) : constexpr_strcmp_(l + 1, r + 1);
+}
+inline constexpr int constexpr_strcmp(const char* l, const char* r) {
+#ifdef ESL_COMPILER_GNU
+	return __builtin_strcmp(l, r);
+#else
+	return constexpr_strcmp_(l, r);
+#endif
+}
+inline constexpr int constexpr_wcscmp(const wchar_t* l, const wchar_t* r) {
+	return constexpr_strcmp_(l, r);
+}
+// constexpr_strncmp, constexpr_wcsncmp
+template <class CharT>
+inline constexpr int constexpr_strncmp_(const CharT* l, const CharT* r, std::size_t count) {
+	return count == 0 ? 0 : (ESL_CONSTEXPR_STRCMP_OR_(l, r) : constexpr_strncmp_(l + 1, r + 1, count - 1));
+}
+inline constexpr int constexpr_strncmp(const char* l, const char* r, std::size_t count) {
+#ifdef ESL_COMPILER_GNU
+	return __builtin_strncmp(l, r, count);
+#else
+	return constexpr_strncmp_(l, r, count);
+#endif
+}
+inline constexpr int constexpr_wcsncmp(const wchar_t* l, const wchar_t* r, std::size_t count) {
+	return constexpr_strncmp_(l, r, count);
+}
+
 // basic_unique_chars
 // A unique_ptr of CharT[] that can be cast to std::basic_string or std::basic_string_view
 template <class CharT, class Deleter = std::default_delete<CharT[]>>
