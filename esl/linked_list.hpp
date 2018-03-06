@@ -21,46 +21,39 @@ private:
 	class node_handle {
 		friend class linked_list<T, Allocator>;
 	private:
-		list_type* list_;
-		iterator it_;
+		mutable list_type list_;
 
 	public:
 		using value_type = typename list_type::value_type;
 		using allocator_type = typename list_type::allocator_type;
 
 	public:
-		node_handle(): list_(nullptr) {}
+		node_handle() = default;
 
-		node_handle(node_handle&& nh): list_(nh.list_), it_(nh.it_) { nh.list_ = nullptr; }
-
-		~node_handle() {
-			if (list_) {
-				list_->erase(it_);
-			}
-		}
+		node_handle(node_handle&& nh): list_(std::move(nh.list_)) {}
 
 		node_handle& operator=(node_handle&& nh) {
-			list_ = nh.list_;
-			it_ = nh.it_;
-			nh.list_ = nullptr;
+			list_ = std::move(nh.list_);
 			return *this;
 		}
 
-		bool empty() const noexcept { return list_; }
+		bool empty() const noexcept { return list_.empty(); }
 
-		explicit operator bool() const noexcept { return list_; }
+		explicit operator bool() const noexcept { return !list_.empty(); }
 
-		value_type& value() const noexcept { return *it_; }
+		value_type& value() const noexcept { return list_.front(); }
 
-		allocator_type get_allocator() const noexcept { return list_->get_allocator(); }
+		allocator_type get_allocator() const noexcept { return list_.get_allocator(); }
 
 	protected:
-		node_handle(list_type& list, iterator it): list_(&list), it_(it) {}
+		node_handle(list_type& list, const_iterator it) {
+			list_.splice(list_.cbegin(), list, it);
+		}
 
-		iterator insert(list_type& list, const_iterator pos) {
-			list.splice(pos, *list_, it_);
-			list_ = nullptr;
-			return it_;
+		iterator move_insert(list_type& list, const_iterator pos) {
+			auto it = list_.begin();
+			list.splice(pos, list_, it);
+			return it;
 		}
 	};
 
@@ -76,27 +69,26 @@ public:
 	using list_type::insert;
 
 	iterator insert(const_iterator pos, node_handle&& nh) {
-		return nh.insert(*this, pos);
+		return nh.move_insert(*this, pos);
 	}
 
 	using list_type::push_back;
 
 	void push_back(node_handle&& nh) {
-		nh.insert(*this, this->cend());
+		nh.move_insert(*this, this->cend());
 	}
 
 	using list_type::push_front;
 
 	void push_front(node_handle&& nh) {
-		nh.insert(*this, this->cbegin());
+		nh.move_insert(*this, this->cbegin());
 	}
 
 	node_type extract(const_iterator it) {
 		if (it == this->cend()) {
 			return node_type{};
 		}
-		extract_list_.splice(extract_list_.cbegin(), *this, it);
-		return node_type(extract_list_, extract_list_.begin());
+		return node_type(*this, it);
 	}
 };
 
