@@ -18,11 +18,15 @@ namespace esl {
 		big    = __BIG_ENDIAN,
 		native = __BYTE_ORDER,
 	};
-#else // FIXME: Assume little-endian
+#else
 	enum class endian {
 		little = 1234,
 		big    = 4321,
-		native = little,
+		#ifdef ESL_SUG_BIG_ENDIAN
+			native = big,
+		#else
+			native = little,
+		#endif
 	};
 #endif
 
