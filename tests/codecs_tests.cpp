@@ -118,9 +118,17 @@ TEST(CodecsBase64Test, decode) {
 		ASSERT_EQ(pos, sv.size() - 4);
 	}
 
+	// error chars - abcX
+	{
+		std::string_view sv("MDEyMzQ1Njc>e");
+		const auto& [d, pos] = esl::base64::decode(sv);
+		ASSERT_EQ(d, "01234567");
+		ASSERT_EQ(pos, sv.size() - 2);
+	}
+
 	// error chars - ab=X
 	{
-		std::string_view sv("MDEyMzQ1Njc4OQ=Xf");
+		std::string_view sv("MDEyMzQ1Njc4OQ=ff");
 		const auto& [d, pos] = esl::base64::decode(sv);
 		ASSERT_EQ(d, "0123456789");
 		ASSERT_EQ(pos, sv.size() - 2);

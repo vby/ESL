@@ -12,15 +12,15 @@ public:
 
 	static constexpr char pad = '=';
 
-	static constexpr unsigned char decode_codes[] =
+	static constexpr unsigned char decode_chars[] =
 		"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
 		// +(0x3E) /(0x3F) 0-9(0x34-0x3D) =(0x40)
 		"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x3E\x41\x41\x41\x3F\x34\x35\x36\x37\x38\x39\x3A\x3B\x3C\x3D\x41\x41\x41\x40\x41\x41"
-		// A-Z
+		// A-Z(0x00-0x19)
 		"\x41\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x41\x41\x41\x41\x41"
-		// a-z
+		// a-z(0x1A-0x33)
 		"\x41\x1A\x1B\x1C\x1D\x1E\x1F\x20\x21\x22\x23\x24\x25\x26\x27\x28\x29\x2A\x2B\x2C\x2D\x2E\x2F\x30\x31\x32\x33\x41\x41\x41\x41\x41"
-		// 128-255
+		// 0x128-0x255
 		"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
 		"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
 		"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
@@ -75,13 +75,14 @@ public:
 	}
 
 	static constexpr std::size_t decode_max_size(std::size_t size) noexcept {
-		return (size / 4) * 3 + (size % 4);
+		const auto r = size % 4;
+		return (size / 4) * 3 + r - (r / 2);
 	}
 
 	#define ESL_BASE64_DECODE_ERROR_BREAK_(in) --in; break
 	#define ESL_BASE64_DECODE_CHECK_AB_(in, x) if (x > 0x3F) { ESL_BASE64_DECODE_ERROR_BREAK_(in); }
-	#define ESL_BASE64_DECODE_CHECK_AB_B_(in, x) if ((x & 0xF) != 0) { ESL_BASE64_DECODE_ERROR_BREAK_(in); }
-	#define ESL_BASE64_DECODE_CHECK_ABC_C_(in, x) if ((x & 3) != 0) { ESL_BASE64_DECODE_ERROR_BREAK_(in); }
+	#define ESL_BASE64_DECODE_CHECK_AB_B_(in, x) if (x & 0xF) { ESL_BASE64_DECODE_ERROR_BREAK_(in); }
+	#define ESL_BASE64_DECODE_CHECK_ABC_C_(in, x) if (x & 3) { ESL_BASE64_DECODE_ERROR_BREAK_(in); }
 
 	static constexpr std::pair<std::size_t, std::size_t> decode(const char* in, std::size_t size, void* out) noexcept {
 		unsigned char* const out_b_base = static_cast<unsigned char*>(out);
@@ -92,10 +93,10 @@ public:
 		const unsigned char* const in_c_end = in_c_base + size;
 		while (in_c + 1 < in_c_end) {
 			// [00aaaaaa][00bbbbbb][00cccccc][00dddddd] -> [aaaaaabb][bbbbcccc][ccdddddd]
-			const auto a = decode_codes[*in_c++];
+			const auto a = decode_chars[*in_c++];
 			ESL_BASE64_DECODE_CHECK_AB_(in_c, a); // break if X---
 
-			const auto b = decode_codes[*in_c++];
+			const auto b = decode_chars[*in_c++];
 			ESL_BASE64_DECODE_CHECK_AB_(in_c, b); // break if aX--
 
 			*out_b++ = (a << 2) | (b >> 4);
@@ -103,7 +104,7 @@ public:
 				ESL_BASE64_DECODE_CHECK_AB_B_(in_c, b);
 				break; //Succ
 			}
-			const auto c = decode_codes[*in_c++];
+			const auto c = decode_chars[*in_c++];
 			if (c > 0x40) { // abX-
 				ESL_BASE64_DECODE_ERROR_BREAK_(in_c);
 			}
@@ -116,7 +117,7 @@ public:
 				}
 				break; //Succ
 			}
-			const auto d = decode_codes[*in_c++];
+			const auto d = decode_chars[*in_c++];
 			if (c < 0x40) {
 				*out_b++ = (b << 4) | (c >> 2);
 				if (d < 0x40) { // abcd
