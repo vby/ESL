@@ -1,6 +1,8 @@
 #ifndef ESL_CODECS_HPP
 #define ESL_CODECS_HPP
 
+#include "utils.hpp"
+
 #include <string_view>
 //#include <immintrin.h>
 
@@ -8,23 +10,11 @@ namespace esl {
 
 class base64 {
 public:
-	static constexpr char encode_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	static constexpr char encode_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
 
 	static constexpr char pad = '=';
 
-	static constexpr unsigned char decode_chars[] =
-		"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
-		// +(0x3E) /(0x3F) 0-9(0x34-0x3D) =(0x40)
-		"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x3E\x41\x41\x41\x3F\x34\x35\x36\x37\x38\x39\x3A\x3B\x3C\x3D\x41\x41\x41\x40\x41\x41"
-		// A-Z(0x00-0x19)
-		"\x41\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x41\x41\x41\x41\x41"
-		// a-z(0x1A-0x33)
-		"\x41\x1A\x1B\x1C\x1D\x1E\x1F\x20\x21\x22\x23\x24\x25\x26\x27\x28\x29\x2A\x2B\x2C\x2D\x2E\x2F\x30\x31\x32\x33\x41\x41\x41\x41\x41"
-		// 0x128-0x255
-		"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
-		"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
-		"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
-		"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41";
+	static constexpr auto decode_chars = transpose_integer_array<unsigned char, 256>(encode_chars);
 
 	static constexpr std::size_t encode_size(std::size_t size, bool padding=true) noexcept {
 		if (padding) {
@@ -36,7 +26,7 @@ public:
 	}
 
 	// without '\0'
-	static constexpr std::size_t encode(const void* in, std::size_t size, char* out, bool padding=true) noexcept {
+	static std::size_t encode(const void* in, std::size_t size, char* out, bool padding=true) noexcept {
 		const unsigned char* in_b = static_cast<const unsigned char*>(in);
 		char* const out_base = out;
 		while (size > 2) {
@@ -84,11 +74,11 @@ public:
 	#define ESL_BASE64_DECODE_CHECK_AB_B_(in, x) if (x & 0xF) { ESL_BASE64_DECODE_ERROR_BREAK_(in); }
 	#define ESL_BASE64_DECODE_CHECK_ABC_C_(in, x) if (x & 3) { ESL_BASE64_DECODE_ERROR_BREAK_(in); }
 
-	static constexpr std::pair<std::size_t, std::size_t> decode(const char* in, std::size_t size, void* out) noexcept {
+	static std::pair<std::size_t, std::size_t> decode(const char* in, std::size_t size, void* out) noexcept {
 		unsigned char* const out_b_base = static_cast<unsigned char*>(out);
 		unsigned char* out_b = out_b_base;
 		std::size_t i = 0;
-		const unsigned char* in_c = static_cast<const unsigned char*>(static_cast<const void*>(in));
+		const unsigned char* in_c = reinterpret_cast<const unsigned char*>(in);
 		const unsigned char* const in_c_base = in_c;
 		const unsigned char* const in_c_end = in_c_base + size;
 		while (in_c + 1 < in_c_end) {
