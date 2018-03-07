@@ -68,27 +68,45 @@
 	#endif
 #endif
 
-// ESL_CPU_*
+// ESL_ARCH_*
 #ifdef ESL_COMPILER_MSVC
 	#if defined _M_X64
-		#define ESL_CPU_X64
+		#define ESL_ARCH_X64
 	#elif defined _M_IX86
-		#define ESL_CPU_X86
+		#define ESL_ARCH_X86
 	#elif defined _M_ARM64
-		#define ESL_CPU_ARM64
+		#define ESL_ARCH_ARM64
 	#elif defined _M_ARM
-		#define ESL_CPU_ARM
+		#define ESL_ARCH_ARM
+	#endif
+	#ifdef _M_IX86_FP
+		#if _M_IX86_FP == 1
+			#define ESL_ARCH_SSE
+		#elif _M_IX86_FP == 2
+			#define ESL_ARCH_SSE2
+		#endif
 	#endif
 #else
 	#if defined __x86_64__
-		#define ESL_CPU_X64
+		#define ESL_ARCH_X64
 	#elif defined __i386__
-		#define ESL_CPU_X86
+		#define ESL_ARCH_X86
 	#elif defined __aarch64__
-		#define ESL_CPU_ARM64
+		#define ESL_ARCH_ARM64
 	#elif defined __ARMEL__
-		#define ESL_CPU_ARM
+		#define ESL_ARCH_ARM
 	#endif
+	#ifdef __SSE__
+		#define ESL_ARCH_SSE
+	#elif defined __SSE2__
+		#define ESL_ARCH_SSE2
+	#endif
+#endif
+#ifdef __AVX__
+	#define ESL_ARCH_AVX
+#endif
+#ifdef __AVX2__
+	#define ESL_ARCH_AVX2
 #endif
 
 #include <cstdint>
