@@ -21,8 +21,14 @@ constexpr std::array<T, Size> transpose_integer_array(U* arr, std::initializer_l
 	for (std::size_t i = 0; i < N; ++i) {
 		t_arr[static_cast<UU>(arr[i])] = static_cast<T>(i);
 	}
-	for (auto& kv: kvs) {
-		t_arr[kv.first] = kv.second;
+	// Fail compile on MSVC - 19.13.26128
+	// for (auto& kv: kvs) {
+	//		t_arr[kv.first] = kv.second;
+	// }
+	auto it = kvs.begin();
+	while (it != kvs.end()) {
+		t_arr[it->first] = it->second;
+		++it;
 	}
 	return t_arr;
 }
