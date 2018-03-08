@@ -10,11 +10,11 @@ namespace esl {
 
 class base64 {
 public:
-	static constexpr char encode_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+	static constexpr char encode_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 	static constexpr char pad = '=';
 
-	static constexpr auto decode_chars = transpose_integer_array<unsigned char, 256>(encode_chars);
+	static constexpr auto decode_codes = transpose_integer_array<unsigned char, 256>(encode_chars, {{'=', 64}});
 
 	static constexpr std::size_t encode_size(std::size_t size, bool padding=true) noexcept {
 		if (padding) {
@@ -61,7 +61,7 @@ public:
 		std::string s;
 		s.resize(encode_size(size, padding));
 		encode(in, size, s.data(), padding);
-		return std::move(s);
+		return s;
 	}
 
 	static constexpr std::size_t decode_max_size(std::size_t size) noexcept {
@@ -77,16 +77,15 @@ public:
 	static std::pair<std::size_t, std::size_t> decode(const char* in, std::size_t size, void* out) noexcept {
 		unsigned char* const out_b_base = static_cast<unsigned char*>(out);
 		unsigned char* out_b = out_b_base;
-		std::size_t i = 0;
 		const unsigned char* in_c = reinterpret_cast<const unsigned char*>(in);
 		const unsigned char* const in_c_base = in_c;
 		const unsigned char* const in_c_end = in_c_base + size;
 		while (in_c + 1 < in_c_end) {
 			// [00aaaaaa][00bbbbbb][00cccccc][00dddddd] -> [aaaaaabb][bbbbcccc][ccdddddd]
-			const auto a = decode_chars[*in_c++];
+			const auto a = decode_codes[*in_c++];
 			ESL_BASE64_DECODE_CHECK_AB_(in_c, a); // break if X---
 
-			const auto b = decode_chars[*in_c++];
+			const auto b = decode_codes[*in_c++];
 			ESL_BASE64_DECODE_CHECK_AB_(in_c, b); // break if aX--
 
 			*out_b++ = (a << 2) | (b >> 4);
@@ -94,7 +93,7 @@ public:
 				ESL_BASE64_DECODE_CHECK_AB_B_(in_c, b);
 				break; //Succ
 			}
-			const auto c = decode_chars[*in_c++];
+			const auto c = decode_codes[*in_c++];
 			if (c > 0x40) { // abX-
 				ESL_BASE64_DECODE_ERROR_BREAK_(in_c);
 			}
@@ -107,7 +106,7 @@ public:
 				}
 				break; //Succ
 			}
-			const auto d = decode_chars[*in_c++];
+			const auto d = decode_codes[*in_c++];
 			if (c < 0x40) {
 				*out_b++ = (b << 4) | (c >> 2);
 				if (d < 0x40) { // abcd

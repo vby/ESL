@@ -6,16 +6,25 @@
 int class_a_count = 0;
 struct ClassA {
 	int x;
+	std::string s;
 	ClassA() {
 		x = ++class_a_count;
+	}
+	ClassA(int x, const std::string& xs): x(x + 1), s(xs) {
+		++class_a_count;
+	}
+	ClassA(int x, std::string&& xs): x(x + 2), s(std::move(xs)) {
+		++class_a_count;
 	}
 	~ClassA() {
 		--class_a_count;
 	}
+	ClassA(const ClassA&) = delete;
+	const ClassA& operator=(const ClassA&) = delete;
 };
 
-TEST(LazyTest, lazy) {
 
+TEST(LazyTest, lazy_without_args) {
 	using LazyClassA = esl::lazy<ClassA>;
 
 	ASSERT_FALSE(std::is_copy_constructible_v<LazyClassA> || std::is_copy_assignable_v<LazyClassA>);
@@ -48,5 +57,31 @@ TEST(LazyTest, lazy) {
 	}
 
 	ASSERT_EQ(class_a_count, 0);
+}
+
+TEST(LazyTest, lazy_construct_with_args) {
+	// exact type of args
+	{
+		esl::lazy<ClassA, int, const std::string&> lazy_a(10, "a1");
+		ASSERT_EQ(class_a_count, 0);
+		ASSERT_EQ((&lazy_a)->x, 11);
+		ASSERT_EQ((&lazy_a)->s, "a1");
+		ASSERT_EQ(class_a_count, 1);
+	}
+	{
+		esl::lazy<ClassA, int, std::string&&> lazy_a(10, "a1");
+		ASSERT_EQ(class_a_count, 0);
+		ASSERT_EQ((&lazy_a)->x, 12);
+		ASSERT_EQ((&lazy_a)->s, "a1");
+		ASSERT_EQ(class_a_count, 1);
+	}
+	// decay type of args
+	{
+		esl::lazy<ClassA, int, std::string> lazy_a(10, "a1");
+		ASSERT_EQ(class_a_count, 0);
+		ASSERT_EQ((&lazy_a)->x, 12);
+		ASSERT_EQ((&lazy_a)->s, "a1");
+		ASSERT_EQ(class_a_count, 1);
+	}
 }
 

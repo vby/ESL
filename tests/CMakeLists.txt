@@ -23,6 +23,11 @@ endfunction()
 function(esl_add_target target name)
     add_executable(${target} ${name}.cpp)
     target_link_libraries(${target} esl gtest gtest_main)
+	target_compile_options(${target} PRIVATE
+				$<$<CXX_COMPILER_ID:MSVC>:/W3 /WX>
+				$<$<CXX_COMPILER_ID:GNU>:-Wall -W -Werror -Wno-mismatched-tags>
+				$<$<CXX_COMPILER_ID:Clang>:-Wall -W -Werror -Wno-mismatched-tags>
+			)
 	set_property(TARGET ${target} PROPERTY CXX_EXTENSIONS OFF)
 	add_test(NAME ${target} COMMAND ${target})
 endfunction()

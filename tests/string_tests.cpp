@@ -54,7 +54,7 @@ TEST(StringTest, split_by_substr) {
 	{
 		std::string str("s1==s23==s345=");
 		std::vector<std::string> ss;
-		auto it = esl::split(str, "==", esl::make_cast_iterator(std::back_inserter(ss)));
+		esl::split(str, "==", esl::make_cast_iterator(std::back_inserter(ss)));
 		ASSERT_TRUE(ss.size() == 3);
 		ASSERT_TRUE((ss[0] == "s1" && ss[1] == "s23" && ss[2] == "s345="));
 	}
