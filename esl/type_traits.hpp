@@ -102,7 +102,7 @@ ESL_TRAITS_MEMBER_TYPE_ESL_(mutex_type)
 
 // add_const_lvalue_reference, add_const_lvalue_reference_t
 template <class T>
-using add_const_lvalue_reference = std::add_lvalue_reference<std::add_const_t<T>>;;
+using add_const_lvalue_reference = std::add_lvalue_reference<std::add_const_t<T>>;
 template <class T>
 using add_const_lvalue_reference_t = typename add_const_lvalue_reference<T>::type;
 

@@ -7,8 +7,34 @@
 #include <array>
 #include <utility>
 #include <initializer_list>
+#include <type_traits>
+#include <cstring>
 
 namespace esl {
+
+inline namespace casts {
+
+template <class To, class From>
+inline constexpr To implicit_cast(From&& v) {
+	return std::forward<From>(v);
+}
+
+template <class To, class From>
+inline constexpr To narrow_cast(From&& v) {
+	return static_cast<To>(std::forward<From>(v));
+}
+
+template <class To, class From>
+inline constexpr To bit_cast(const From& v) noexcept {
+	static_assert(std::is_pod_v<From>, "bit_cast source type should be POD");
+	static_assert(std::is_pod_v<To>, "bit_cast destination type should be POD");
+	static_assert(sizeof(From) == sizeof(To), "bit_cast types should have same size");
+	To to{};
+	std::memcpy(&to, &v, sizeof(To));
+	return to;
+}
+
+} // inline namespace casts
 
 template <class T, std::size_t Size, std::size_t N, class U>
 constexpr std::array<T, Size> transpose_integer_array(U* arr, std::initializer_list<std::pair<U, T>> kvs) {
