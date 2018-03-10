@@ -9,6 +9,7 @@ TEST(UtilsTest, casts) {
 		int a;
 	};
 	struct B: public A {
+		B(int a, char b): A{a}, b(b) {}
 		char b;
 	};
 	struct C {
@@ -20,7 +21,7 @@ TEST(UtilsTest, casts) {
 	};
 
 	{
-		B b{{1}, 2};
+		B b{1, 2};
 		A& a = implicit_cast<A&>(b);
 		ASSERT_EQ(a.a, 1);
 	}
