@@ -14,7 +14,7 @@ namespace esl {
 template <class T, class... Args>
 class lazy {
 public:
-	using element_type = T;
+	using type = T;
 	using reference = T&;
 	using const_reference = const T&;
 	using pointer = T*;
@@ -27,7 +27,7 @@ private:
 
 	template <std::size_t... Is>
 	void construct_(std::index_sequence<Is...>) const {
-		std::call_once(once_flag_, [this]() { return new(static_cast<void*>(&val_)) T(std::forward<Args>(std::get<Is>(args_))...); });
+		std::call_once(once_flag_, [this]() { new(static_cast<void*>(&val_)) T(std::forward<Args>(std::get<Is>(args_))...); });
 	}
 
 	pointer construct_() const {
@@ -37,7 +37,7 @@ private:
 
 public:
 	template <class... FArgs>
-	constexpr lazy(FArgs&&... args): args_(std::forward<FArgs>(args)...) {}
+	explicit lazy(FArgs&&... args): args_(std::forward<FArgs>(args)...) {}
 
 	lazy(const lazy&) = delete;
 
@@ -49,17 +49,13 @@ public:
 
 	lazy& operator=(lazy&&) = delete;
 
-	pointer address() { return this->construct_(); }
+	reference get() { return *this->construct_(); }
 
-	const_pointer address() const { return this->construct_(); }
+	const_reference get() const { return *this->construct_(); }
 
-	pointer operator&() { return this->address(); }
+	pointer operator&() { return this->construct_(); }
 
-	const_pointer operator&() const { return this->address(); }
-
-	explicit operator reference() { return *this->address(); }
-
-	explicit operator const_reference() const { return *this->address(); }
+	const_pointer operator&() const { return this->construct_(); }
 };
 
 } // namespace esl

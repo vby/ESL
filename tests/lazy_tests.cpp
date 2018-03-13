@@ -40,11 +40,7 @@ TEST(LazyTest, lazy_without_args) {
 		ASSERT_EQ(class_a_count, 1);
 
 		// address
-		ASSERT_EQ(lazy_a1.address()->x, 1);
-		ASSERT_EQ(class_a_count, 1);
-
-		// operator reference
-		ASSERT_EQ(static_cast<ClassA&>(lazy_a1).x, 1);
+		ASSERT_EQ(lazy_a1.get().x, 1);
 		ASSERT_EQ(class_a_count, 1);
 
 		(&lazy_a1)->x = 10;
@@ -59,7 +55,7 @@ TEST(LazyTest, lazy_without_args) {
 	ASSERT_EQ(class_a_count, 0);
 }
 
-TEST(LazyTest, lazy_construct_with_args) {
+TEST(LazyTest, lazy_with_args) {
 	// exact type of args
 	{
 		esl::lazy<ClassA, int, const std::string&> lazy_a(10, "a1");

@@ -1,6 +1,6 @@
 
-#ifndef ESL_FILE_UTILS_HPP
-#define ESL_FILE_UTILS_HPP
+#ifndef ESL_IO_HPP
+#define ESL_IO_HPP
 
 #include <memory>
 #include <cstdio>
@@ -21,5 +21,5 @@ using unique_FILE = std::unique_ptr<std::FILE, FILE_delete>;
 
 } // namespace esl
 
-#endif //ESL_FILE_UTILS_HPP
+#endif //ESL_IO_HPP
 
