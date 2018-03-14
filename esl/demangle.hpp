@@ -3,47 +3,36 @@
 #define ESL_DEMANGLE_HPP
 
 #if __has_include(<cxxabi.h>)
-#define ESL_HAS_DEMANGLE
+	#define ESL_HAS_DEMANGLE
+	#include <cxxabi.h>
+	#include <typeinfo>
+#endif
 
-#include "string.hpp"
-
-#include <cxxabi.h>
-#include <typeinfo>
+#include "memory.hpp"
 
 namespace esl {
 
 // demangle
 // Exceptions: std::bad_alloc
-inline c_unique_chars demangle(const char* abi_name) {
+inline c_unique_ptr<char> demangle(const char* mangled_name) {
+#ifdef ESL_HAS_DEMANGLE
 	int status;
-	char* name = abi::__cxa_demangle(abi_name, nullptr, nullptr, &status);
+	c_unique_ptr<char> name(abi::__cxa_demangle(mangled_name, nullptr, nullptr, &status));
 	if (status == 0) {
-		return c_unique_chars(name);
+		return name;
 	} else if (status == -1) {
 		throw std::bad_alloc{};
 	} else {
-		if (name) {
-			std::free(name);
-		}
+		name.reset();
 	}
-	return c_unique_chars{};
-}
-
-} // namespace esl
-
-#endif
-
-namespace esl {
-
-inline std::string type_name(const std::type_info& type_info) {
-#ifdef ESL_HAS_DEMANGLE
-	return demangle(type_info.name());
+	return name;
 #else
-	return type_info.name();
+	#error "Not implemented."
 #endif
 }
 
 } // namespace esl
+
 
 #endif //ESL_DEMANGLE_HPP
 

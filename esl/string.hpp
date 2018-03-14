@@ -60,36 +60,8 @@ inline constexpr int constexpr_wcsncmp(const wchar_t* l, const wchar_t* r, std::
 	return constexpr_strncmp_(l, r, count);
 }
 
-// basic_unique_chars
-// A unique_ptr of CharT[] that can be cast to std::basic_string or std::basic_string_view
-template <class CharT, class Deleter = std::default_delete<CharT[]>>
-struct basic_unique_chars: public std::unique_ptr<CharT[], Deleter> {
-private:
-	using unique_ptr = std::unique_ptr<CharT[], Deleter>;
 
-public:
-	using unique_ptr::unique_ptr;
-
-	template <class Traits>
-	explicit operator std::basic_string_view<CharT, Traits>() const noexcept {
-		return (*this) ? this->get() : "";
-	}
-
-	template <class Traits, class Alloc>
-	operator std::basic_string<CharT, Traits, Alloc>() const {
-		return (*this) ? this->get() : "";
-	}
-};
-
-using unique_chars = basic_unique_chars<char>;
-using wunique_chars = basic_unique_chars<wchar_t>;
-using u16unique_chars = basic_unique_chars<char16_t>;
-using u32unique_chars = basic_unique_chars<char32_t>;
-
-using c_unique_chars = basic_unique_chars<char, c_free_delete>;
-using c_wunique_chars = basic_unique_chars<wchar_t, c_free_delete>;
-using c_u16unique_chars = basic_unique_chars<char16_t, c_free_delete>;
-using c_u32unique_chars = basic_unique_chars<char32_t, c_free_delete>;
+/// traits ///
 
 namespace details {
 
@@ -165,6 +137,9 @@ struct string_view_of<T, true> {
 };
 template <class T>
 using string_view_of_t = typename string_view_of<T>::type;
+
+
+/// functions ///
 
 // make_string_view
 template <class S, class StrV = string_view_of_t<S>>
