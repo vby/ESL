@@ -10,6 +10,8 @@
 
 #include "memory.hpp"
 
+#include <exception>
+
 namespace esl {
 
 // demangle
@@ -27,7 +29,7 @@ inline c_unique_ptr<char> demangle(const char* mangled_name) {
 	}
 	return name;
 #else
-	#error "Not implemented."
+	std::terminate();
 #endif
 }
 
