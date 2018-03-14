@@ -10,6 +10,33 @@
 
 namespace esl {
 
+namespace details {
+
+    template <template <class...> class B, class... Ps>
+    std::true_type is_base_of_template_pre_test(B<Ps...>*);
+    template <template <class...> class B>
+    std::false_type is_base_of_template_pre_test(void*);
+    template <template <class...> class B, class D>
+    using is_base_of_template_pre = decltype(details::is_base_of_template_pre_test<B>(std::declval<D*>()));
+
+} // namespace details
+
+// is_base_of_template, is_base_of_template_v
+template <template <class...> class B, class D, class = void>
+struct is_base_of_template : std::true_type {};
+template <template <class...> class B, class D>
+struct is_base_of_template<B, D, std::void_t<details::is_base_of_template_pre<B, D>>>: details::is_base_of_template_pre<B, D> {};
+template <template <class...> class B, class D>
+inline constexpr bool is_base_of_template_v = is_base_of_template<B, D>::value;
+
+// is_one_of
+template <class T, class... Us>
+struct is_one_of: std::false_type {};
+template <class T, class U, class... Us>
+struct is_one_of<T, U, Us...>: std::bool_constant<std::is_same_v<T, U> || is_one_of<T, Us...>::value> {};
+template <class T, class... Us>
+inline constexpr bool is_one_of_v = is_one_of<T, Us...>::value;
+
 // ESL_TRAITS_WELL_FORMED
 #define ESL_TRAITS_WELL_FORMED(name, type_expr) \
 	template <class T, class = std::void_t<>> \
@@ -112,6 +139,12 @@ using remove_cv_reference = std::remove_cv<std::remove_reference_t<T>>;
 template <class T>
 using remove_cv_reference_t = typename remove_cv_reference<T>::type;
 
+// remove_cv_pointer, remove_cv_pointer_t
+template <class T>
+using remove_cv_pointer = std::remove_cv<std::remove_pointer_t<T>>;
+template <class T>
+using remove_cv_pointer_t = typename remove_cv_pointer<T>::type;
+
 // remove_rp, remove_rp_t
 template <class T>
 using remove_rp = std::remove_pointer<std::remove_reference_t<T>>;
@@ -187,6 +220,12 @@ struct as_reference_as<T, Ref, false, true> {
 };
 template <class T, class Ref>
 using as_reference_as_t = typename as_reference_as<T, Ref>::type;
+
+// not_void_or, not_void_or_t
+template <class T, class U>
+using not_void_or = std::conditional<!std::is_void_v<T>, T, U>;
+template <class T, class U>
+using not_void_or_t = typename not_void_or<T, U>::type;
 
 // is_function_or_function_pointer, is_function_or_function_pointer_v
 template <class T>

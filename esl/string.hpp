@@ -75,8 +75,8 @@ public:
 		return (*this) ? this->get() : "";
 	}
 
-	template <class Traits, class Allocator>
-	operator std::basic_string<CharT, Traits, Allocator>() const {
+	template <class Traits, class Alloc>
+	operator std::basic_string<CharT, Traits, Alloc>() const {
 		return (*this) ? this->get() : "";
 	}
 };
@@ -91,166 +91,150 @@ using c_wunique_chars = basic_unique_chars<wchar_t, c_free_delete>;
 using c_u16unique_chars = basic_unique_chars<char16_t, c_free_delete>;
 using c_u32unique_chars = basic_unique_chars<char32_t, c_free_delete>;
 
-// Traits
+namespace details {
+
+template <class T>
+struct string_of {
+	using string_type = std::basic_string<typename T::value_type, typename T::traits_type, member_type_allocator_type_t<T, std::allocator<typename T::value_type>>>;
+	using string_view_type = std::basic_string_view<typename T::value_type, typename T::traits_type>;
+};
+template <class CharT>
+struct string_of<CharT*> {
+	using string_type = std::basic_string<std::remove_const_t<CharT>>;
+	using string_view_type = std::basic_string_view<std::remove_const_t<CharT>>;
+};
+
+} // namespace details
+
+// is_char, is_char_v
+template <class T>
+using is_char = is_one_of<T, char, wchar_t, char16_t, char32_t>;
+template <class T>
+inline constexpr bool is_char_v = is_char<T>::value;
+
+// is_string, is_string_v
+template <class T>
+using is_string = is_base_of_template<std::basic_string, T>;
+template <class T>
+inline constexpr bool is_string_v = is_string<T>::value;
+
+// is_string_view, is_string_view_v
+template <class T>
+using is_string_view = is_base_of_template<std::basic_string_view, T>;
+template <class T>
+inline constexpr bool is_string_view_v = is_string_view<T>::value;
 
 // is_string_or_string_view, is_string_or_string_view_v
-template <class T, class CharT = member_type_value_type_t<T, void>,
-		 class Traits = member_type_traits_type_t<T, void>, class Allocator = member_type_allocator_type_t<T, void>>
-struct is_string_or_string_view: std::is_base_of<std::basic_string<CharT, Traits, Allocator>, T> {};
-template <class T, class CharT, class Traits>
-struct is_string_or_string_view<T, CharT, Traits, void>: std::is_base_of<std::basic_string_view<CharT, Traits>, T> {};
-template <class T, class Traits, class Allocator>
-struct is_string_or_string_view<T, void, Traits, Allocator>: std::false_type {};
-template <class T, class CharT, class Allocator>
-struct is_string_or_string_view<T, CharT, void, Allocator>: std::false_type {};
-template <class T, class Allocator>
-struct is_string_or_string_view<T, void, void, Allocator>: std::false_type {};
-template <class T, class Traits>
-struct is_string_or_string_view<T, void, Traits, void>: std::false_type {};
-template <class T, class CharT>
-struct is_string_or_string_view<T, CharT, void, void>: std::false_type {};
 template <class T>
-struct is_string_or_string_view<T, void, void, void>: std::false_type {};
+using is_string_or_string_view = std::bool_constant<is_string_v<T> || is_string_view_v<T>>;
 template <class T>
 inline constexpr bool is_string_or_string_view_v = is_string_or_string_view<T>::value;
 
-// string_view_of, string_view_of_t
-template <class T, class Traits = typename T::traits_type>
-struct string_view_of {
-	using type = std::basic_string_view<typename T::value_type, Traits>;
-};
-template <class T, class Traits = typename T::traits_type>
-using string_view_of_t = typename string_view_of<T, Traits>::type;
+// is_cstring, is_cstring_v
+template <class T>
+using is_cstring_ = std::bool_constant<std::is_pointer_v<T> && is_char_v<remove_cv_pointer_t<T>>>;
+template <class T>
+using is_cstring = is_cstring_<std::decay_t<T>>;
+template <class T>
+inline constexpr bool is_cstring_v = is_cstring<T>::value;
+
+// is_string_type, is_string_type_v
+template <class T>
+struct is_string_type: std::bool_constant<is_cstring_v<T> || is_string_or_string_view_v<T>> {};
+template <class T>
+inline constexpr bool is_string_type_v = is_string_type<T>::value;
 
 // string_of, string_of_t
-template <class T, class Traits = typename T::traits_type,
-		class Allocator = member_type_allocator_type_t<T, std::allocator<typename T::value_type>>>
-struct string_of {
-	using type = std::basic_string<typename T::value_type, Traits, Allocator>;
+// SFINAE friendly
+template <class T, bool = is_string_type_v<std::decay_t<T>>>
+struct string_of;
+template <class T>
+struct string_of<T, true> {
+	using type = typename details::string_of<std::decay_t<T>>::string_type;
 };
-template <class T, class Traits = typename T::traits_type,
-		class Allocator = member_type_allocator_type_t<T, std::allocator<typename T::value_type>>>
-using string_of_t = typename string_of<T, Traits, Allocator>::type;
+template <class T>
+using string_of_t = typename string_of<T>::type;
 
-// to_string_view
-template <class CharT, class Traits, class Allocator>
-inline std::basic_string_view<CharT, Traits> to_string_view(const std::basic_string<CharT, Traits, Allocator>& s) noexcept {
-	// operator std::basic_string_view<CharT, Traits>
-	return s;
-}
-template <class CharT, class Traits = std::char_traits<CharT>>
-inline std::basic_string_view<CharT, Traits> to_string_view(const CharT* s) noexcept {
-	return std::basic_string_view<CharT, Traits>(s);
-}
+// string_view_of, string_view_of_t
+// SFINAE friendly
+template <class T, bool = is_string_type_v<std::decay_t<T>>>
+struct string_view_of;
+template <class T>
+struct string_view_of<T, true> {
+	using type = typename details::string_of<std::decay_t<T>>::string_view_type;
+};
+template <class T>
+using string_view_of_t = typename string_view_of<T>::type;
 
-// to_string
-template <class CharT, class Traits, class Allocator = std::allocator<CharT>>
-inline std::basic_string<CharT, Traits, Allocator> to_string(const std::basic_string_view<CharT, Traits>& s) {
-	return std::basic_string<CharT, Traits, Allocator>(s);
-}
-template <class CharT, class Traits = std::char_traits<CharT>, class Allocator = std::allocator<CharT>>
-inline std::basic_string<CharT, Traits, Allocator> to_string(const CharT* s) {
-	return std::basic_string<CharT, Traits, Allocator>(s);
+// make_string_view
+template <class S, class StrV = string_view_of_t<S>>
+inline StrV make_string_view(const S& s) noexcept { return StrV(s); }
+
+template <class S, class StrV = string_view_of_t<S>>
+inline StrV make_string_view(const S& s, typename StrV::size_type pos, typename StrV::size_type count = StrV::npos) noexcept {
+	return StrV(s).substr(pos, count);
 }
 
-// substr return string_view
-template <class CharT, class Traits, class T = std::basic_string_view<CharT, Traits>>
-inline std::basic_string_view<CharT, Traits> substr(const std::basic_string_view<CharT, Traits>& s,
-		typename T::size_type pos = 0, typename T::size_type count = T::npos) {
-	return s.substr(pos, count);
-}
-template <class CharT, class Traits, class Allocator, class T = std::basic_string<CharT, Traits, Allocator>>
-inline std::basic_string_view<CharT, Traits> substr(const std::basic_string<CharT, Traits, Allocator>& s,
-		typename T::size_type pos = 0, typename T::size_type count = T::npos) {
-	return std::basic_string_view<CharT, Traits>(s).substr(pos, count);
-}
-template <class CharT, class Traits = std::char_traits<CharT>, class T = std::basic_string_view<CharT, Traits>>
-inline std::basic_string_view<CharT, Traits> substr(const CharT* s,
-		typename T::size_type pos = 0, typename T::size_type count = T::npos) {
-	return std::basic_string_view<CharT, Traits>(s).substr(pos, count);
+// make_string
+template <class S, class Str = string_of_t<S>>
+inline Str make_string(const S& s) { return Str(s); }
+
+template <class S, class Str = string_of_t<S>>
+inline Str make_string(S&& s) { return Str(std::move(s)); }
+
+template <class S, class Str = string_of_t<S>, class StrV = string_view_of_t<S>>
+inline Str make_string(const S& s, typename StrV::size_type pos, typename StrV::size_type count = StrV::npos) {
+	return Str(make_string_view(s, pos, count));
 }
 
-// split by CharT
-template <class CharT, class Traits, class OutputIt>
-OutputIt split(const std::basic_string_view<CharT, Traits>& s, CharT delim, OutputIt d_first) {
-	using size_type = typename std::basic_string_view<CharT, Traits>::size_type;
-	size_type pos = 0;
-	for (size_type i = 0; i < s.length(); ++i) {
+// split
+template <class S, class OutputIt, class StrV = string_view_of_t<S>>
+OutputIt split(const S& s, typename StrV::value_type delim, OutputIt d_first) {
+	auto v = make_string_view(s);
+	typename StrV::size_type pos = 0;
+	for (typename StrV::size_type i = 0; i < s.length(); ++i) {
 		if (s[i] == delim) {
-			*d_first = s.substr(pos, i - pos);
+			*d_first = v.substr(pos, i - pos);
 			++d_first;
 			pos = i + 1;
 		}
 	}
-	*d_first = s.substr(pos);
+	*d_first = v.substr(pos);
 	++d_first;
 	return d_first;
 }
-template <class CharT, class Traits, class Allocator, class OutputIt>
-inline OutputIt split(const std::basic_string<CharT, Traits, Allocator>& s, CharT delim, OutputIt d_first) {
-	return split(std::basic_string_view<CharT, Traits>(s), delim, d_first);
-}
-template <class CharT, class Traits = std::char_traits<CharT>, class OutputIt>
-inline OutputIt split(const CharT* s, CharT delim, OutputIt d_first) {
-	return split(std::basic_string_view<CharT, Traits>(s), delim, d_first);
-}
-
-// split by str
-template <class CharT, class Traits, class OutputIt>
-OutputIt split_(const std::basic_string_view<CharT, Traits>& s, const std::basic_string_view<CharT, Traits>& delim, OutputIt d_first) {
-	using size_type = typename std::basic_string_view<CharT, Traits>::size_type;
-	size_type pos = 0;
+template <class S, class OutputIt, class StrVOf = string_view_of<S>, class StrV = typename StrVOf::type>
+OutputIt split(const S& s, const typename StrVOf::type& delim, OutputIt d_first) {
+	auto v = make_string_view(s);
+	typename StrV::size_type pos = 0;
 	do {
-		size_type end_pos = s.find(delim, pos);
-		if (end_pos == std::basic_string_view<CharT, Traits>::npos) {
-			*d_first = s.substr(pos);
+		typename StrV::size_type end_pos = v.find(delim, pos);
+		if (end_pos == StrV::npos) {
+			*d_first = v.substr(pos);
 			++d_first;
 			break;
 		}
-		*d_first = s.substr(pos, end_pos - pos);
+		*d_first = v.substr(pos, end_pos - pos);
 		++d_first;
 		pos = end_pos + delim.size();
 	} while(true);
 	return d_first;
 }
-template <class CharT, class Traits, class SV, class OutputIt>
-inline OutputIt split(const std::basic_string_view<CharT, Traits>& s, const SV& delim, OutputIt d_first) {
-	return split_(s, std::basic_string_view<CharT, Traits>(delim), d_first);
-}
-template <class CharT, class Traits, class Allocator, class SV, class OutputIt>
-inline OutputIt split(const std::basic_string<CharT, Traits, Allocator>& s, const SV& delim, OutputIt d_first) {
-	return split_(std::basic_string_view<CharT, Traits>(s), std::basic_string_view<CharT, Traits>(delim), d_first);
-}
-template <class CharT, class Traits = std::char_traits<CharT>, class SV, class OutputIt>
-inline OutputIt split(const CharT* s, const SV& delim, OutputIt d_first) {
-	return split_(std::basic_string_view<CharT, Traits>(s), std::basic_string_view<CharT, Traits>(delim), d_first);
-}
 
 // join
-template <class Allocator, class CharT, class Traits, class InputIt>
-std::basic_string<CharT, Traits, Allocator> join_(const std::basic_string_view<CharT, Traits>& delim, InputIt first, InputIt last) {
-	std::basic_string<CharT, Traits, Allocator> str;
+template <class S, class InputIt, class Str = string_of_t<S>>
+Str join(const S& delim, InputIt first, InputIt last) {
+	auto dv = make_string_view(delim);
+	Str s;
 	if (first != last) {
 		do {
-			str.append(*first);
-			str.append(delim);
+			s.append(*first);
+			s.append(dv);
 			++first;
 		} while (first != last);
-		str.resize(str.size() - delim.size());
+		s.resize(s.size() - dv.size());
 	}
-	return std::move(str);
-}
-template <class CharT, class Allocator = std::allocator<CharT>, class Traits, class InputIt>
-inline std::basic_string<CharT, Traits, Allocator> join_(const std::basic_string_view<CharT, Traits>& delim, InputIt first, InputIt last) {
-	return join_<Allocator>(delim, first, last);
-}
-template <class CharT, class Traits, class Allocator, class InputIt>
-inline std::basic_string<CharT, Traits, Allocator> join(const std::basic_string<CharT, Traits, Allocator>& delim, InputIt first, InputIt last) {
-	return join_<Allocator>(std::basic_string_view<CharT, Traits>(delim), first, last);
-}
-template <class CharT, class Traits = std::char_traits<CharT>, class Allocator = std::allocator<CharT>, class InputIt>
-inline std::basic_string<CharT, Traits, Allocator> join(const CharT* delim, InputIt first, InputIt last) {
-	return join_<Allocator>(std::basic_string_view<CharT, Traits>(delim), first, last);
+	return std::move(s);
 }
 
 } //namespace esl

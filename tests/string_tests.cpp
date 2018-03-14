@@ -28,14 +28,23 @@ TEST(StringTest, constexpr_str_functions) {
 	static_assert(esl::constexpr_strncmp("abcd", "abc", 5) > 0);
 }
 
-TEST(StringTest, substr) {
-	{
-		std::string str("adbcdef");
-		std::string_view sv(str.data(), str.size());
-		auto ss = esl::substr(str, 1, 3);
-		ASSERT_EQ(ss.size(), 3);
-		ASSERT_EQ(ss[0], 'd');
-	}
+TEST(StringTest, make_string) {
+	ASSERT_EQ(esl::make_string("hello"), "hello");
+	ASSERT_EQ(esl::make_string("hello", 1, 3), "ell");
+	std::string_view s("shello");
+	ASSERT_EQ(esl::make_string(s), "shello");
+}
+namespace esl {
+	void make_string_view(int) {}
+}
+
+TEST(StringTest, make_string_view) {
+	ASSERT_EQ(esl::make_string_view("hello"), "hello");
+	ASSERT_EQ(esl::make_string_view("hello", 1, 3), "ell");
+	std::string s("shello");
+	ASSERT_EQ(esl::make_string_view(s), "shello");
+	int a = 0;
+	esl::make_string_view(a);
 }
 
 TEST(StringTest, split_by_char) {
