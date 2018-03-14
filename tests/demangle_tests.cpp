@@ -1,6 +1,6 @@
 
 #include <gtest/gtest.h>
-#include <esl/typeinfo.hpp>
+#include <esl/demangle.hpp>
 
 struct TypeinfoTestClassBase {
 	virtual ~TypeinfoTestClassBase() = default;
@@ -32,27 +32,5 @@ TEST(TypeinfoTest, demangle) {
 	}
 }
 
-TEST(TypeinfoTest, typeid_name) {
-	TypeinfoTestClassA a;
-	TypeinfoTestClassBase& b = a;
-	{
-		auto name = esl::typeid_name(typeid(a)); 
-		ASSERT_EQ(name, "TypeinfoTestClassA");
-	}
-	{
-		auto name = esl::typeid_name(a); 
-		ASSERT_EQ(name, "TypeinfoTestClassA");
-	}
-	{
-		auto name = esl::typeid_name(b); 
-		ASSERT_EQ(name, "TypeinfoTestClassA");
-	}
-	{
-		auto name = esl::typeid_name<TypeinfoTestClassA>(); 
-		ASSERT_EQ(name, "TypeinfoTestClassA");
-	}
-}
-
 #endif // ESL_HAS_DEMANGLE
-
 
