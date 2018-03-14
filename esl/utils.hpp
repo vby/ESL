@@ -2,6 +2,8 @@
 #ifndef ESL_UTILS_HPP
 #define ESL_UTILS_HPP
 
+#include "type_traits.hpp"
+
 #include <cstdint>
 #include <limits>
 #include <array>
@@ -67,6 +69,15 @@ constexpr std::array<T, Size> transpose_integer_array(U (&arr)[N], std::initiali
 template <class T, std::size_t Size, class U, std::size_t N>
 constexpr std::array<T, Size> transpose_integer_array(const std::array<T, N>& arr, std::initializer_list<std::pair<U, T>> kvs) {
 	return transpose_integer_array<T, Size, N>(arr, kvs);
+}
+
+template <class C, class... Args>
+void emplace_back_or_emplace(C& c, Args&&... args) {
+	if constexpr (is_emplace_backable_v<C, Args...>) {
+		c.emplace(std::forward<Args>(args)...);
+	} else {
+		c.emplace_back(std::forward<Args>(args)...);
+	}
 }
 
 } // namespace esl
