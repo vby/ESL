@@ -72,11 +72,13 @@ constexpr std::array<T, Size> transpose_integer_array(const std::array<T, N>& ar
 }
 
 template <class C, class... Args>
-void emplace_back_or_emplace(C& c, Args&&... args) {
+void add_emplace(C& c, Args&&... args) {
 	if constexpr (is_emplace_backable_v<C, Args...>) {
+		c.emplace_back(std::forward<Args>(args)...);
+	} else if constexpr (is_emplaceable_v<C, Args...>) {
 		c.emplace(std::forward<Args>(args)...);
 	} else {
-		c.emplace_back(std::forward<Args>(args)...);
+		c.emplace_front(std::forward<Args>(args)...);
 	}
 }
 

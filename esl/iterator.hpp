@@ -1,17 +1,17 @@
 #ifndef ESL_ITERATOR_HPP
 #define ESL_ITERATOR_HPP
 
-#include "type_traits.hpp"
+#include "utils.hpp"
 
+#include <type_traits>
 #include <iterator>
+#include <memory>
 
 namespace esl {
 
-template <class DIter, class UIter>
-class noop_output_iterator: public UIter {
+template <class DIter>
+class noop_output_iterator {
 public:
-	explicit noop_output_iterator(UIter it): UIter(it) {}
-
 	DIter& operator*() noexcept { return static_cast<DIter&>(*this); }
 
 	constexpr DIter& operator++() noexcept { return static_cast<DIter&>(*this); }
@@ -19,17 +19,23 @@ public:
 	constexpr DIter& operator++(int) noexcept { return static_cast<DIter&>(*this); }
 };
 
-template <class UIter>
-class cast_iterator: public noop_output_iterator<cast_iterator<UIter>, UIter> {
+// cast_iterator
+template <class Iterator>
+class cast_iterator: public noop_output_iterator<cast_iterator<Iterator>> {
+private:
+	Iterator current_;
+
 public:
-	using noop_output_iterator<cast_iterator<UIter>, UIter>::noop_output_iterator;
+	explicit cast_iterator(Iterator it): current_(it) {}
+
+	cast_iterator& operator=(const cast_iterator&) noexcept = default;
 
 	template <class T>
-	cast_iterator& operator=(T&& value) {
-		if constexpr (std::is_assignable_v<UIter, T&&>) {
-			this->UIter::operator=(std::forward<T>(value));
+	constexpr cast_iterator& operator=(T&& value) {
+		if constexpr (std::is_assignable_v<Iterator, T&&>) {
+			current_ = std::forward<T>(value);
 		} else {
-			this->UIter::operator=(std::move(static_cast<typename UIter::container_type::value_type>(std::forward<T>(value))));
+			current_ = std::move(static_cast<typename Iterator::container_type::value_type>(std::forward<T>(value)));
 		}
 		return *this;
 	}
@@ -38,6 +44,34 @@ public:
 template <class Iterator>
 inline constexpr cast_iterator<Iterator> make_cast_iterator(Iterator it) {
 	return cast_iterator<Iterator>(it);
+}
+
+// add_iterator
+template <class Container>
+class add_iterator: public noop_output_iterator<add_iterator<Container>> {
+private:
+	Container* c_;
+
+public:
+	explicit add_iterator(Container& c): c_(std::addressof(c)) {}
+
+	add_iterator& operator=(const add_iterator&) noexcept = default;
+
+	template <class T>
+	add_iterator& operator=(T&& value) {
+		add_emplace(*c_, std::forward<T>(value));
+		return *this;
+	}
+};
+
+template <class Container>
+inline constexpr add_iterator<Container> make_add_iterator(Container& c) {
+	return add_iterator<Container>(c);
+}
+
+template <class Container>
+inline constexpr cast_iterator<add_iterator<Container>> make_cast_add_iterator(Container& c) {
+	return make_cast_iterator(make_add_iterator(c));
 }
 
 } // namespace esl

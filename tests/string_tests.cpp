@@ -5,6 +5,7 @@
 #include <esl/iterator.hpp>
 
 #include <vector>
+#include <set>
 #include <iterator>
 
 TEST(StringTest, constexpr_str_functions) {
@@ -34,17 +35,12 @@ TEST(StringTest, make_string) {
 	std::string_view s("shello");
 	ASSERT_EQ(esl::make_string(s), "shello");
 }
-namespace esl {
-	void make_string_view(int) {}
-}
 
 TEST(StringTest, make_string_view) {
 	ASSERT_EQ(esl::make_string_view("hello"), "hello");
 	ASSERT_EQ(esl::make_string_view("hello", 1, 3), "ell");
 	std::string s("shello");
 	ASSERT_EQ(esl::make_string_view(s), "shello");
-	int a = 0;
-	esl::make_string_view(a);
 }
 
 TEST(StringTest, split_by_char) {
@@ -56,6 +52,16 @@ TEST(StringTest, split_by_char) {
 		ASSERT_TRUE((ss[0] == "s1" && ss[1] == "s23" && ss[2] == "s345"));
 		esl::split(str, ',', it);
 		ASSERT_TRUE(ss.size() == 6);
+	}
+	{
+		std::string str("a;bc;def;gh");
+		std::vector<std::string_view> svec;
+		esl::split(str, ';', esl::make_add_iterator(svec));
+		ASSERT_EQ(svec.size(), 4);
+
+		std::set<std::string_view> sset;
+		esl::split(str, ';', esl::make_add_iterator(sset));
+		ASSERT_EQ(sset.size(), 4);
 	}
 }
 
