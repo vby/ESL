@@ -65,44 +65,51 @@ inline constexpr int constexpr_wcsncmp(const wchar_t* l, const wchar_t* r, std::
 
 namespace details {
 
-template <class T>
+template <class T, bool = std::is_class_v<T>>
 struct string_of {
 	using string_type = std::basic_string<typename T::value_type, typename T::traits_type, member_type_allocator_type_t<T, std::allocator<typename T::value_type>>>;
 	using string_view_type = std::basic_string_view<typename T::value_type, typename T::traits_type>;
 };
 template <class CharT>
-struct string_of<CharT*> {
-	using string_type = std::basic_string<std::remove_const_t<CharT>>;
-	using string_view_type = std::basic_string_view<std::remove_const_t<CharT>>;
+struct string_of<CharT*, false> {
+	using string_type = std::basic_string<std::remove_cv_t<CharT>>;
+	using string_view_type = std::basic_string_view<std::remove_cv_t<CharT>>;
+};
+template <class CharT>
+struct string_of<CharT, false> {
+	using string_type = std::basic_string<CharT>;
+	using string_view_type = std::basic_string_view<CharT>;
 };
 
 } // namespace details
 
-// is_char, is_char_v
+// is_char, is_char_v (ignoring cv)
 template <class T>
-using is_char = is_one_of<T, char, wchar_t, char16_t, char32_t>;
+using is_char_ = is_one_of<T, char, wchar_t, char16_t, char32_t>;
+template <class T>
+using is_char = is_char_<std::remove_cv_t<T>>;
 template <class T>
 inline constexpr bool is_char_v = is_char<T>::value;
 
-// is_string, is_string_v
+// is_string, is_string_v (ignoring cv)
 template <class T>
 using is_string = is_base_of_template<std::basic_string, T>;
 template <class T>
 inline constexpr bool is_string_v = is_string<T>::value;
 
-// is_string_view, is_string_view_v
+// is_string_view, is_string_view_v (ignoring cv)
 template <class T>
 using is_string_view = is_base_of_template<std::basic_string_view, T>;
 template <class T>
 inline constexpr bool is_string_view_v = is_string_view<T>::value;
 
-// is_string_or_string_view, is_string_or_string_view_v
+// is_string_or_string_view, is_string_or_string_view_v (ignoring cv)
 template <class T>
 using is_string_or_string_view = std::bool_constant<is_string_v<T> || is_string_view_v<T>>;
 template <class T>
 inline constexpr bool is_string_or_string_view_v = is_string_or_string_view<T>::value;
 
-// is_cstring, is_cstring_v
+// is_cstring, is_cstring_v (ignoring cv)
 template <class T>
 using is_cstring_ = std::bool_constant<std::is_pointer_v<T> && is_char_v<remove_cv_pointer_t<T>>>;
 template <class T>
@@ -110,15 +117,15 @@ using is_cstring = is_cstring_<std::decay_t<T>>;
 template <class T>
 inline constexpr bool is_cstring_v = is_cstring<T>::value;
 
-// is_string_type, is_string_type_v
+// is_string_type, is_string_type_v (ignoring cv)
 template <class T>
 struct is_string_type: std::bool_constant<is_cstring_v<T> || is_string_or_string_view_v<T>> {};
 template <class T>
 inline constexpr bool is_string_type_v = is_string_type<T>::value;
 
-// string_of, string_of_t
+// string_of, string_of_t (ignoring cv)
 // SFINAE friendly
-template <class T, bool = is_string_type_v<std::decay_t<T>>>
+template <class T, bool = is_string_type_v<T>>
 struct string_of;
 template <class T>
 struct string_of<T, true> {
@@ -127,9 +134,9 @@ struct string_of<T, true> {
 template <class T>
 using string_of_t = typename string_of<T>::type;
 
-// string_view_of, string_view_of_t
+// string_view_of, string_view_of_t (ignoring cv)
 // SFINAE friendly
-template <class T, bool = is_string_type_v<std::decay_t<T>>>
+template <class T, bool = is_string_type_v<T>>
 struct string_view_of;
 template <class T>
 struct string_view_of<T, true> {
@@ -138,12 +145,21 @@ struct string_view_of<T, true> {
 template <class T>
 using string_view_of_t = typename string_view_of<T>::type;
 
+// char_as_cstring (ignoring cv)
+template <class T>
+using char_as_cstring = std::conditional<is_char_v<T>, std::add_pointer_t<T>, T>;
+template <class T>
+using char_as_cstring_t = typename char_as_cstring<T>::type;
+
 
 /// functions ///
 
 // make_string_view
 template <class S, class StrV = string_view_of_t<S>>
 inline StrV make_string_view(const S& s) noexcept { return StrV(s); }
+
+template <class CharT, class = std::enable_if_t<is_char_v<CharT>>, class StrV = std::basic_string_view<CharT>>
+inline StrV make_string_view(const CharT& c) noexcept { return StrV(&c, 1); }
 
 template <class S, class StrV = string_view_of_t<S>>
 inline StrV make_string_view(const S& s, typename StrV::size_type pos, typename StrV::size_type count = StrV::npos) noexcept {
@@ -156,6 +172,9 @@ inline Str make_string(const S& s) { return Str(s); }
 
 template <class S, class Str = string_of_t<S>>
 inline Str make_string(S&& s) { return Str(std::move(s)); }
+
+template <class CharT, class = std::enable_if_t<is_char_v<CharT>>, class Str = std::basic_string<CharT>>
+inline Str make_string(const CharT& c) { return Str(&c, 1); }
 
 template <class S, class Str = string_of_t<S>, class StrV = string_view_of_t<S>>
 inline Str make_string(const S& s, typename StrV::size_type pos, typename StrV::size_type count = StrV::npos) {
@@ -197,7 +216,7 @@ OutputIt split(const S& s, const typename StrVOf::type& delim, OutputIt d_first)
 }
 
 // join
-template <class S, class InputIt, class Str = string_of_t<S>>
+template <class S, class InputIt, class Str = string_of_t<char_as_cstring_t<S>>>
 Str join(const S& delim, InputIt first, InputIt last) {
 	auto dv = make_string_view(delim);
 	Str s;
@@ -209,7 +228,7 @@ Str join(const S& delim, InputIt first, InputIt last) {
 		} while (first != last);
 		s.resize(s.size() - dv.size());
 	}
-	return std::move(s);
+	return s;
 }
 
 } //namespace esl

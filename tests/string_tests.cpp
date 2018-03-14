@@ -43,7 +43,7 @@ TEST(StringTest, make_string_view) {
 	ASSERT_EQ(esl::make_string_view(s), "shello");
 }
 
-TEST(StringTest, split_by_char) {
+TEST(StringTest, split) {
 	{
 		std::string str("s1,s23,s345");
 		std::vector<std::string_view> ss;
@@ -63,9 +63,7 @@ TEST(StringTest, split_by_char) {
 		esl::split(str, ';', esl::make_add_iterator(sset));
 		ASSERT_EQ(sset.size(), 4);
 	}
-}
-
-TEST(StringTest, split_by_substr) {
+	// split_by_substr
 	{
 		std::string str("s1==s23==s345=");
 		std::vector<std::string> ss;
@@ -76,6 +74,11 @@ TEST(StringTest, split_by_substr) {
 }
 
 TEST(StringTest, join) {
+	{
+		std::vector<std::string> ss {"s1", "s22", "s333"};
+		auto str = esl::join(';', ss.begin(), ss.end());
+		ASSERT_EQ(str, "s1;s22;s333");
+	}
 	{
 		std::vector<std::string> ss {"s1", "s22", "s333"};
 		auto str = esl::join("::", ss.begin(), ss.end());

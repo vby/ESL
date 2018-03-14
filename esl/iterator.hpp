@@ -12,6 +12,13 @@ namespace esl {
 template <class DIter>
 class noop_output_iterator {
 public:
+	using value_type = void;
+	using difference_type = void;
+	using pointer = void;
+	using reference = void;
+	using iterator_category = std::output_iterator_tag;
+
+public:
 	DIter& operator*() noexcept { return static_cast<DIter&>(*this); }
 
 	constexpr DIter& operator++() noexcept { return static_cast<DIter&>(*this); }
@@ -35,7 +42,7 @@ public:
 		if constexpr (std::is_assignable_v<Iterator, T&&>) {
 			current_ = std::forward<T>(value);
 		} else {
-			current_ = std::move(static_cast<typename Iterator::container_type::value_type>(std::forward<T>(value)));
+			current_ = typename Iterator::container_type::value_type(std::forward<T>(value));
 		}
 		return *this;
 	}
