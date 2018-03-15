@@ -2,6 +2,7 @@
 #ifndef ESL_SPAN_HPP
 #define ESL_SPAN_HPP
 
+#include "macros.hpp"
 #include "exception.hpp"
 
 #include <string>
@@ -18,7 +19,7 @@ namespace esl {
 
 namespace details {
 
-static constexpr std::size_t span_npos = std::string::npos; 
+static constexpr std::size_t span_npos = std::string::npos;
 
 // span_storage
 template <class pointer, std::size_t N>
@@ -264,11 +265,18 @@ inline constexpr span<const T> make_span(const std::vector<T>& vec) noexcept {
 // std::tuple_size<fixed-span>, std::get<I>(fixed-span)
 namespace std {
 
+ESL_WARNING_PUSH()
+#ifdef ESL_COMPILER_CLANG
+	ESL_WARNING_DISABLE(mismatched-tags)
+#endif
+
 // std::tuple_size
 template <class T, size_t N>
 class tuple_size<esl::span<T, N>>: public integral_constant<size_t, N> {};
 template <class T>
 class tuple_size<esl::span<T, esl::span_npos>> {};
+
+ESL_WARNING_POP()
 
 // std::get
 template <size_t I, class T, size_t N, class = std::enable_if<N != esl::span_npos>>

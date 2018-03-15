@@ -109,17 +109,17 @@ using is_string_or_string_view = std::bool_constant<is_string_v<T> || is_string_
 template <class T>
 inline constexpr bool is_string_or_string_view_v = is_string_or_string_view<T>::value;
 
-// is_cstring, is_cstring_v (ignoring cv)
+// is_zstring, is_zstring_v (ignoring cv)
 template <class T>
-using is_cstring_ = std::bool_constant<std::is_pointer_v<T> && is_char_v<remove_cv_pointer_t<T>>>;
+using is_zstring_ = std::bool_constant<std::is_pointer_v<T> && is_char_v<remove_cvp_t<T>>>;
 template <class T>
-using is_cstring = is_cstring_<std::decay_t<T>>;
+using is_zstring = is_zstring_<std::decay_t<T>>;
 template <class T>
-inline constexpr bool is_cstring_v = is_cstring<T>::value;
+inline constexpr bool is_zstring_v = is_zstring<T>::value;
 
 // is_string_type, is_string_type_v (ignoring cv)
 template <class T>
-struct is_string_type: std::bool_constant<is_cstring_v<T> || is_string_or_string_view_v<T>> {};
+struct is_string_type: std::bool_constant<is_zstring_v<T> || is_string_or_string_view_v<T>> {};
 template <class T>
 inline constexpr bool is_string_type_v = is_string_type<T>::value;
 
@@ -145,11 +145,11 @@ struct string_view_of<T, true> {
 template <class T>
 using string_view_of_t = typename string_view_of<T>::type;
 
-// char_as_cstring (ignoring cv)
+// char_as_zstring (ignoring cv)
 template <class T>
-using char_as_cstring = std::conditional<is_char_v<T>, std::add_pointer_t<T>, T>;
+using char_as_zstring = std::conditional<is_char_v<T>, std::add_pointer_t<T>, T>;
 template <class T>
-using char_as_cstring_t = typename char_as_cstring<T>::type;
+using char_as_zstring_t = typename char_as_zstring<T>::type;
 
 
 /// functions ///
@@ -216,7 +216,7 @@ OutputIt split(const S& s, const typename StrVOf::type& delim, OutputIt d_first)
 }
 
 // join
-template <class S, class InputIt, class Str = string_of_t<char_as_cstring_t<S>>>
+template <class S, class InputIt, class Str = string_of_t<char_as_zstring_t<S>>>
 Str join(const S& delim, InputIt first, InputIt last) {
 	auto dv = make_string_view(delim);
 	Str s;

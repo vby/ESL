@@ -12,12 +12,12 @@ namespace esl {
 
 namespace details {
 
-    template <template <class...> class B, class... Ps>
-    std::true_type is_base_of_template_test(B<Ps...>*);
-    template <template <class...> class B>
-    std::false_type is_base_of_template_test(void*);
-    template <template <class...> class B, class D>
-    using is_base_of_template = decltype(details::is_base_of_template_test<B>(std::declval<D*>()));
+	template <template <class...> class B, class... Ps>
+	std::true_type is_base_of_template_test(B<Ps...>*);
+	template <template <class...> class B>
+	std::false_type is_base_of_template_test(void*);
+	template <template <class...> class B, class D>
+	using is_base_of_template = decltype(details::is_base_of_template_test<B>(std::declval<D*>()));
 
 	template <class From, class To>
 	static std::true_type is_static_castable_test(std::add_pointer_t<decltype(static_cast<To>(std::declval<From>()))>);
@@ -141,23 +141,17 @@ ESL_TRAITS_MEMBER_TYPE_ESL_(weak_type)
 ESL_TRAITS_MEMBER_TYPE_ESL_(native_handle_type)
 ESL_TRAITS_MEMBER_TYPE_ESL_(mutex_type)
 
-// add_const_lvalue_reference, add_const_lvalue_reference_t
+// remove_cvr, remove_cvr_t
 template <class T>
-using add_const_lvalue_reference = std::add_lvalue_reference<std::add_const_t<T>>;
+using remove_cvr = std::remove_cv<std::remove_reference_t<T>>;
 template <class T>
-using add_const_lvalue_reference_t = typename add_const_lvalue_reference<T>::type;
+using remove_cvr_t = typename remove_cvr<T>::type;
 
-// remove_cv_reference, remove_cv_reference_t
+// remove_cvp, remove_cvp_t
 template <class T>
-using remove_cv_reference = std::remove_cv<std::remove_reference_t<T>>;
+using remove_cvp = std::remove_cv<std::remove_pointer_t<T>>;
 template <class T>
-using remove_cv_reference_t = typename remove_cv_reference<T>::type;
-
-// remove_cv_pointer, remove_cv_pointer_t
-template <class T>
-using remove_cv_pointer = std::remove_cv<std::remove_pointer_t<T>>;
-template <class T>
-using remove_cv_pointer_t = typename remove_cv_pointer<T>::type;
+using remove_cvp_t = typename remove_cvp<T>::type;
 
 // remove_rp, remove_rp_t
 template <class T>
@@ -165,11 +159,11 @@ using remove_rp = std::remove_pointer<std::remove_reference_t<T>>;
 template <class T>
 using remove_rp_t = typename remove_rp<T>::type;
 
-// remove_cv_rp, remove_cv_rp_t
+// remove_cvrp, remove_cvrp_t
 template <class T>
-using remove_cv_rp = std::remove_cv<remove_rp_t<T>>;
+using remove_cvrp = std::remove_cv<remove_rp_t<T>>;
 template <class T>
-using remove_cv_rp_t = typename remove_cv_rp<T>::type;
+using remove_cvrp_t = typename remove_cvrp<T>::type;
 
 // to_lvalue_reference, to_lvalue_reference_t
 template <class T>
@@ -207,33 +201,45 @@ using is_const_or_volatile = std::bool_constant<std::is_const_v<T> || std::is_vo
 template <class T>
 inline constexpr bool is_const_or_volatile_v = is_const_or_volatile<T>::value;
 
-// as_const_as, as_const_as_t
+// const_as, const_as_t
 template <class T, class Ref, bool = std::is_const_v<Ref>>
-struct as_const_as {
+struct const_as {
 	using type = std::remove_const_t<T>;
 };
 template <class T, class Ref>
-struct as_const_as<T, Ref, true> {
+struct const_as<T, Ref, true> {
 	using type = std::add_const_t<T>;
 };
 template <class T, class Ref>
-using as_const_as_t = typename as_const_as<T, Ref>::type;
+using const_as_t = typename const_as<T, Ref>::type;
 
-// as_reference_as, as_reference_as_t
+// pointer_as, pointer_as_t
+template <class T, class Ref, bool = std::is_pointer_v<Ref>>
+struct pointer_as {
+	using type = std::remove_pointer_t<T>;
+};
+template <class T, class Ref>
+struct pointer_as<T, Ref, true> {
+	using type = std::add_pointer_t<T>;
+};
+template <class T, class Ref>
+using pointer_as_t = typename pointer_as<T, Ref>::type;
+
+// reference_as, reference_as_t
 template <class T, class Ref, bool = std::is_lvalue_reference_v<Ref>, bool = std::is_rvalue_reference_v<Ref>>
-struct as_reference_as {
+struct reference_as {
 	using type = std::remove_reference_t<T>;
 };
 template <class T, class Ref>
-struct as_reference_as<T, Ref, true, false> {
+struct reference_as<T, Ref, true, false> {
 	using type = to_lvalue_reference_t<T>;
 };
 template <class T, class Ref>
-struct as_reference_as<T, Ref, false, true> {
+struct reference_as<T, Ref, false, true> {
 	using type = to_rvalue_reference_t<T>;
 };
 template <class T, class Ref>
-using as_reference_as_t = typename as_reference_as<T, Ref>::type;
+using reference_as_t = typename reference_as<T, Ref>::type;
 
 // not_void_or, not_void_or_t
 template <class T, class U>
@@ -337,7 +343,7 @@ using noexcept_function_of_t = typename function_of<T, Ret, Args...>::noexcept_t
 template <class T, class Ret, class... Args>
 struct member_function_pointer_of {
 private:
-	using class_type = remove_cv_reference_t<T>;
+	using class_type = remove_cvr_t<T>;
 	using function_of_type = function_of<T, Ret, Args...>;
 public:
 	using type = typename function_of_type::type class_type::*;

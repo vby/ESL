@@ -29,6 +29,7 @@
 	#define ESL_COMPILER_VERSION_PATCHLEVEL __clang_patchlevel__
 #elif defined __GNUC__
 	#define ESL_COMPILER_GNU
+	#define ESL_COMPILER_GNU_NOT_CLANG
 	#define ESL_COMPILER_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
 	#define ESL_COMPILER_VERSION_MAJOR __GNUC__
 	#define ESL_COMPILER_VERSION_MINOR __GNUC_MINOR__
@@ -40,6 +41,8 @@
 	#define ESL_SOURCE_WIN32
 	#ifdef _WIN64
 		#define ESL_SOURCE_WIN64
+	#else
+		#define ESL_SOURCE_WIN32_NOT_WIN64
 	#endif
 #endif
 #ifdef _POSIX_SOURCE
@@ -109,6 +112,31 @@
 	#define ESL_ARCH_AVX2
 #endif
 
+// ESL_STRINGIFY
+#define ESL_QUOTE(name) #name
+#define ESL_STRINGIFY(name) ESL_QUOTE(name)
+
+#ifdef ESL_COMPILER_MSVC
+	#define ESL_WARNING_PUSH() __pragma(warning(push))
+	#define ESL_WARNING_POP() __pragma(warning(pop))
+	#define ESL_WARNING_DISABLE(number) __pragma(warning(disable: number))
+	#define ESL_WARNING_ERROR(number) __pragma(warning(error: number))
+	#define ESL_WARNING_WARNING(number) __pragma(warning(default: number))
+#elif defined ESL_COMPILER_GNU
+	#define ESL_WARNING_PUSH() _Pragma("GCC diagnostic push")
+	#define ESL_WARNING_POP() _Pragma("GCC diagnostic pop")
+	#define ESL_WARNING_GNU_(level, name) _Pragma(ESL_QUOTE(GCC diagnostic level name))
+	#define ESL_WARNING_DISABLE(name) ESL_WARNING_GNU_(ignored, ESL_QUOTE(-W##name))
+	#define ESL_WARNING_ERROR(name) ESL_WARNING_GNU_(error, ESL_QUOTE(-W##name))
+	#define ESL_WARNING_WARNING(name) ESL_WARNING_GNU_(warning, ESL_QUOTE(-W##name))
+#else
+	#define ESL_WARNING_PUSH()
+	#define ESL_WARNING_POP()
+	#define ESL_WARNING_DISABLE(x)
+	#define ESL_WARNING_ERROR(x)
+	#define ESL_WARNING_WARNING(x)
+#endif
+
 #include <cstdint>
 
 // ESL_SIZE_BITS, ESL_SIZE_*
@@ -134,10 +162,6 @@
 	#define ESL_FAST_ROTR32(x, s) _rotr(x, s)
 	#define ESL_FAST_ROTR64(x, s) _rotr64(x, s)
 #endif
-
-// ESL_STRINGIFY
-#define ESL_QUOTE(name) #name
-#define ESL_STRINGIFY(name) ESL_QUOTE(name)
 
 #endif // ESL_MACROS_HPP
 

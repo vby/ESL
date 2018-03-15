@@ -12,7 +12,7 @@ namespace esl {
 
 // map_mapped_t
 template <class Map>
-using map_mapped_t_ = as_const_as_t<typename Map::mapped_type, Map>;
+using map_mapped_t_ = const_as_t<typename Map::mapped_type, Map>;
 template <class Map>
 using map_mapped_t = map_mapped_t_<std::remove_reference_t<Map>>;
 

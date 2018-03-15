@@ -26,7 +26,7 @@ function(esl_add_target target name)
 	target_compile_options(${target} PRIVATE
 				$<$<CXX_COMPILER_ID:MSVC>:/W3 /WX>
 				$<$<CXX_COMPILER_ID:GNU>:-Wall -W -Werror -Wpedantic>
-				$<$<CXX_COMPILER_ID:Clang>:-Wall -W -Werror -Wpedantic -Wno-mismatched-tags>
+				$<$<CXX_COMPILER_ID:Clang>:-Wall -W -Werror -Wpedantic>
 			)
 	set_property(TARGET ${target} PROPERTY CXX_EXTENSIONS OFF)
 	add_test(NAME ${target} COMMAND ${target})
