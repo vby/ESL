@@ -189,20 +189,25 @@ inline Str make_string(const S& s) { return Str(s); }
 template <class S, class Str = string_of_t<S>>
 inline Str make_string(S&& s) { return Str(std::move(s)); }
 
-// from
+// from_string
 // generic c++17 std::from_chars
 // TODO float
+enum class from_string_errc {
+	success = 0,
+	invalid_argument = static_cast<int>(std::errc::invalid_argument),
+	result_out_of_range = static_cast<int>(std::errc::result_out_of_range),
+};
 template <class S, class T, class StrV = string_view_of_t<S>, class = std::enable_if_t<std::is_integral_v<T>>>
-constexpr std::pair<bool, typename StrV::iterator> from(const S& s, T& value, int base = 10) {
+constexpr std::pair<from_string_errc, const typename StrV::value_type*> from_string(const S& s, T& value, int base = 10) {
 	using CharT = typename StrV::value_type;
 	using Traits = typename StrV::traits_type;
 	auto v = make_string_view(s);
-	auto it = v.begin();
-	auto last = v.end();
+	auto it = v.data();
+	auto last = it + v.size();
 	if (base < 2 || it == last) {
-		return {false, it};
+		return {from_string_errc::invalid_argument, it};
 	}
-	auto begin = v.begin();
+	auto begin = it;
 	bool neg = false;
 	if constexpr (std::is_signed_v<T>) {
 		if (Traits::eq(*it, char_of_v<CharT, '-'>)) {
@@ -230,16 +235,20 @@ constexpr std::pair<bool, typename StrV::iterator> from(const S& s, T& value, in
 			break;
 		}
 		if (val > cutoff || (val == cutoff && chval > cutlimit)) {
-			return {false, it};
+			return {from_string_errc::result_out_of_range, it};
 		}
 		val = val * base + chval;
 		++it;
 	}
 	if (it == begin) {
-		return {false, it};
+		return {from_string_errc::invalid_argument, it};
 	}
-	value = neg ? -val : val;
-	return {true, it};
+	if constexpr (std::is_signed_v<T>) {
+		value = neg ? -val : val;
+	} else {
+		value = val;
+	}
+	return {from_string_errc::success, it};
 }
 
 // split
@@ -291,6 +300,269 @@ Str join(const S& delim, InputIt first, InputIt last) {
 		s.resize(s.size() - dv.size());
 	}
 	return s;
+}
+
+
+/// format ///
+// See https://docs.python.org/3.5/library/string.html#formatstrings
+
+// bad_format
+
+class bad_format: std::runtime_error {
+public:
+	using size_type = typename std::string::size_type;
+	static constexpr size_type npos = std::string::npos;
+
+private:
+	size_type pos_;
+
+public:
+	bad_format(const char* what, size_type pos = npos): runtime_error(what), pos_(pos) {}
+
+	bad_format(const std::string& what, size_type pos = npos): runtime_error(what), pos_(pos) {}
+
+	size_type position() const noexcept { return pos_; }
+};
+
+namespace details {
+
+	template <class CharT, class Traits = std::char_traits<CharT>>
+	struct format_argument {
+		const void* vp;
+		void(*out)(std::basic_ostream<CharT, Traits>& os, const void*);
+
+		template <class T>
+		static void format_out(std::basic_ostream<CharT, Traits>& os, const void* vp) {
+			os << *static_cast<std::add_pointer_t<std::add_const_t<T>>>(vp);
+		}
+
+		template <class T>
+		explicit constexpr format_argument(const T& val) noexcept: vp(std::addressof(val)), out(format_out<T>) {};
+	};
+
+	template <class CharT, class Traits>
+	inline std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& os, const format_argument<CharT, Traits>& arg) {
+		arg.out(os, arg.vp);
+		return os;
+	}
+
+	template <class Traits, class CharT>
+	constexpr std::pair<bool, const CharT*> format_find_colon_or_close_brace(const CharT* first, const CharT* last) {
+		constexpr CharT rbrace_char = char_of_v<CharT, '}'>;
+		constexpr CharT colon_char = char_of_v<CharT, ':'>;
+		while (first != last) {
+			const auto ch = *first;
+			if (Traits::eq(ch, colon_char)) {
+				return {true, first};
+			} else if (Traits::eq(ch, rbrace_char)) {
+				break;
+			}
+			++first;
+		}
+		return {false, first};
+	}
+
+	template <class CharT, class Traits>
+	const CharT* format_spec(std::basic_ostream<CharT, Traits>& os, std::basic_string_view<CharT, Traits> spec_v) {
+		// TODO: change switch to Traits::eq
+		static const std::basic_regex<CharT> spec_r(R"(^(?:(.?)([<>=^]))?([+\- ]?)(#?)(0?)([0-9]*)([_,]?)(?:\.([0-9]+))?([bcdeEfFgGnosxX%]?))", std::regex_constants::optimize);
+		std::cmatch m;
+		std::regex_search(spec_v.begin(), spec_v.end(), m, spec_r);
+		auto& matched = m[0];
+		if (matched.second != spec_v.end()) {
+			return matched.second;
+		}
+		if (m.length(4)) { // 0
+			os.fill(CharT('0'));
+		}
+		auto& fill = m[0];
+		if (fill.first != fill.second) {
+			os.fill(*fill.first);
+		}
+		auto& align = m[1];
+		if (align.first != align.second) {
+			switch (*align.first) {
+			case CharT('<'):
+				os.setf(std::ios_base::left, std::ios_base::adjustfield);
+				break;
+			case CharT('>'):
+				os.setf(std::ios_base::right, std::ios_base::adjustfield);
+				break;
+			case CharT('='):
+				os.setf(std::ios_base::internal, std::ios_base::adjustfield);
+				break;
+			case CharT('^'):
+				//TODO
+				break;
+			}
+		}
+		auto& sign = m[2];
+		if (sign.first != sign.second) {
+			switch (*sign.first) {
+			case CharT('+'):
+				os.setf(std::ios_base::showpos);
+				break;
+			case CharT(' '):
+				// TODO
+				break;
+			// default '-'
+			}
+		}
+		if (m.length(3)) { // #
+			os.setf(std::ios_base::showbase);
+		}
+		auto& width = m[5];
+		if (width.first != width.second) {
+			std::size_t w;
+			from_string(width, w);
+			os.width(w);
+		}
+		if (m.length(6)) { // grouping_option
+			// TODO
+		}
+		auto& precision = m[7];
+		if (precision.first != precision.second) {
+			std::size_t p;
+			from_string(precision, p);
+			os.precision(p);
+		}
+		auto& type = m[8];
+		if (type.first != type.second) {
+			switch (*type.first) {
+			case CharT('b'): // binary
+				// TODO
+				break;
+			case CharT('c'): // int to char
+				// TODO
+				break;
+			case CharT('d'):
+				os.setf(std::ios_base::dec, std::ios_base::basefield);
+				break;
+			case CharT('o'):
+				os.setf(std::ios_base::oct, std::ios_base::basefield);
+				break;
+			case CharT('X'):
+				os.setf(std::ios_base::uppercase);
+				[[fallthrough]];
+			case CharT('x'):
+				os.setf(std::ios_base::hex, std::ios_base::basefield);
+				break;
+			case CharT('F'):
+				os.setf(std::ios_base::uppercase);
+				[[fallthrough]];
+			case CharT('f'):
+				os.setf(std::ios_base::fixed, std::ios_base::floatfield);
+				break;
+			case CharT('E'):
+				os.setf(std::ios_base::uppercase);
+				[[fallthrough]];
+			case CharT('e'):
+				os.setf(std::ios_base::scientific, std::ios_base::floatfield);
+				break;
+			case CharT('G'):
+				os.setf(std::ios_base::uppercase);
+				break;
+			case CharT('n'): // use locale
+				// TODO
+				break;
+			case CharT('%'): // x*100 'f' %
+				// TODO
+				break;
+			// default string 's', integer 'd', float 'g'
+			}
+		}
+		return spec_v.end();
+	}
+}
+
+
+template <class S, class... Args, class Str = string_of_t<S>>
+Str format(const S& fmt, Args&&... args) {
+	using CharT = typename Str::value_type;
+	using Traits = typename Str::traits_type;
+	using StrV = std::basic_string_view<CharT, Traits>;
+
+	constexpr CharT lbrace_char = char_of_v<CharT, '{'>;
+	constexpr CharT rbrace_char = char_of_v<CharT, '}'>;
+	auto fmt_v = make_string_view(fmt);
+	auto first = fmt_v.data();
+	auto last = fmt_v.data() + fmt_v.size();
+	auto it = first;
+	details::format_argument<CharT, Traits> fargs[sizeof...(Args)] = {details::format_argument<CharT, Traits>(args)...};
+	std::basic_ostringstream<CharT, Traits, typename Str::allocator_type> oss;
+	std::size_t next_index = 0;
+
+	while (it != last) {
+		// <prefix>{field}<suffix> -> field}<suffix>
+		auto lit = it;
+		while (lit != last) {
+			const auto ch = *lit;
+			if (Traits::eq(ch, lbrace_char)) {
+				if (lit != last - 1 && Traits::eq(lit[1], lbrace_char)) {
+					oss << StrV(it , lit + 1 - it);
+					lit += 2;
+					it = lit;
+					continue;
+				} else {
+					break;
+				}
+			} else if (Traits::eq(ch, rbrace_char)) {
+				if (lit != last - 1 && Traits::eq(lit[1], rbrace_char)) {
+					oss << StrV(it , lit + 1 - it);
+					lit += 2;
+					it = lit;
+					continue;
+				} else {
+					throw bad_format("esl::format: unexpected close-brace", lit - first);
+				}
+			}
+			++lit;
+		}
+		if (lit == last) {
+			oss << StrV(it, last - it);
+			break;
+		}
+		if (lit != it) {
+			oss << StrV(it, lit - it);
+		}
+		it = lit + 1;
+		// field}<suffix> -> field + <suffix>
+		auto [cfound, rit] = details::format_find_colon_or_close_brace<Traits>(it, last);
+		if (rit == last) {
+			throw bad_format("esl::format: missing close-brace", lit - first);
+		}
+		auto index = next_index;
+		if (rit == it) {
+			++next_index;
+		} else {
+			auto [errc, ptr] = from_string(StrV(it, rit - it), index);
+			if (ptr == rit) { // index
+				next_index = index + 1;
+			} else {
+				throw bad_format("esl::format: bad format index", ptr - first);
+			}
+			it = rit + 1;
+			if (cfound) {
+				auto pos = StrV(it, last - it).find(rbrace_char);
+				if (pos == StrV::npos) {
+					throw bad_format("esl::format: missing close-brace", lit - first);
+				}
+				if (pos != 0) {
+					rit = it + pos;
+					ptr = details::format_spec(oss, StrV(it, rit - it));
+					if (ptr != rit) {
+						throw bad_format("esl::format: bad format spec", ptr - first);
+					}
+				}
+			}
+		}
+		if (index >= sizeof...(Args)) {
+			throw bad_format("esl::format: index out of range", lit + 1 - first);
+		}
+		oss << fargs[index];
+		it = rit + 1;
+	}
+	return oss.str();
 }
 
 } //namespace esl

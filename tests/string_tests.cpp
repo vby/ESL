@@ -86,7 +86,7 @@ TEST(StringTest, join) {
 	}
 }
 
-TEST(StringTest, from) {
+TEST(StringTest, from_string) {
 	auto s0 = esl::make_string_view("");
 	auto s00 = esl::make_string_view("-");
 	auto s1 = esl::make_string_view("123456789");
@@ -99,80 +99,91 @@ TEST(StringTest, from) {
 	auto s8 = esl::make_string_view("5123456789");
 	{
 		int a = 100;
-		auto [ok, ptr] = esl::from(s0, a);
-		ASSERT_FALSE(ok);
+		auto [errc, ptr] = esl::from_string(s0, a);
+		ASSERT_EQ(errc, esl::from_string_errc::invalid_argument);
 		ASSERT_EQ(a, 100);
 		ASSERT_EQ(ptr, s0.begin());
 	}
 	{
 		int a = 100;
-		auto [ok, ptr] = esl::from(s00, a);
-		ASSERT_FALSE(ok);
+		auto [errc, ptr] = esl::from_string(s00, a);
+		ASSERT_EQ(errc, esl::from_string_errc::invalid_argument);
 		ASSERT_EQ(a, 100);
 		ASSERT_EQ(ptr, s00.data() + 1);
 	}
 	{
 		unsigned int a = 0;
-		auto [ok, ptr] = esl::from(s1, a);
-		ASSERT_TRUE(ok);
+		auto [errc, ptr] = esl::from_string(s1, a);
+		ASSERT_EQ(errc, esl::from_string_errc::success);
 		ASSERT_EQ(a, 123456789);
-		ASSERT_EQ(ptr, s1.end());
+		ASSERT_EQ(ptr, s1.data() + s1.size());
 	}
 	{
 		int a = 0;
-		auto [ok, ptr] = esl::from(s2, a);
-		ASSERT_TRUE(ok);
+		auto [errc, ptr] = esl::from_string(s2, a);
+		ASSERT_EQ(errc, esl::from_string_errc::success);
 		ASSERT_EQ(a, -123456789);
-		ASSERT_EQ(ptr, s2.end());
+		ASSERT_EQ(ptr, s2.data() + s2.size());
 	}
 	{
 		unsigned int a = 100;
-		auto [ok, ptr] = esl::from(s2, a);
-		ASSERT_FALSE(ok);
+		auto [errc, ptr] = esl::from_string(s2, a);
+		ASSERT_EQ(errc, esl::from_string_errc::invalid_argument);
 		ASSERT_EQ(a, 100);
 		ASSERT_EQ(ptr, s2.begin());
 	}
 	{
 		int a = 100;
-		auto [ok, ptr] = esl::from(s3, a);
-		ASSERT_FALSE(ok);
+		auto [errc, ptr] = esl::from_string(s3, a);
+		ASSERT_EQ(errc, esl::from_string_errc::invalid_argument);
 		ASSERT_EQ(a, 100);
 		ASSERT_EQ(ptr, s3.begin());
 	}
 	{
 		int a = 100;
-		auto [ok, ptr] = esl::from(s4, a);
-		ASSERT_TRUE(ok);
+		auto [errc, ptr] = esl::from_string(s4, a);
+		ASSERT_EQ(errc, esl::from_string_errc::success);
 		ASSERT_EQ(a, 12345);
 		ASSERT_EQ(ptr, s4.data() + 5);
 	}
 	{
 		unsigned int a = 0;
-		auto [ok, ptr] = esl::from(s5, a, 16);
-		ASSERT_TRUE(ok);
+		auto [errc, ptr] = esl::from_string(s5, a, 16);
+		ASSERT_EQ(errc, esl::from_string_errc::success);
 		ASSERT_EQ(a, 0xa1fe0F8B);
-		ASSERT_EQ(ptr, s5.end());
+		ASSERT_EQ(ptr, s5.data() + s5.size());
 	}
 	{
 		unsigned int a = 0;
-		auto [ok, ptr] = esl::from(s6, a, 16);
-		ASSERT_TRUE(ok);
+		auto [errc, ptr] = esl::from_string(s6, a, 16);
+		ASSERT_EQ(errc, esl::from_string_errc::success);
 		ASSERT_EQ(a, 0xa1fe);
 		ASSERT_EQ(ptr, s6.data() + 4);
 	}
 	{
 		std::uint32_t a = 100;
-		auto [ok, ptr] = esl::from(s7, a);
-		ASSERT_TRUE(ok);
+		auto [errc, ptr] = esl::from_string(s7, a);
+		ASSERT_EQ(errc, esl::from_string_errc::success);
 		ASSERT_EQ(a, 4123456789);
-		ASSERT_EQ(ptr, s7.end());
+		ASSERT_EQ(ptr, s7.data() + s7.size());
 	}
 	{
 		std::uint32_t a = 100;
-		auto [ok, ptr] = esl::from(s8, a);
-		ASSERT_FALSE(ok);
+		auto [errc, ptr] = esl::from_string(s8, a);
+		ASSERT_EQ(errc, esl::from_string_errc::result_out_of_range);
 		ASSERT_EQ(a, 100);
 		ASSERT_EQ(ptr, s8.data() + 9);
+	}
+}
+
+TEST(StringTest, format) {
+	{
+		auto s = esl::format("{{hi{}}}", 123);
+		ASSERT_EQ(s, "{hi123}");
+	}
+	{
+		auto s = esl::format("aaa{2}b{1}cc{0}", 111, 2222, 33333);
+		ASSERT_EQ(s, "aaa33333b2222cc111");
 	}
 }
 
