@@ -17,7 +17,7 @@ namespace details {
 	template <template <class...> class B>
 	std::false_type is_base_of_template_test(void*);
 	template <template <class...> class B, class D>
-	using is_base_of_template = decltype(details::is_base_of_template_test<B>(std::declval<D*>()));
+	using is_base_of_template = decltype(details::is_base_of_template_test<B>(std::declval<std::decay_t<D>*>()));
 
 	template <class From, class To>
 	static std::true_type is_static_castable_test(std::add_pointer_t<decltype(static_cast<To>(std::declval<From>()))>);
@@ -36,7 +36,7 @@ struct fallback<not_fallback_t> { using value_type = bool; static constexpr bool
 
 // is_base_of_template, is_base_of_template_v
 template <template <class...> class B, class D, class = void>
-struct is_base_of_template : std::true_type {};
+struct is_base_of_template: std::true_type {};
 template <template <class...> class B, class D>
 struct is_base_of_template<B, D, std::void_t<details::is_base_of_template<B, D>>>: details::is_base_of_template<B, D> {};
 template <template <class...> class B, class D>
@@ -141,17 +141,20 @@ ESL_TRAITS_MEMBER_TYPE_ESL_(weak_type)
 ESL_TRAITS_MEMBER_TYPE_ESL_(native_handle_type)
 ESL_TRAITS_MEMBER_TYPE_ESL_(mutex_type)
 
+
+/// basic traits ///
+
 // remove_cvr, remove_cvr_t
 template <class T>
 using remove_cvr = std::remove_cv<std::remove_reference_t<T>>;
 template <class T>
 using remove_cvr_t = typename remove_cvr<T>::type;
 
-// remove_cvp, remove_cvp_t
+// remove_pcv, remove_pcv_t
 template <class T>
-using remove_cvp = std::remove_cv<std::remove_pointer_t<T>>;
+using remove_pcv = std::remove_cv<std::remove_pointer_t<T>>;
 template <class T>
-using remove_cvp_t = typename remove_cvp<T>::type;
+using remove_pcv_t = typename remove_pcv<T>::type;
 
 // remove_rp, remove_rp_t
 template <class T>
@@ -159,11 +162,11 @@ using remove_rp = std::remove_pointer<std::remove_reference_t<T>>;
 template <class T>
 using remove_rp_t = typename remove_rp<T>::type;
 
-// remove_cvrp, remove_cvrp_t
+// remove_rpcv, remove_rpcv_t
 template <class T>
-using remove_cvrp = std::remove_cv<remove_rp_t<T>>;
+using remove_rpcv = std::remove_cv<remove_rp_t<T>>;
 template <class T>
-using remove_cvrp_t = typename remove_cvrp<T>::type;
+using remove_rpcv_t = typename remove_rpcv<T>::type;
 
 // to_lvalue_reference, to_lvalue_reference_t
 template <class T>
@@ -177,29 +180,37 @@ using to_rvalue_reference = std::add_rvalue_reference<std::remove_reference_t<T>
 template <class T>
 using to_rvalue_reference_t = typename to_rvalue_reference<T>::type;
 
+// remove_low_const, remove_low_const_t
+template <class T>
+struct remove_low_const {
+	using type = T;
+};
+template <class T>
+struct remove_low_const<const T&> {
+	using type = T&;
+};
+template <class T>
+struct remove_low_const<const T&&> {
+	using type = T&&;
+};
+template <class T>
+struct remove_low_const<const T*> {
+	using type = T*;
+};
+template <class T>
+using remove_low_const_t = typename remove_low_const<T>::type;
+
 // is_low_const, is_low_const_v
 template <class T>
 using is_low_const = std::is_const<remove_rp_t<T>>;
 template <class T>
 inline constexpr bool is_low_const_v = is_low_const<T>::value;
 
-// is_const_or_low_const, is_const_or_low_const_v
-template <class T>
-using is_const_or_low_const = std::bool_constant<std::is_const_v<T> || is_low_const_v<T>>;
-template <class T>
-inline constexpr bool is_const_or_low_const_v = is_const_or_low_const<T>::value;
-
 // is_pointer_or_reference, is_pointer_or_reference_v
 template <class T>
 using is_pointer_or_reference = std::bool_constant<std::is_pointer_v<T> || std::is_reference_v<T>>;
 template <class T>
 inline constexpr bool is_pointer_or_reference_v = is_pointer_or_reference<T>::value;
-
-// is_const_or_volatile, is_const_or_volatile_v
-template <class T>
-using is_const_or_volatile = std::bool_constant<std::is_const_v<T> || std::is_volatile_v<T>>;
-template <class T>
-inline constexpr bool is_const_or_volatile_v = is_const_or_volatile<T>::value;
 
 // const_as, const_as_t
 template <class T, class Ref, bool = std::is_const_v<Ref>>
@@ -246,6 +257,64 @@ template <class T, class U>
 using not_void_or = std::conditional<!std::is_void_v<T>, T, U>;
 template <class T, class U>
 using not_void_or_t = typename not_void_or<T, U>::type;
+
+
+/// tuple traits ///
+
+// tuple_index, tuple_index_v
+template <class T, class Tuple, std::size_t Size = std::tuple_size_v<Tuple>>
+struct tuple_index: std::integral_constant<std::size_t, Size> {};
+template <class T, class U, class... Ts, std::size_t Size>
+struct tuple_index<T, std::tuple<U, Ts...>, Size>: tuple_index<T, std::tuple<Ts...>, Size> {};
+template <class T, class... Ts, std::size_t Size>
+struct tuple_index<T, std::tuple<T, Ts...>, Size>: std::integral_constant<std::size_t, Size - sizeof...(Ts) - 1> {};
+template <class T, class Tuple>
+inline constexpr std::size_t tuple_index_v = tuple_index<T, Tuple>::value;
+
+// tuple_sub, tuple_sub_t
+template <class Tuple, std::size_t Pos, std::size_t Cnt, class = std::make_index_sequence<Cnt>>
+struct tuple_sub;
+template <class Tuple, std::size_t Pos, std::size_t Cnt, std::size_t... Is>
+struct tuple_sub<Tuple, Pos, Cnt, std::index_sequence<Is...>> {
+	using type = std::tuple<std::tuple_element_t<Pos + Is, Tuple>...>;
+};
+template <class Tuple, std::size_t Pos, std::size_t Cnt>
+using tuple_sub_t = typename tuple_sub<Tuple, Pos, Cnt>::type;
+
+// tuple_unique, tuple_unique_t
+template <class Tuple, class T, bool = tuple_index_v<T, Tuple> == std::tuple_size_v<Tuple>>
+struct tuple_unique_append_ {
+	using type = Tuple;
+};
+template <class T, class... Ts>
+struct tuple_unique_append_<std::tuple<Ts...>, T, true> {
+	using type = std::tuple<Ts..., T>;
+};
+template <class Tuple, class = std::tuple<>>
+struct tuple_unique;
+template <class TupleU>
+struct tuple_unique<std::tuple<>, TupleU> {
+	using type = TupleU;
+};
+template <class TupleU, class T, class... Ts>
+struct tuple_unique<std::tuple<T, Ts...>, TupleU> {
+	using type = typename tuple_unique<typename tuple_unique_append_<TupleU, T>::type, std::tuple<Ts...>>::type;
+};
+template <class Tuple>
+using tuple_unique_t = typename tuple_unique<Tuple>::type;
+
+// tuple_template_class, tuple_template_class_t
+template <template <class...> class TT, class Tuple>
+struct tuple_template_class;
+template <template <class...> class TT, class... Ts>
+struct tuple_template_class<TT, std::tuple<Ts...>> {
+	using type = TT<Ts...>;
+};
+template <template <class...> class TT, class Tuple>
+using tuple_template_class_t = typename tuple_template_class<TT, Tuple>::type;
+
+
+/// function traits ///
 
 // is_function_or_function_pointer, is_function_or_function_pointer_v
 template <class T>
