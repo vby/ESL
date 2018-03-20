@@ -102,7 +102,7 @@ TEST(StringTest, from_string) {
 		auto [errc, ptr] = esl::from_string(s0, a);
 		ASSERT_EQ(errc, esl::from_string_errc::invalid_argument);
 		ASSERT_EQ(a, 100);
-		ASSERT_EQ(ptr, s0.begin());
+		ASSERT_EQ(ptr, s0.data());
 	}
 	{
 		int a = 100;
@@ -130,14 +130,14 @@ TEST(StringTest, from_string) {
 		auto [errc, ptr] = esl::from_string(s2, a);
 		ASSERT_EQ(errc, esl::from_string_errc::invalid_argument);
 		ASSERT_EQ(a, 100);
-		ASSERT_EQ(ptr, s2.begin());
+		ASSERT_EQ(ptr, s2.data());
 	}
 	{
 		int a = 100;
 		auto [errc, ptr] = esl::from_string(s3, a);
 		ASSERT_EQ(errc, esl::from_string_errc::invalid_argument);
 		ASSERT_EQ(a, 100);
-		ASSERT_EQ(ptr, s3.begin());
+		ASSERT_EQ(ptr, s3.data());
 	}
 	{
 		int a = 100;

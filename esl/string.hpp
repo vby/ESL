@@ -198,7 +198,7 @@ enum class from_string_errc {
 	result_out_of_range = static_cast<int>(std::errc::result_out_of_range),
 };
 template <class S, class T, class StrV = string_view_of_t<S>, class = std::enable_if_t<std::is_integral_v<T>>>
-constexpr std::pair<from_string_errc, const typename StrV::value_type*> from_string(const S& s, T& value, int base = 10) {
+constexpr std::pair<from_string_errc, const typename StrV::value_type*> from_string(const S& s, T& value, int base = 10) noexcept {
 	using CharT = typename StrV::value_type;
 	using Traits = typename StrV::traits_type;
 	auto v = make_string_view(s);
@@ -362,14 +362,14 @@ namespace details {
 		return {false, first};
 	}
 
-	template <class CharT, class Traits>
-	const CharT* format_spec(std::basic_ostream<CharT, Traits>& os, std::basic_string_view<CharT, Traits> spec_v) {
+	template <class CharT, class Traits, class Allocator>
+	const CharT* format_spec(std::basic_ostringstream<CharT, Traits, Allocator>& os, const CharT* first, const CharT* last) {
 		// TODO: change switch to Traits::eq
 		static const std::basic_regex<CharT> spec_r(R"(^(?:(.?)([<>=^]))?([+\- ]?)(#?)(0?)([0-9]*)([_,]?)(?:\.([0-9]+))?([bcdeEfFgGnosxX%]?))", std::regex_constants::optimize);
-		std::cmatch m;
-		std::regex_search(spec_v.begin(), spec_v.end(), m, spec_r);
+		std::match_results<const CharT*, typename std::allocator_traits<Allocator>::template rebind_alloc<std::sub_match<const CharT*>>> m;
+		std::regex_search(first, last, m, spec_r);
 		auto& matched = m[0];
-		if (matched.second != spec_v.end()) {
+		if (matched.second != last) {
 			return matched.second;
 		}
 		if (m.length(4)) { // 0
@@ -471,7 +471,7 @@ namespace details {
 			// default string 's', integer 'd', float 'g'
 			}
 		}
-		return spec_v.end();
+		return last;
 	}
 }
 
@@ -535,11 +535,11 @@ Str format(const S& fmt, Args&&... args) {
 		if (rit == it) {
 			++next_index;
 		} else {
-			auto [errc, ptr] = from_string(StrV(it, rit - it), index);
-			if (ptr == rit) { // index
+			auto fr = from_string(StrV(it, rit - it), index);
+			if (fr.second == rit) { // index
 				next_index = index + 1;
 			} else {
-				throw bad_format("esl::format: bad format index", ptr - first);
+				throw bad_format("esl::format: bad format index", fr.second - first);
 			}
 			it = rit + 1;
 			if (cfound) {
@@ -549,7 +549,7 @@ Str format(const S& fmt, Args&&... args) {
 				}
 				if (pos != 0) {
 					rit = it + pos;
-					ptr = details::format_spec(oss, StrV(it, rit - it));
+					auto ptr = details::format_spec(oss, it, rit);
 					if (ptr != rit) {
 						throw bad_format("esl::format: bad format spec", ptr - first);
 					}

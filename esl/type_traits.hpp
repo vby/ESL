@@ -12,8 +12,21 @@ namespace esl {
 
 namespace details {
 
-	template <template <class...> class B, class... Ps>
-	std::true_type is_base_of_template_test(B<Ps...>*);
+	// not standard
+	//template <template <class...> class B, class... Ts>
+	//std::true_type is_base_of_template_test(B<Ts...>*);
+	template <template <class...> class B, class T>
+	std::true_type is_base_of_template_test(B<T>*);
+	template <template <class...> class B, class T, class T2>
+	std::true_type is_base_of_template_test(B<T, T2>*);
+	template <template <class...> class B, class T, class T2, class T3>
+	std::true_type is_base_of_template_test(B<T, T2, T3>*);
+	template <template <class...> class B, class T, class T2, class T3, class T4>
+	std::true_type is_base_of_template_test(B<T, T2, T3, T4>*);
+	template <template <class...> class B, class T, class T2, class T3, class T4, class T5>
+	std::true_type is_base_of_template_test(B<T, T2, T3, T4, T5>*);
+	template <template <class...> class B, class T, class T2, class T3, class T4, class T5, class T6>
+	std::true_type is_base_of_template_test(B<T, T2, T3, T4, T5, T6>*);
 	template <template <class...> class B>
 	std::false_type is_base_of_template_test(void*);
 	template <template <class...> class B, class D>
