@@ -328,23 +328,43 @@ public:
 
 namespace details {
 
+	using format_xflag = unsigned int;
+	struct format_xflags {
+		static constexpr format_xflag center = 0x1;
+		static constexpr format_xflag space_sign = 0x2;
+		static constexpr format_xflag grouping = 0x4;
+		static constexpr format_xflag binary = 0x8;
+		static constexpr format_xflag character = 0x10;
+		static constexpr format_xflag number = 0x20;
+		static constexpr format_xflag percent = 0x40;
+	};
+
 	template <class CharT, class Traits = std::char_traits<CharT>>
 	struct format_argument {
 		const void* vp;
-		void(*out)(std::basic_ostream<CharT, Traits>& os, const void*);
+		void(*out)(std::basic_ostream<CharT, Traits>&, const void*, format_xflag);
+		format_xflag xflags;
 
 		template <class T>
-		static void format_out(std::basic_ostream<CharT, Traits>& os, const void* vp) {
-			os << *static_cast<std::add_pointer_t<std::add_const_t<T>>>(vp);
+		static void format_out(std::basic_ostream<CharT, Traits>& os, const void* vp, format_xflag xflags) {
+			const auto& value = *static_cast<std::add_pointer_t<std::add_const_t<T>>>(vp);
+			if constexpr (std::is_integral_v<T>) {
+				if (xflags & format_xflags::character) {
+					os << static_cast<CharT>(value);
+					return;
+				}
+			}
+			// TODO
+			os << value;
 		}
 
 		template <class T>
-		explicit constexpr format_argument(const T& val) noexcept: vp(std::addressof(val)), out(format_out<T>) {}
+			explicit constexpr format_argument(const T& val) noexcept: vp(std::addressof(val)), out(format_out<T>), xflags(0) {}
 	};
 
 	template <class CharT, class Traits>
 	inline std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& os, const format_argument<CharT, Traits>& arg) {
-		arg.out(os, arg.vp);
+		arg.out(os, arg.vp, arg.xflags);
 		return os;
 	}
 
@@ -364,111 +384,131 @@ namespace details {
 		return {false, first};
 	}
 
-	template <class CharT, class Traits, class Allocator>
-	const CharT* format_spec(std::basic_ostringstream<CharT, Traits, Allocator>& os, const CharT* first, const CharT* last) {
+	#define ESL_FORMAT_SPEC_REGEX_STRING_(...) __VA_ARGS__##R"(^(?:(.?)([<>=^]))?([+\- ]?)(#?)(0?)([0-9]*)([_,]?)(\.[0-9]*)?([bcdeEfFgGnosxX%]?))"
+	template <class CharT> struct format_spec_regex_string;
+	template <> struct format_spec_regex_string<char> {
+		static constexpr const char* value = ESL_FORMAT_SPEC_REGEX_STRING_();
+	};
+	template <> struct format_spec_regex_string<wchar_t> {
+		static constexpr const wchar_t* value = ESL_FORMAT_SPEC_REGEX_STRING_(L);
+	};
+	template <> struct format_spec_regex_string<char16_t> {
+		static constexpr const char16_t* value = ESL_FORMAT_SPEC_REGEX_STRING_(u);
+	};
+	template <> struct format_spec_regex_string<char32_t> {
+		static constexpr const char32_t* value = ESL_FORMAT_SPEC_REGEX_STRING_(U);
+	};
+	#undef ESL_FORMAT_SPEC_REGEX_STRING_
+
+	template <class CharT>
+	inline const std::basic_regex<CharT> format_spec_regex(format_spec_regex_string<CharT>::value, std::regex_constants::optimize);
+
+	template <class Allocator, class CharT, class Traits>
+	const CharT* format_spec(std::basic_ostream<CharT, Traits>& os, const CharT* first, const CharT* last, format_xflag& xflags) {
 		// TODO: change switch to Traits::eq
-		static const std::basic_regex<CharT> spec_r(R"(^(?:(.?)([<>=^]))?([+\- ]?)(#?)(0?)([0-9]*)([_,]?)(?:\.([0-9]+))?([bcdeEfFgGnosxX%]?))", std::regex_constants::optimize);
 		std::match_results<const CharT*, typename std::allocator_traits<Allocator>::template rebind_alloc<std::sub_match<const CharT*>>> m;
-		std::regex_search(first, last, m, spec_r);
+		std::regex_search(first, last, m, format_spec_regex<CharT>);
 		auto& matched = m[0];
 		if (matched.second != last) {
 			return matched.second;
 		}
-		if (m.length(4)) { // 0
-			os.fill(CharT('0'));
-		}
-		auto& fill = m[0];
+		auto& fill = m[1];
 		if (fill.first != fill.second) {
 			os.fill(*fill.first);
 		}
-		auto& align = m[1];
+		auto& align = m[2];
 		if (align.first != align.second) {
 			switch (*align.first) {
 			case CharT('<'):
-				os.setf(std::ios_base::left, std::ios_base::adjustfield);
+				os.setf(std::ios_base::left);
 				break;
 			case CharT('>'):
-				os.setf(std::ios_base::right, std::ios_base::adjustfield);
+				os.setf(std::ios_base::right);
 				break;
 			case CharT('='):
-				os.setf(std::ios_base::internal, std::ios_base::adjustfield);
+				os.setf(std::ios_base::internal);
 				break;
 			case CharT('^'):
-				//TODO
+				xflags |= format_xflags::center;
 				break;
 			}
 		}
-		auto& sign = m[2];
+		auto& sign = m[3];
 		if (sign.first != sign.second) {
 			switch (*sign.first) {
 			case CharT('+'):
 				os.setf(std::ios_base::showpos);
 				break;
 			case CharT(' '):
-				// TODO
+				xflags |= format_xflags::space_sign;
 				break;
 			// default '-'
 			}
 		}
-		if (m.length(3)) { // #
+		if (m.length(4)) { // #
 			os.setf(std::ios_base::showbase);
 		}
-		auto& width = m[5];
+		if (m.length(5)) { // 0, override m[1]
+			os.fill(CharT('0'));
+		}
+		auto& width = m[6];
 		if (width.first != width.second) {
 			std::size_t w;
 			from_string(width, w);
 			os.width(w);
 		}
-		if (m.length(6)) { // grouping_option
-			// TODO
+		if (m.length(7)) { // grouping_option
+			xflags |= format_xflags::grouping;
 		}
-		auto& precision = m[7];
+		auto& precision = m[8];
 		if (precision.first != precision.second) {
-			std::size_t p;
-			from_string(precision, p);
+			std::size_t p = 0;
+			from_string(make_string_view(precision.first + 1, precision.second), p);
 			os.precision(p);
 		}
-		auto& type = m[8];
+		auto& type = m[9];
 		if (type.first != type.second) {
 			switch (*type.first) {
-			case CharT('b'): // binary
-				// TODO
+			case CharT('b'):
+				xflags |= format_xflags::binary;
 				break;
-			case CharT('c'): // int to char
-				// TODO
+			case CharT('c'):
+				xflags |= format_xflags::character;
 				break;
 			case CharT('d'):
-				os.setf(std::ios_base::dec, std::ios_base::basefield);
+				os.setf(std::ios_base::dec);
+				os.unsetf(std::ios_base::boolalpha);
 				break;
 			case CharT('o'):
-				os.setf(std::ios_base::oct, std::ios_base::basefield);
+				os.setf(std::ios_base::oct);
 				break;
 			case CharT('X'):
 				os.setf(std::ios_base::uppercase);
 				[[fallthrough]];
 			case CharT('x'):
-				os.setf(std::ios_base::hex, std::ios_base::basefield);
+				os.setf(std::ios_base::hex);
 				break;
 			case CharT('F'):
 				os.setf(std::ios_base::uppercase);
 				[[fallthrough]];
 			case CharT('f'):
-				os.setf(std::ios_base::fixed, std::ios_base::floatfield);
+				os.setf(std::ios_base::fixed);
+				os.setf(std::ios_base::showpoint);
 				break;
 			case CharT('E'):
 				os.setf(std::ios_base::uppercase);
 				[[fallthrough]];
 			case CharT('e'):
-				os.setf(std::ios_base::scientific, std::ios_base::floatfield);
+				os.setf(std::ios_base::scientific);
 				break;
 			case CharT('G'):
 				os.setf(std::ios_base::uppercase);
 				break;
 			case CharT('n'): // use locale
-				// TODO
+				xflags |= format_xflags::number;
 				break;
 			case CharT('%'): // x*100 'f' %
-				// TODO
+				xflags |= format_xflags::percent;
 				break;
 			// default string 's', integer 'd', float 'g'
 			}
@@ -482,6 +522,7 @@ template <class S, class... Args, class Str = string_of_t<S>>
 Str format(const S& fmt, Args&&... args) {
 	using CharT = typename Str::value_type;
 	using Traits = typename Str::traits_type;
+	using Allocator = typename Str::allocator_type;
 	using StrV = std::basic_string_view<CharT, Traits>;
 
 	constexpr CharT lbrace_char = char_of_v<CharT, '{'>;
@@ -491,7 +532,7 @@ Str format(const S& fmt, Args&&... args) {
 	auto last = fmt_v.data() + fmt_v.size();
 	auto it = first;
 	details::format_argument<CharT, Traits> fargs[sizeof...(Args)] = {details::format_argument<CharT, Traits>(args)...};
-	std::basic_ostringstream<CharT, Traits, typename Str::allocator_type> oss;
+	std::basic_ostringstream<CharT, Traits, Allocator> os;
 	std::size_t next_index = 0;
 
 	while (it != last) {
@@ -501,31 +542,29 @@ Str format(const S& fmt, Args&&... args) {
 			const auto ch = *lit;
 			if (Traits::eq(ch, lbrace_char)) {
 				if (lit != last - 1 && Traits::eq(lit[1], lbrace_char)) {
-					oss << StrV(it , lit + 1 - it);
+					os << StrV(it , lit + 1 - it);
 					lit += 2;
 					it = lit;
 					continue;
-				} else {
-					break;
 				}
+				break;
 			} else if (Traits::eq(ch, rbrace_char)) {
 				if (lit != last - 1 && Traits::eq(lit[1], rbrace_char)) {
-					oss << StrV(it , lit + 1 - it);
+					os << StrV(it , lit + 1 - it);
 					lit += 2;
 					it = lit;
 					continue;
-				} else {
-					throw bad_format("esl::format: unexpected close-brace", lit - first);
 				}
+				throw bad_format("esl::format: unexpected close-brace", lit - first);
 			}
 			++lit;
 		}
 		if (lit == last) {
-			oss << StrV(it, last - it);
+			os << StrV(it, last - it);
 			break;
 		}
 		if (lit != it) {
-			oss << StrV(it, lit - it);
+			os << StrV(it, lit - it);
 		}
 		it = lit + 1;
 		// field}<suffix> -> field + <suffix>
@@ -538,33 +577,37 @@ Str format(const S& fmt, Args&&... args) {
 			++next_index;
 		} else {
 			auto fr = from_string(StrV(it, rit - it), index);
-			if (fr.second == rit) { // index
-				next_index = index + 1;
-			} else {
+			if (fr.second != rit) { // index
 				throw bad_format("esl::format: bad format index", fr.second - first);
 			}
-			it = rit + 1;
-			if (cfound) {
-				auto pos = StrV(it, last - it).find(rbrace_char);
-				if (pos == StrV::npos) {
-					throw bad_format("esl::format: missing close-brace", lit - first);
-				}
-				if (pos != 0) {
-					rit = it + pos;
-					auto ptr = details::format_spec(oss, it, rit);
-					if (ptr != rit) {
-						throw bad_format("esl::format: bad format spec", ptr - first);
-					}
-				}
-			}
+			next_index = index + 1;
 		}
 		if (index >= sizeof...(Args)) {
 			throw bad_format("esl::format: index out of range", lit + 1 - first);
 		}
-		oss << fargs[index];
+		auto& farg = fargs[index];
+		// reset ostream
+		os.setf(std::ios_base::boolalpha, os.flags());
+		os.fill(char_of_v<CharT, ' '>);
+		os.precision(6);
+		if (cfound) {
+			it = rit + 1;
+			auto pos = StrV(it, last - it).find(rbrace_char);
+			if (pos == StrV::npos) {
+				throw bad_format("esl::format: missing close-brace", lit - first);
+			}
+			rit = it + pos;
+			if (pos != 0) {
+				auto ptr = details::format_spec<Allocator>(os, it, rit, farg.xflags);
+				if (ptr != rit) {
+					throw bad_format("esl::format: bad format spec", ptr - first);
+				}
+			}
+		}
+		os << farg;
 		it = rit + 1;
 	}
-	return oss.str();
+	return os.str();
 }
 
 } //namespace esl

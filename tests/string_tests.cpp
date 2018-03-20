@@ -177,13 +177,26 @@ TEST(StringTest, from_string) {
 }
 
 TEST(StringTest, format) {
-	{
-		auto s = esl::format("{{hi{}}}", 123);
-		ASSERT_EQ(s, "{hi123}");
-	}
-	{
-		auto s = esl::format("aaa{2}b{1}cc{0}", 111, 2222, 33333);
-		ASSERT_EQ(s, "aaa33333b2222cc111");
-	}
+	auto s = esl::format("{{hi{}}}", 123);
+	ASSERT_EQ(s, "{hi123}");
+
+	s = esl::format("{:{>5}aaa{:4}", 12, 34);
+	ASSERT_EQ(s, "{{{12aaa  34");
+
+	s = esl::format("{:{>5}bbb{:}", 12, 34);
+	ASSERT_EQ(s, "{{{12bbb34");
+
+	s = esl::format("{:-<5}bbb{2:>#8X}ccc{1:+#}", "hi", 366, 255);
+	ASSERT_EQ(s, "hi---bbb    0XFFccc+366");
+
+	s = esl::format("aaa{2}b{1}cc{0}", 111, 2222, 33333);
+	ASSERT_EQ(s, "aaa33333b2222cc111");
+
+	s = esl::format("{:08.5f}x{0:.4}x{0:.2}x", 1.23);
+	ASSERT_EQ(s, "01.23000x1.23x1.2x");
+
+	// xflags
+	s = esl::format("aa{:c}bb", 65);
+	ASSERT_EQ(s, "aaAbb");
 }
 
