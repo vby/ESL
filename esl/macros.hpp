@@ -112,10 +112,29 @@
 	#define ESL_ARCH_AVX2
 #endif
 
-// ESL_STRINGIFY
+// ESL_DECL_*
+#ifdef ESL_COMPILER_MSVC
+	#define ESL_DECL_FORCEINLINE __forceinline
+	#define ESL_DECL_NOINLINE __declspec(noinline)
+	#define ESL_DECL_EXPORT __declspec(dllexport)
+	#define ESL_DECL_IMPORT __declspec(dllimport)
+#elif defined ESL_COMPILER_GNU
+	#define ESL_DECL_FORCEINLINE inline __attribute__((always_inline))
+	#define ESL_DECL_NOINLINE __attribute__((noinline))
+	#define ESL_DECL_EXPORT __attribute__((visibility("default")))
+	#define ESL_DECL_IMPORT __attribute__((visibility("default")))
+#else
+	#define ESL_DECL_FORCEINLINE
+	#define ESL_DECL_NOINLINE
+	#define ESL_DECL_EXPORT
+	#define ESL_DECL_IMPORT
+#endif
+
+// ESL_QUOTE, ESL_STRINGIFY
 #define ESL_QUOTE(name) #name
 #define ESL_STRINGIFY(name) ESL_QUOTE(name)
 
+// ESL_WARNING_*
 #ifdef ESL_COMPILER_MSVC
 	#define ESL_WARNING_PUSH() __pragma(warning(push))
 	#define ESL_WARNING_POP() __pragma(warning(pop))
@@ -137,9 +156,8 @@
 	#define ESL_WARNING_WARNING(x)
 #endif
 
-#include <cstdint>
-
 // ESL_SIZE_BITS, ESL_SIZE_*
+#include <cstdint>
 #if (SIZE_MAX == UINT64_MAX)
 	#define ESL_SIZE_BITS 64
 	#define ESL_SIZE_64

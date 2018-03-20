@@ -8,9 +8,11 @@
 
 #include <string>
 #include <string_view>
-#include <regex>
 #include <utility>
 #include <cinttypes>
+#include <sstream>
+#include <regex>
+#include <stdexcept>
 
 namespace esl {
 
@@ -208,7 +210,7 @@ constexpr std::pair<from_string_errc, const typename StrV::value_type*> from_str
 		return {from_string_errc::invalid_argument, it};
 	}
 	auto begin = it;
-	bool neg = false;
+	[[maybe_unused]] bool neg = false;
 	if constexpr (std::is_signed_v<T>) {
 		if (Traits::eq(*it, char_of_v<CharT, '-'>)) {
 			neg = true;
@@ -337,7 +339,7 @@ namespace details {
 		}
 
 		template <class T>
-		explicit constexpr format_argument(const T& val) noexcept: vp(std::addressof(val)), out(format_out<T>) {};
+		explicit constexpr format_argument(const T& val) noexcept: vp(std::addressof(val)), out(format_out<T>) {}
 	};
 
 	template <class CharT, class Traits>
