@@ -29,7 +29,7 @@ build_script:
   - cmake --build . --config %CONFIGURATION% -- /m:2 /v:minimal
 
 test_script:
-  - ctest -C %CONFIGURATION% -j2
+  - ctest -C %CONFIGURATION% --output-on-failure -j2
 
 deploy: off
 

@@ -198,5 +198,8 @@ TEST(StringTest, format) {
 	// xflags
 	s = esl::format("aa{:c}bb", 65);
 	ASSERT_EQ(s, "aaAbb");
+
+	auto ws = esl::format(L"{{hi{:5d}}}", 123);
+	ASSERT_EQ(ws, L"{hi  123}");
 }
 

@@ -341,8 +341,8 @@ namespace details {
 
 	template <class CharT, class Traits = std::char_traits<CharT>>
 	struct format_argument {
-		const void* vp;
-		void(*out)(std::basic_ostream<CharT, Traits>&, const void*, format_xflag);
+		const void* const vp;
+		void(* const out)(std::basic_ostream<CharT, Traits>&, const void*, format_xflag);
 		format_xflag xflags;
 
 		template <class T>
@@ -359,7 +359,7 @@ namespace details {
 		}
 
 		template <class T>
-			explicit constexpr format_argument(const T& val) noexcept: vp(std::addressof(val)), out(format_out<T>), xflags(0) {}
+		explicit constexpr format_argument(const T& val) noexcept: vp(std::addressof(val)), out(format_out<T>), xflags(0) {}
 	};
 
 	template <class CharT, class Traits>
@@ -401,13 +401,18 @@ namespace details {
 	#undef ESL_FORMAT_SPEC_REGEX_STRING_
 
 	template <class CharT>
-	inline const std::basic_regex<CharT> format_spec_regex(format_spec_regex_string<CharT>::value, std::regex_constants::optimize);
+	inline const std::basic_regex<CharT>& format_spec_regex() noexcept {
+		static const std::basic_regex<CharT> r(format_spec_regex_string<CharT>::value, std::regex_constants::ECMAScript | std::regex_constants::optimize);
+		return r;
+	}
 
 	template <class Allocator, class CharT, class Traits>
 	const CharT* format_spec(std::basic_ostream<CharT, Traits>& os, const CharT* first, const CharT* last, format_xflag& xflags) {
 		// TODO: change switch to Traits::eq
 		std::match_results<const CharT*, typename std::allocator_traits<Allocator>::template rebind_alloc<std::sub_match<const CharT*>>> m;
-		std::regex_search(first, last, m, format_spec_regex<CharT>);
+		if (!std::regex_search(first, last, m, format_spec_regex<CharT>())) {
+			return first;
+		}
 		auto& matched = m[0];
 		if (matched.second != last) {
 			return matched.second;
@@ -453,7 +458,7 @@ namespace details {
 		}
 		auto& width = m[6];
 		if (width.first != width.second) {
-			std::size_t w;
+			std::size_t w = 0;
 			from_string(width, w);
 			os.width(w);
 		}
