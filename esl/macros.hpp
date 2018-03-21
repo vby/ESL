@@ -138,22 +138,19 @@
 #ifdef ESL_COMPILER_MSVC
 	#define ESL_WARNING_PUSH() __pragma(warning(push))
 	#define ESL_WARNING_POP() __pragma(warning(pop))
-	#define ESL_WARNING_DISABLE(number) __pragma(warning(disable: number))
-	#define ESL_WARNING_ERROR(number) __pragma(warning(error: number))
-	#define ESL_WARNING_WARNING(number) __pragma(warning(default: number))
+	#define ESL_WARNING(specifier, number) __pragma(warning(specifier: number))
 #elif defined ESL_COMPILER_GNU
 	#define ESL_WARNING_PUSH() _Pragma("GCC diagnostic push")
 	#define ESL_WARNING_POP() _Pragma("GCC diagnostic pop")
-	#define ESL_WARNING_GNU_(level, name) _Pragma(ESL_QUOTE(GCC diagnostic level name))
-	#define ESL_WARNING_DISABLE(name) ESL_WARNING_GNU_(ignored, ESL_QUOTE(-W##name))
-	#define ESL_WARNING_ERROR(name) ESL_WARNING_GNU_(error, ESL_QUOTE(-W##name))
-	#define ESL_WARNING_WARNING(name) ESL_WARNING_GNU_(warning, ESL_QUOTE(-W##name))
+	#define ESL_WARNING_(specifier, name) _Pragma(ESL_QUOTE(GCC diagnostic specifier name))
+	#define ESL_WARNING_disable_(name) ESL_WARNING_(ignored, name)
+	#define ESL_WARNING_error_(name) ESL_WARNING_(error, name)
+	#define ESL_WARNING_default_(name) ESL_WARNING_(warning, name)
+	#define ESL_WARNING(specifier, name) ESL_WARNING_##specifier##_(ESL_QUOTE(-W##name))
 #else
 	#define ESL_WARNING_PUSH()
 	#define ESL_WARNING_POP()
-	#define ESL_WARNING_DISABLE(x)
-	#define ESL_WARNING_ERROR(x)
-	#define ESL_WARNING_WARNING(x)
+	#define ESL_WARNING(specifier, x)
 #endif
 
 // ESL_SIZE_BITS, ESL_SIZE_*
