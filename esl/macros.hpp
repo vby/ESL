@@ -112,22 +112,22 @@
 	#define ESL_ARCH_AVX2
 #endif
 
-// ESL_DECL_*
+// ESL_ATTR_*
 #ifdef ESL_COMPILER_MSVC
-	#define ESL_DECL_FORCEINLINE __forceinline
-	#define ESL_DECL_NOINLINE __declspec(noinline)
-	#define ESL_DECL_EXPORT __declspec(dllexport)
-	#define ESL_DECL_IMPORT __declspec(dllimport)
+	#define ESL_ATTR_FORCEINLINE __forceinline
+	#define ESL_ATTR_NOINLINE __declspec(noinline)
+	#define ESL_ATTR_EXPORT __declspec(dllexport)
+	#define ESL_ATTR_IMPORT __declspec(dllimport)
 #elif defined ESL_COMPILER_GNU
-	#define ESL_DECL_FORCEINLINE inline __attribute__((always_inline))
-	#define ESL_DECL_NOINLINE __attribute__((noinline))
-	#define ESL_DECL_EXPORT __attribute__((visibility("default")))
-	#define ESL_DECL_IMPORT __attribute__((visibility("default")))
+	#define ESL_ATTR_FORCEINLINE inline __attribute__((always_inline))
+	#define ESL_ATTR_NOINLINE __attribute__((noinline))
+	#define ESL_ATTR_EXPORT __attribute__((visibility("default")))
+	#define ESL_ATTR_IMPORT __attribute__((visibility("default")))
 #else
-	#define ESL_DECL_FORCEINLINE
-	#define ESL_DECL_NOINLINE
-	#define ESL_DECL_EXPORT
-	#define ESL_DECL_IMPORT
+	#define ESL_ATTR_FORCEINLINE
+	#define ESL_ATTR_NOINLINE
+	#define ESL_ATTR_EXPORT
+	#define ESL_ATTR_IMPORT
 #endif
 
 // ESL_QUOTE, ESL_STRINGIFY

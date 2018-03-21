@@ -10,48 +10,94 @@
 
 namespace esl {
 
-namespace details {
-
-	// not standard
-	//template <template <class...> class B, class... Ts>
-	//std::true_type is_base_of_template_test(B<Ts...>*);
-	template <template <class...> class B, class T>
-	std::true_type is_base_of_template_test(B<T>*);
-	template <template <class...> class B, class T, class T2>
-	std::true_type is_base_of_template_test(B<T, T2>*);
-	template <template <class...> class B, class T, class T2, class T3>
-	std::true_type is_base_of_template_test(B<T, T2, T3>*);
-	template <template <class...> class B, class T, class T2, class T3, class T4>
-	std::true_type is_base_of_template_test(B<T, T2, T3, T4>*);
-	template <template <class...> class B, class T, class T2, class T3, class T4, class T5>
-	std::true_type is_base_of_template_test(B<T, T2, T3, T4, T5>*);
-	template <template <class...> class B, class T, class T2, class T3, class T4, class T5, class T6>
-	std::true_type is_base_of_template_test(B<T, T2, T3, T4, T5, T6>*);
-	template <template <class...> class B>
-	std::false_type is_base_of_template_test(void*);
-	template <template <class...> class B, class D>
-	using is_base_of_template = decltype(details::is_base_of_template_test<B>(std::declval<std::decay_t<D>*>()));
-
-	template <class From, class To>
-	static std::true_type is_static_castable_test(std::add_pointer_t<decltype(static_cast<To>(std::declval<From>()))>);
-	template <class From, class To>
-	static std::false_type is_static_castable_test(...);
-	template <class From, class To>
-	using is_static_castable = decltype(is_static_castable_test<From, To>(nullptr));
-
-} // namespace details
-
 struct not_fallback_t {};
 template <class D>
 struct fallback: std::false_type { using type = D; };
 template <>
 struct fallback<not_fallback_t> { using value_type = bool; static constexpr bool value = false; };
 
-// is_base_of_template, is_base_of_template_v
-template <template <class...> class B, class D, class = void>
-struct is_base_of_template: std::true_type {};
+// macros
+
+// ESL_IMPL_WELL_FORMED
+// name, name##_v
+#define ESL_IMPL_WELL_FORMED(name, type_expr) \
+	template <class T, class = void> \
+	struct name: std::false_type {}; \
+	template <class T> \
+	struct name<T, std::void_t<type_expr>>: std::true_type {}; \
+	template <class T> \
+	inline constexpr bool name##_v = name<T>::value;
+
+// ESL_IMPL_WELL_FORMED_ARGS
+// name, name##_v
+#define ESL_IMPL_WELL_FORMED_ARGS(name, type_expr) \
+	template <class T, class Args, class = void> \
+	struct name##_tuple_: std::false_type {}; \
+	template <class T, class... Args> \
+	struct name##_tuple_<T, std::tuple<Args...>, std::void_t<type_expr>>: std::true_type {}; \
+	template <class T, class... Args> \
+	using name = name##_tuple_<T, std::tuple<Args...>>; \
+	template <class T, class... Args> \
+	inline constexpr bool name##_v = name<T, Args...>::value;
+
+// ESL_IMPL_HAS_MEMBER_VARIABLE
+// name, name##_v
+#define ESL_IMPL_HAS_MEMBER_VARIABLE(name, member) ESL_IMPL_WELL_FORMED(name, decltype(&T::member))
+
+// ESL_IMPL_HAS_NON_OVERLOADED_MEMBER_FUNCTION
+// name, name##_v
+#define ESL_IMPL_HAS_NON_OVERLOADED_MEMBER_FUNCTION(name, member) ESL_IMPL_WELL_FORMED(name, decltype(&T::member))
+
+// ESL_IMPL_MEMBER_TYPE
+// name, name##_t
+#define ESL_IMPL_MEMBER_TYPE(name, member) \
+	template <class T, class D = ::esl::not_fallback_t, class = std::void_t<>> \
+	struct name: ::esl::fallback<D> {}; \
+	template <class T, class D> \
+	struct name<T, D, std::void_t<typename T::member>>: std::true_type { using type = typename T::member; }; \
+	template <class T> \
+	inline constexpr bool name##_v = name<T>::value; \
+	template <class T, class D = ::esl::not_fallback_t> \
+	using name##_t = typename name<T, D>::type;
+
+namespace details {
+
+// not standard
+//template <template <class...> class B, class... Ts>
+//std::true_type is_base_of_template_test(B<Ts...>*);
+template <template <class...> class B, class T>
+std::true_type is_base_of_template_test(B<T>*);
+template <template <class...> class B, class T, class T2>
+std::true_type is_base_of_template_test(B<T, T2>*);
+template <template <class...> class B, class T, class T2, class T3>
+std::true_type is_base_of_template_test(B<T, T2, T3>*);
+template <template <class...> class B, class T, class T2, class T3, class T4>
+std::true_type is_base_of_template_test(B<T, T2, T3, T4>*);
+template <template <class...> class B, class T, class T2, class T3, class T4, class T5>
+std::true_type is_base_of_template_test(B<T, T2, T3, T4, T5>*);
+template <template <class...> class B, class T, class T2, class T3, class T4, class T5, class T6>
+std::true_type is_base_of_template_test(B<T, T2, T3, T4, T5, T6>*);
+template <template <class...> class B>
+std::false_type is_base_of_template_test(void*);
 template <template <class...> class B, class D>
-struct is_base_of_template<B, D, std::void_t<details::is_base_of_template<B, D>>>: details::is_base_of_template<B, D> {};
+using is_base_of_template_pre = decltype(details::is_base_of_template_test<B>(std::declval<D*>()));
+template <template <class...> class B, class D, class = void>
+struct is_base_of_template: std::is_class<D> {};
+template <template <class...> class B, class D>
+struct is_base_of_template<B, D, std::void_t<details::is_base_of_template_pre<B, D>>>: details::is_base_of_template_pre<B, D> {};
+
+template <class From, class To>
+static std::true_type is_static_castable_test(std::add_pointer_t<decltype(static_cast<To>(std::declval<From>()))>);
+template <class From, class To>
+static std::false_type is_static_castable_test(...);
+template <class From, class To>
+using is_static_castable = decltype(is_static_castable_test<From, To>(nullptr));
+
+} // namespace details
+
+// is_base_of_template, is_base_of_template_v
+template <template <class...> class B, class D>
+using is_base_of_template = details::is_base_of_template<B, std::remove_cv_t<D>>;
 template <template <class...> class B, class D>
 inline constexpr bool is_base_of_template_v = is_base_of_template<B, D>::value;
 
@@ -63,56 +109,19 @@ struct is_one_of<T, U, Us...>: std::bool_constant<std::is_same_v<T, U> || is_one
 template <class T, class... Us>
 inline constexpr bool is_one_of_v = is_one_of<T, Us...>::value;
 
-// ESL_TRAITS_WELL_FORMED
-#define ESL_TRAITS_WELL_FORMED(name, type_expr) \
-	template <class T, class = void> \
-	struct name: std::false_type {}; \
-	template <class T> \
-	struct name<T, std::void_t<type_expr>>: std::true_type {}; \
-	template <class T> \
-	inline constexpr bool name##_v = name<T>::value;
+#define ESL_IMPL_HAS_NON_OVERLOADED_MEMBER_FUNCTION_ESL_(name, member) \
+	ESL_IMPL_HAS_NON_OVERLOADED_MEMBER_FUNCTION(has_non_overloaded_##name, member)
 
-// ESL_TRAITS_WELL_FORMED_ARGS
-#define ESL_TRAITS_WELL_FORMED_ARGS(name, type_expr) \
-	template <class T, class Args, class = void> \
-	struct name##_tuple_: std::false_type {}; \
-	template <class T, class... Args> \
-	struct name##_tuple_<T, std::tuple<Args...>, std::void_t<type_expr>>: std::true_type {}; \
-	template <class T, class... Args> \
-	using name = name##_tuple_<T, std::tuple<Args...>>; \
-	template <class T, class... Args> \
-	inline constexpr bool name##_v = name<T, Args...>::value;
-
-// ESL_TRAITS_HAS_MEMBER_VARIABLE
-#define ESL_TRAITS_HAS_MEMBER_VARIABLE(name, member) ESL_TRAITS_WELL_FORMED(name, decltype(&T::member))
-
-// ESL_TRAITS_HAS_NON_OVERLOADED_MEMBER_FUNCTION
-#define ESL_TRAITS_HAS_NON_OVERLOADED_MEMBER_FUNCTION(name, member) ESL_TRAITS_WELL_FORMED(name, decltype(&T::member))
-
-#define ESL_TRAITS_HAS_NON_OVERLOADED_MEMBER_FUNCTION_ESL_(name, member) \
-	ESL_TRAITS_HAS_NON_OVERLOADED_MEMBER_FUNCTION(has_non_overloaded_##name, member)
-
-// ESL_TRAITS_MEMBER_TYPE
-#define ESL_TRAITS_MEMBER_TYPE(name, member) \
-	template <class T, class D = ::esl::not_fallback_t, class = std::void_t<>> \
-	struct name: ::esl::fallback<D> {}; \
-	template <class T, class D> \
-	struct name<T, D, std::void_t<typename T::member>>: std::true_type { using type = typename T::member; }; \
-	template <class T> \
-	inline constexpr bool name##_v = name<T>::value; \
-	template <class T, class D = ::esl::not_fallback_t> \
-	using name##_t = typename name<T, D>::type;
-
-#define ESL_TRAITS_MEMBER_TYPE_ESL_(name)  ESL_TRAITS_MEMBER_TYPE(member_type_##name, name)
+#define ESL_IMPL_MEMBER_TYPE_ESL_(name)  ESL_IMPL_MEMBER_TYPE(member_type_##name, name)
 
 // is_datable, is_datable_v
-ESL_TRAITS_WELL_FORMED(is_datable, decltype(std::data(std::declval<T>())))
+ESL_IMPL_WELL_FORMED(is_datable, decltype(std::data(std::declval<T>())))
 
 // is_sizeable, is_sizeable_v
-ESL_TRAITS_WELL_FORMED(is_sizeable, decltype(std::size(std::declval<T>())))
+ESL_IMPL_WELL_FORMED(is_sizeable, decltype(std::size(std::declval<T>())))
 
 // is_emptiable, is_emptiable_v
-ESL_TRAITS_WELL_FORMED(is_emptiable, decltype(std::empty(std::declval<T>())))
+ESL_IMPL_WELL_FORMED(is_emptiable, decltype(std::empty(std::declval<T>())))
 
 // is_static_castable, is_static_castable_v
 template <class From, class To>
@@ -121,38 +130,38 @@ template <class From, class To>
 inline constexpr bool is_static_castable_v = is_static_castable<From, To>::value;
 
 // is_emplaceable, is_emplaceable_v
-ESL_TRAITS_WELL_FORMED_ARGS(is_emplaceable, decltype(std::declval<T>().emplace(std::forward<Args>(std::declval<Args>())...)))
+ESL_IMPL_WELL_FORMED_ARGS(is_emplaceable, decltype(std::declval<T>().emplace(std::forward<Args>(std::declval<Args>())...)))
 
 // is_emplace_backable, is_emplace_backable_v
-ESL_TRAITS_WELL_FORMED_ARGS(is_emplace_backable, decltype(std::declval<T>().emplace_back(std::forward<Args>(std::declval<Args>())...)))
+ESL_IMPL_WELL_FORMED_ARGS(is_emplace_backable, decltype(std::declval<T>().emplace_back(std::forward<Args>(std::declval<Args>())...)))
 
 // has_non_overloaded_operator_parentheses, has_non_overloaded_operator_parentheses_v
-ESL_TRAITS_HAS_NON_OVERLOADED_MEMBER_FUNCTION_ESL_(operator_parentheses, operator())
+ESL_IMPL_HAS_NON_OVERLOADED_MEMBER_FUNCTION_ESL_(operator_parentheses, operator())
 
 // has_non_overloaded_operator_brackets, has_non_overloaded_operator_brackets_v
-ESL_TRAITS_HAS_NON_OVERLOADED_MEMBER_FUNCTION_ESL_(operator_brackets, operator[])
+ESL_IMPL_HAS_NON_OVERLOADED_MEMBER_FUNCTION_ESL_(operator_brackets, operator[])
 
 // member_type_##name, member_type_##name_t, member_type_##name_v
-ESL_TRAITS_MEMBER_TYPE_ESL_(type)
-ESL_TRAITS_MEMBER_TYPE_ESL_(value_type)
-ESL_TRAITS_MEMBER_TYPE_ESL_(size_type)
-ESL_TRAITS_MEMBER_TYPE_ESL_(difference_type)
-ESL_TRAITS_MEMBER_TYPE_ESL_(allocator_type)
-ESL_TRAITS_MEMBER_TYPE_ESL_(pointer)
-ESL_TRAITS_MEMBER_TYPE_ESL_(const_pointer)
-ESL_TRAITS_MEMBER_TYPE_ESL_(reference)
-ESL_TRAITS_MEMBER_TYPE_ESL_(const_reference)
-ESL_TRAITS_MEMBER_TYPE_ESL_(iterator)
-ESL_TRAITS_MEMBER_TYPE_ESL_(const_iterator)
-ESL_TRAITS_MEMBER_TYPE_ESL_(reverse_iterator)
-ESL_TRAITS_MEMBER_TYPE_ESL_(const_reverse_iterator)
-ESL_TRAITS_MEMBER_TYPE_ESL_(traits_type)
-ESL_TRAITS_MEMBER_TYPE_ESL_(element_type)
-ESL_TRAITS_MEMBER_TYPE_ESL_(deleter_type)
-ESL_TRAITS_MEMBER_TYPE_ESL_(is_always_equal)
-ESL_TRAITS_MEMBER_TYPE_ESL_(weak_type)
-ESL_TRAITS_MEMBER_TYPE_ESL_(native_handle_type)
-ESL_TRAITS_MEMBER_TYPE_ESL_(mutex_type)
+ESL_IMPL_MEMBER_TYPE_ESL_(type)
+ESL_IMPL_MEMBER_TYPE_ESL_(value_type)
+ESL_IMPL_MEMBER_TYPE_ESL_(size_type)
+ESL_IMPL_MEMBER_TYPE_ESL_(difference_type)
+ESL_IMPL_MEMBER_TYPE_ESL_(allocator_type)
+ESL_IMPL_MEMBER_TYPE_ESL_(pointer)
+ESL_IMPL_MEMBER_TYPE_ESL_(const_pointer)
+ESL_IMPL_MEMBER_TYPE_ESL_(reference)
+ESL_IMPL_MEMBER_TYPE_ESL_(const_reference)
+ESL_IMPL_MEMBER_TYPE_ESL_(iterator)
+ESL_IMPL_MEMBER_TYPE_ESL_(const_iterator)
+ESL_IMPL_MEMBER_TYPE_ESL_(reverse_iterator)
+ESL_IMPL_MEMBER_TYPE_ESL_(const_reverse_iterator)
+ESL_IMPL_MEMBER_TYPE_ESL_(traits_type)
+ESL_IMPL_MEMBER_TYPE_ESL_(element_type)
+ESL_IMPL_MEMBER_TYPE_ESL_(deleter_type)
+ESL_IMPL_MEMBER_TYPE_ESL_(is_always_equal)
+ESL_IMPL_MEMBER_TYPE_ESL_(weak_type)
+ESL_IMPL_MEMBER_TYPE_ESL_(native_handle_type)
+ESL_IMPL_MEMBER_TYPE_ESL_(mutex_type)
 
 
 /// basic traits ///
