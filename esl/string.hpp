@@ -5,6 +5,7 @@
 #include "macros.hpp"
 #include "type_traits.hpp"
 #include "memory.hpp"
+#include "literal.hpp"
 
 #include <string>
 #include <string_view>
@@ -13,29 +14,9 @@
 #include <sstream>
 #include <regex>
 #include <stdexcept>
+#include <locale>
 
 namespace esl {
-
-// macros
-
-// ESL_IMPL_STRING_LITERAL
-// name, name##_v
-#define ESL_IMPL_STRING_LITERAL(name, s) \
-	template <class CharT> struct name; \
-	template <> struct name<char> { \
-		static constexpr const char* value = s; \
-	}; \
-	template <> struct name<wchar_t> { \
-		static constexpr const wchar_t* value = L##s; \
-	}; \
-	template <> struct name<char16_t> { \
-		static constexpr const char16_t* value = u##s; \
-	}; \
-	template <> struct name<char32_t> { \
-		static constexpr const char32_t* value = U##s; \
-	}; \
-	template <class CharT> \
-	inline constexpr const CharT* name##_v = name<CharT>::value;
 
 // constexpr_strlen, constexpr_wcslen
 template <class CharT>
@@ -154,6 +135,8 @@ public:
 
 /// functions ///
 
+// NOTE: Assume wchar_t, char16_t, char32_t is compatible with char.
+
 // from_string
 // Generic c++17 std::from_chars
 // TODO float
@@ -266,7 +249,9 @@ std::basic_string<CharT> join(CharT d, InputIt first, InputIt last) {
 
 
 /// format ///
+// Similar to python's str.format
 // See https://docs.python.org/3.5/library/string.html#formatstrings
+// NOTE: This implemention is locale aware
 
 // bad_format
 
@@ -288,186 +273,182 @@ public:
 
 namespace details {
 
-	using format_xflag = unsigned int;
-	struct format_xflags {
-		static constexpr format_xflag center = 0x1;
-		static constexpr format_xflag space_sign = 0x2;
-		static constexpr format_xflag grouping = 0x4;
-		static constexpr format_xflag binary = 0x8;
-		static constexpr format_xflag character = 0x10;
-		static constexpr format_xflag number = 0x20;
-		static constexpr format_xflag percent = 0x40;
-	};
+using format_xflag = unsigned int;
+struct format_xflags {
+	static constexpr format_xflag center = 0x1;
+	static constexpr format_xflag space_sign = 0x2;
+	static constexpr format_xflag grouping = 0x4;
+	static constexpr format_xflag binary = 0x8;
+	static constexpr format_xflag character = 0x10;
+	static constexpr format_xflag number = 0x20;
+	static constexpr format_xflag percent = 0x40;
+};
 
-	template <class CharT, class Traits = std::char_traits<CharT>>
-	struct format_argument {
-		const void* const vp;
-		void(* const out)(std::basic_ostream<CharT, Traits>&, const void*, format_xflag);
-		format_xflag xflags;
-
-		template <class T>
-		static void format_out(std::basic_ostream<CharT, Traits>& os, const void* vp, format_xflag xflags) {
-			const auto& value = *static_cast<std::add_pointer_t<std::add_const_t<T>>>(vp);
-			if constexpr (std::is_integral_v<T>) {
-				if (xflags & format_xflags::character) {
-					os << static_cast<CharT>(value);
-					return;
-				}
+template <class CharT, class Traits, class T>
+static void format_out(std::basic_ostream<CharT, Traits>& os, const void* vp, format_xflag xflags) {
+	const auto& value = *static_cast<std::add_pointer_t<std::add_const_t<T>>>(vp);
+	if constexpr (std::is_arithmetic_v<T>) {
+		if constexpr (std::is_integral_v<T>) {
+			if (xflags & format_xflags::character) {
+				os << static_cast<CharT>(value);
+				return;
 			}
-			// TODO
+		}
+		if (xflags & (format_xflags::grouping | format_xflags::number)) {
+			auto loc = os.imbue(std::locale(""));
 			os << value;
+			os.imbue(loc);
+			return;
 		}
-
-		template <class T>
-		explicit constexpr format_argument(const T& val) noexcept: vp(std::addressof(val)), out(format_out<T>), xflags(0) {}
-	};
-
-	template <class CharT, class Traits>
-	inline std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& os, const format_argument<CharT, Traits>& arg) {
-		arg.out(os, arg.vp, arg.xflags);
-		return os;
 	}
+	// TODO
+	os << value;
+}
 
-	template <class Traits, class CharT>
-	constexpr std::pair<bool, const CharT*> format_find_colon_or_close_brace(const CharT* first, const CharT* last) {
-		while (first != last) {
-			const auto ch = *first;
-			if (Traits::eq(ch, CharT(':'))) {
-				return {true, first};
-			} else if (Traits::eq(ch, CharT('}'))) {
-				break;
-			}
-			++first;
+template <class CharT, class Traits = std::char_traits<CharT>>
+struct format_argument {
+	const void* const vp;
+	void(* const out)(std::basic_ostream<CharT, Traits>&, const void*, format_xflag);
+	format_xflag xflags;
+
+	template <class T>
+	explicit constexpr format_argument(const T& val) noexcept: vp(std::addressof(val)), out(format_out<CharT, Traits, T>), xflags(0) {}
+};
+
+template <class CharT, class Traits>
+inline std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& os, const format_argument<CharT, Traits>& arg) {
+	arg.out(os, arg.vp, arg.xflags);
+	return os;
+}
+
+template <class Traits, class CharT>
+constexpr std::pair<bool, const CharT*> format_find_colon_or_close_brace(const CharT* first, const CharT* last) {
+	while (first != last) {
+		const auto ch = *first;
+		if (Traits::eq(ch, CharT(':'))) {
+			return {true, first};
+		} else if (Traits::eq(ch, CharT('}'))) {
+			break;
 		}
-		return {false, first};
+		++first;
 	}
+	return {false, first};
+}
 
-	ESL_IMPL_STRING_LITERAL(format_spec_regex_string, R"(^(?:(.?)([<>=^]))?([+\- ]?)(#?)(0?)([0-9]*)([_,]?)(\.[0-9]*)?([bcdeEfFgGnosxX%]?))")
+ESL_IMPL_STRING_LITERAL_CONSTANT(format_spec_regex_string, R"(^(?:(.?)([<>=^]))?([+\- ]?)(#?)(0?)([0-9]*)([_,]?)(\.[0-9]*)?([bcdeEfFgGnosxX%]?))")
 
-	// NOTE: global regex instance not working on MSVC, unknown bug, use static
-	// template <class CharT>
-	// inline const std::basic_regex<CharT> format_spec_regex(format_spec_regex_string_v<CharT>, std::regex_constants::ECMAScript | std::regex_constants::optimize);
-	template <class CharT>
-	inline const std::basic_regex<CharT>& format_spec_regex() noexcept {
-		static const std::basic_regex<CharT> r(format_spec_regex_string_v<CharT>, std::regex_constants::ECMAScript | std::regex_constants::optimize);
-		return r;
+// NOTE: global regex instance not working on MSVC, unknown bug, use static
+// template <class CharT>
+// inline const std::basic_regex<CharT> format_spec_regex(format_spec_regex_string_v<CharT>, std::regex_constants::ECMAScript | std::regex_constants::optimize);
+template <class CharT>
+inline const std::basic_regex<CharT>& format_spec_regex() noexcept {
+	static const std::basic_regex<CharT> r(format_spec_regex_string_v<CharT>, std::regex_constants::ECMAScript | std::regex_constants::optimize);
+	return r;
+}
+
+template <class Alloc, class CharT, class Traits>
+const CharT* format_spec(const std::basic_string_view<CharT, Traits>& v, std::basic_ostream<CharT, Traits>& os, format_xflag& xflags) {
+	// TODO: change switch to Traits::eq
+	using string_view_type = std::basic_string_view<CharT, Traits>;
+	const auto first = v.data();
+	const auto last = v.data() + v.size();
+	std::match_results<const CharT*, typename std::allocator_traits<Alloc>::template rebind_alloc<std::sub_match<const CharT*>>> m;
+	if (!std::regex_search(first, last, m, format_spec_regex<CharT>())) {
+		return first;
 	}
-
-	template <class Alloc, class CharT, class Traits>
-	const CharT* format_spec(const std::basic_string_view<CharT, Traits>& v, std::basic_ostream<CharT, Traits>& os, format_xflag& xflags) {
-		// TODO: change switch to Traits::eq
-		using string_view_type = std::basic_string_view<CharT, Traits>;
-		const auto first = v.data();
-		const auto last = v.data() + v.size();
-		std::match_results<const CharT*, typename std::allocator_traits<Alloc>::template rebind_alloc<std::sub_match<const CharT*>>> m;
-		if (!std::regex_search(first, last, m, format_spec_regex<CharT>())) {
-			return first;
-		}
-		auto& matched = m[0];
-		if (matched.second != last) {
-			return matched.second;
-		}
-		auto& fill = m[1];
-		if (fill.first != fill.second) {
-			os.fill(*fill.first);
-		}
-		auto& align = m[2];
-		if (align.first != align.second) {
-			const auto c = *align.first;
-			if (Traits::eq(c, CharT('<'))) {
-				os.setf(std::ios_base::left);
-			} else if (Traits::eq(c, CharT('>'))) {
-				os.setf(std::ios_base::right);
-			} else if (Traits::eq(c, CharT('='))) {
-				os.setf(std::ios_base::internal);
-			} else if (Traits::eq(c, CharT('^'))) {
-				xflags |= format_xflags::center;
-			} else {
-				return align.first;
-			}
-		}
-		auto& sign = m[3];
-		if (sign.first != sign.second) {
-			// default '-'
-			const auto c = *sign.first;
-			if (Traits::eq(c, CharT('+'))) {
-				os.setf(std::ios_base::showpos);
-			} else if (Traits::eq(c, CharT(' '))) {
-				xflags |= format_xflags::space_sign;
-			} else {
-				return sign.first;
-			}
-		}
-		if (m.length(4)) { // #
-			os.setf(std::ios_base::showbase);
-		}
-		if (m.length(5)) { // 0, override m[1]
-			os.fill(CharT('0'));
-		}
-		auto& width = m[6];
-		if (width.first != width.second) {
-			std::size_t w = 0;
-			from_string(string_view_type(width.first, width.second - width.first), w);
-			os.width(w);
-		}
-		if (m.length(7)) { // grouping_option
-			xflags |= format_xflags::grouping;
-		}
-		auto& precision = m[8];
-		if (precision.first != precision.second) {
-			std::size_t p = 0;
-			from_string(string_view_type(precision.first + 1, precision.second - precision.first - 1), p);
-			os.precision(p);
-		}
-		auto& type = m[9];
-		if (type.first != type.second) {
-			// default string 's', integer 'd', float 'g'
-			const auto c = *type.first;
-			if (Traits::eq(c, CharT('b'))) {
-				xflags |= format_xflags::binary;
-			} else if (Traits::eq(c, CharT('c'))) {
-				xflags |= format_xflags::character;
-			} else if (Traits::eq(c, CharT('d'))) {
-				os.setf(std::ios_base::dec);
-				os.unsetf(std::ios_base::boolalpha);
-			} else if (Traits::eq(c, CharT('o'))) {
-				os.setf(std::ios_base::oct);
-				os.unsetf(std::ios_base::boolalpha);
-			} else if (Traits::eq(c, CharT('X'))) {
-				os.setf(std::ios_base::hex);
-				os.setf(std::ios_base::uppercase);
-				os.unsetf(std::ios_base::boolalpha);
-			} else if (Traits::eq(c, CharT('x'))) {
-				os.setf(std::ios_base::hex);
-				os.unsetf(std::ios_base::boolalpha);
-			} else if (Traits::eq(c, CharT('F'))) {
-				os.setf(std::ios_base::fixed);
-				os.setf(std::ios_base::showpoint);
-				os.setf(std::ios_base::uppercase);
-				os.unsetf(std::ios_base::boolalpha);
-			} else if (Traits::eq(c, CharT('f'))) {
-				os.setf(std::ios_base::fixed);
-				os.setf(std::ios_base::showpoint);
-				os.unsetf(std::ios_base::boolalpha);
-			} else if (Traits::eq(c, CharT('E'))) {
-				os.setf(std::ios_base::scientific);
-				os.setf(std::ios_base::uppercase);
-				os.unsetf(std::ios_base::boolalpha);
-			} else if (Traits::eq(c, CharT('e'))) {
-				os.setf(std::ios_base::scientific);
-				os.unsetf(std::ios_base::boolalpha);
-			} else if (Traits::eq(c, CharT('G'))) {
-				os.setf(std::ios_base::uppercase);
-			} else if (Traits::eq(c, CharT('n'))) { // use locale
-				xflags |= format_xflags::number;
-			} else if (Traits::eq(c, CharT('%'))) { // x*100 'f' %
-				xflags |= format_xflags::percent;
-			} else {
-				return type.first;
-			}
-		}
-		return last;
+	auto& matched = m[0];
+	if (matched.second != last) {
+		return matched.second;
 	}
+	auto& fill = m[1];
+	if (fill.first != fill.second) {
+		os.fill(*fill.first);
+	}
+	auto& align = m[2];
+	if (align.first != align.second) {
+		const auto c = *align.first;
+		if (Traits::eq(c, CharT('<'))) {
+			os.setf(std::ios_base::left);
+		} else if (Traits::eq(c, CharT('>'))) {
+			os.setf(std::ios_base::right);
+		} else if (Traits::eq(c, CharT('='))) {
+			os.setf(std::ios_base::internal);
+		} else if (Traits::eq(c, CharT('^'))) {
+			xflags |= format_xflags::center;
+		} else {
+			return align.first;
+		}
+	}
+	auto& sign = m[3];
+	if (sign.first != sign.second) {
+		// default '-'
+		const auto c = *sign.first;
+		if (Traits::eq(c, CharT('+'))) {
+			os.setf(std::ios_base::showpos);
+		} else if (Traits::eq(c, CharT(' '))) {
+			xflags |= format_xflags::space_sign;
+		} else {
+			return sign.first;
+		}
+	}
+	if (m.length(4)) { // #
+		os.setf(std::ios_base::showbase);
+	}
+	if (m.length(5)) { // 0, override m[1]
+		os.fill(CharT('0'));
+	}
+	auto& width = m[6];
+	if (width.first != width.second) {
+		std::size_t w = 0;
+		from_string(string_view_type(width.first, width.second - width.first), w);
+		os.width(w);
+	}
+	if (m.length(7)) { // grouping_option
+		xflags |= format_xflags::grouping;
+	}
+	auto& precision = m[8];
+	if (precision.first != precision.second) {
+		std::size_t p = 0;
+		from_string(string_view_type(precision.first + 1, precision.second - precision.first - 1), p);
+		os.precision(p);
+	}
+	auto& type = m[9];
+	if (type.first != type.second) {
+		// default string 's', integer 'd', float 'g'
+		const auto c = *type.first;
+		os.unsetf(std::ios_base::boolalpha);
+		if (Traits::eq(c, CharT('b'))) {
+			xflags |= format_xflags::binary;
+		} else if (Traits::eq(c, CharT('c'))) {
+			xflags |= format_xflags::character;
+		} else if (Traits::eq(c, CharT('d'))) {
+			os.setf(std::ios_base::dec);
+		} else if (Traits::eq(c, CharT('o'))) {
+			os.setf(std::ios_base::oct);
+		} else if (Traits::eq(c, CharT('x'))) {
+			os.setf(std::ios_base::hex);
+		} else if (Traits::eq(c, CharT('X'))) {
+			os.setf(std::ios_base::hex | std::ios_base::uppercase);
+		} else if (Traits::eq(c, CharT('f'))) {
+			os.setf(std::ios_base::fixed | std::ios_base::showpoint);
+		} else if (Traits::eq(c, CharT('F'))) {
+			os.setf(std::ios_base::fixed | std::ios_base::showpoint | std::ios_base::uppercase);
+		} else if (Traits::eq(c, CharT('e'))) {
+			os.setf(std::ios_base::scientific);
+		} else if (Traits::eq(c, CharT('E'))) {
+			os.setf(std::ios_base::scientific | std::ios_base::uppercase);
+		} else if (Traits::eq(c, CharT('G'))) {
+			os.setf(std::ios_base::uppercase);
+		} else if (Traits::eq(c, CharT('n'))) {
+			xflags |= format_xflags::number;
+		} else if (Traits::eq(c, CharT('%'))) {
+			xflags |= format_xflags::percent;
+		} else {
+			return type.first;
+		}
+	}
+	return last;
+}
 
 } // namespace details
 

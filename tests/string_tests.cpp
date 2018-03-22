@@ -187,6 +187,10 @@ TEST(StringTest, format) {
 	s = esl::format("{:d}", false);
 	ASSERT_EQ(s, "0");
 
+	s = esl::format("{:n}", 123456789);
+	// depend on locale
+	//ASSERT_EQ(s, "123,456,789");
+
 	// xflags
 	s = esl::format("aa{:c}bb", 65);
 	ASSERT_EQ(s, "aaAbb");
