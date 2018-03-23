@@ -73,9 +73,9 @@ constexpr std::array<T, Size> transpose_integer_array(const std::array<T, N>& ar
 
 template <class C, class... Args>
 inline decltype(auto) add_emplace(C& c, Args&&... args) {
-	if constexpr (is_emplace_backable_v<C, Args...>) {
+	if constexpr (is_emplace_backable_v<C, Args&&...>) {
 		return c.emplace_back(std::forward<Args>(args)...);
-	} else if constexpr (is_emplaceable_v<C, Args...>) {
+	} else if constexpr (is_emplaceable_v<C, Args&&...>) {
 		return c.emplace(std::forward<Args>(args)...);
 	} else {
 		return c.emplace_front(std::forward<Args>(args)...);
