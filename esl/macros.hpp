@@ -1,8 +1,8 @@
-
 #ifndef ESL_MACROS_HPP
 #define ESL_MACROS_HPP
 
-// ESL_CXX_*, ESL_CXX_VERSION, ESL_CXX_VERSION_MAJOR, ESL_CXX_VERSION_MINOR
+// ESL_CXX_(98, 11, 14, 17)
+// ESL_CXX_VERSION, ESL_CXX_VERSION_MAJOR, ESL_CXX_VERSION_MINOR
 #define ESL_CXX_98 199711L
 #define ESL_CXX_11 201103L
 #define ESL_CXX_14 201402L
@@ -11,7 +11,9 @@
 #define ESL_CXX_VERSION_MAJOR (__cplusplus / 100)
 #define ESL_CXX_VERSION_MINOR (__cplusplus % 100)
 
-// ESL_COMPILER_*, ESL_COMPILER_VERSION, ESL_COMPILER_VERSION_MAJOR, ESL_COMPILER_VERSION_MINOR, ESL_COMPILER_VERSION_PATCHLEVEL
+// ESL_COMPILER_(MSVC, GNU, CLANG, GNU_NOT_CLANG)
+// ESL_COMPILER_VERSION (nnnn)
+// ESL_COMPILER_VERSION_MAJOR, ESL_COMPILER_VERSION_MINOR, ESL_COMPILER_VERSION_PATCHLEVEL
 #if defined _MSC_VER
 	#define ESL_COMPILER_MSVC
 	#define ESL_COMPILER_VERSION _MSC_VER
@@ -36,7 +38,7 @@
 	#define ESL_COMPILER_VERSION_PATCHLEVEL __GNUC_PATCHLEVEL__
 #endif
 
-// ESL_SOURCE_*
+// ESL_SOURCE_(WIN32, WIN64, WIN32_NOT_WIN64, POSIX, GNU, BSD, APPLE)
 #ifdef _WIN32
 	#define ESL_SOURCE_WIN32
 	#ifdef _WIN64
@@ -58,20 +60,7 @@
 	#define ESL_SOURCE_APPLE
 #endif
 
-// ESL_COUNTER, ESL_PRETTY_FUNCTION
-#ifdef ESL_COMPILER_MSVC
-	#define ESL_COUNTER __COUNTER__
-	#define ESL_PRETTY_FUNCTION __FUNCSIG__
-#else
-	#ifdef __COUNTER__
-		#define ESL_COUNTER __COUNTER__
-	#endif
-	#ifdef __PRETTY_FUNCTION__
-		#define ESL_PRETTY_FUNCTION __PRETTY_FUNCTION__
-	#endif
-#endif
-
-// ESL_ARCH_*
+// ESL_ARCH_(X64, X86, ARM64, ARM, SSE, SSE2, AVX, AVX2)
 #ifdef ESL_COMPILER_MSVC
 	#if defined _M_X64
 		#define ESL_ARCH_X64
@@ -112,15 +101,15 @@
 	#define ESL_ARCH_AVX2
 #endif
 
-// ESL_ATTR_*
+// ESL_ATTR_(FORCEINLINE, NOINLINE, EXPORT, IMPORT)
 #ifdef ESL_COMPILER_MSVC
 	#define ESL_ATTR_FORCEINLINE __forceinline
 	#define ESL_ATTR_NOINLINE __declspec(noinline)
 	#define ESL_ATTR_EXPORT __declspec(dllexport)
 	#define ESL_ATTR_IMPORT __declspec(dllimport)
 #elif defined ESL_COMPILER_GNU
-	#define ESL_ATTR_FORCEINLINE inline __attribute__((always_inline))
-	#define ESL_ATTR_NOINLINE __attribute__((noinline))
+	#define ESL_ATTR_FORCEINLINE inline __attribute__((__always_inline__))
+	#define ESL_ATTR_NOINLINE __attribute__((__noinline__))
 	#define ESL_ATTR_EXPORT __attribute__((visibility("default")))
 	#define ESL_ATTR_IMPORT __attribute__((visibility("default")))
 #else
@@ -130,11 +119,24 @@
 	#define ESL_ATTR_IMPORT
 #endif
 
+// ESL_COUNTER, ESL_PRETTY_FUNCTION
+#ifdef ESL_COMPILER_MSVC
+	#define ESL_COUNTER __COUNTER__
+	#define ESL_PRETTY_FUNCTION __FUNCSIG__
+#else
+	#ifdef __COUNTER__
+		#define ESL_COUNTER __COUNTER__
+	#endif
+	#ifdef __PRETTY_FUNCTION__
+		#define ESL_PRETTY_FUNCTION __PRETTY_FUNCTION__
+	#endif
+#endif
+
 // ESL_QUOTE, ESL_STRINGIFY
 #define ESL_QUOTE(name) #name
 #define ESL_STRINGIFY(name) ESL_QUOTE(name)
 
-// ESL_WARNING_*
+// ESL_WARNING_(PUSH, POP), ESL_WARNING
 #ifdef ESL_COMPILER_MSVC
 	#define ESL_WARNING_PUSH() __pragma(warning(push))
 	#define ESL_WARNING_POP() __pragma(warning(pop))
@@ -153,29 +155,13 @@
 	#define ESL_WARNING(specifier, x)
 #endif
 
-// ESL_SIZE_BITS, ESL_SIZE_*
+// TODO: move into separated file
+// ESL_SIZE(64, 32)
 #include <cstdint>
 #if (SIZE_MAX == UINT64_MAX)
-	#define ESL_SIZE_BITS 64
-	#define ESL_SIZE_64
+	#define ESL_SIZE64
 #elif (SIZE_MAX == UINT32_MAX)
-	#define ESL_SIZE_BITS 32
-	#define ESL_SIZE_32
-#endif
-
-// ESL_ROT*
-#define ESL_ROTL32(x, s) (((x) << (s)) | ((x) >> (32 - (s))))
-#define ESL_ROTL64(x, s) (((x) << (s)) | ((x) >> (64 - (s))))
-#define ESL_ROTR32(x, s) (((x) >> (s)) | ((x) << (32 - (s))))
-#define ESL_ROTR64(x, s) (((x) >> (s)) | ((x) << (64 - (s))))
-
-// ESL_FAST_ROT*
-#ifdef ESL_COMPILER_MSVC
-	#include <cstdlib>
-	#define ESL_FAST_ROTL32(x, s) _rotl(x, s)
-	#define ESL_FAST_ROTL64(x, s) _rotl64(x, s)
-	#define ESL_FAST_ROTR32(x, s) _rotr(x, s)
-	#define ESL_FAST_ROTR64(x, s) _rotr64(x, s)
+	#define ESL_SIZE32
 #endif
 
 #endif // ESL_MACROS_HPP
