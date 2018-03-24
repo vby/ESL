@@ -79,7 +79,7 @@
 		#endif
 	#endif
 #else
-	#if defined __x86_64__
+	#if defined (__x86_64__) || defined (__amd64__)
 		#define ESL_ARCH_X64
 	#elif defined __i386__
 		#define ESL_ARCH_X86
