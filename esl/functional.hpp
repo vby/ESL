@@ -6,6 +6,7 @@
 #ifndef ESL_FUNCTIONAL_HPP
 #define ESL_FUNCTIONAL_HPP
 
+#include "limits.hpp"
 #include "intrin.hpp"
 
 #include <cstdint>
@@ -25,7 +26,7 @@ inline std::size_t hash_value(const void* p, std::size_t size) noexcept {
 	return std::hash<std::string_view>{}(std::string_view(static_cast<const char*>(p), size));
 }
 
-#ifdef ESL_SIZE64
+#if (ESL_SIZE_WIDTH == 64)
 
 // Modified from boost/container_hash/hash.hpp
 inline constexpr void hash_value_combine_(std::uint64_t& h, std::uint64_t k) noexcept {

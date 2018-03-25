@@ -155,13 +155,17 @@
 	#define ESL_WARNING(specifier, x)
 #endif
 
-// TODO: move into separated file
-// ESL_SIZE(64, 32)
-#include <cstdint>
-#if (SIZE_MAX == UINT64_MAX)
-	#define ESL_SIZE64
-#elif (SIZE_MAX == UINT32_MAX)
-	#define ESL_SIZE32
+// ESL_ORDER_(LITTLE_ENDIAN, BIG_ENDIAN, PDP_ENDIAN)
+#if !defined(ESL_ORDER_BIG_ENDIAN) && !defined(ESL_ORDER_PDP_ENDIAN) && defined(ESL_COMPILER_GNU)
+	#if (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+		#define ESL_ORDER_LITTLE_ENDIAN
+	#elif (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+		#define ESL_ORDER_BIG_ENDIAN
+	#elif (__BYTE_ORDER__ == __ORDER_PDP_ENDIAN__)
+		#define ESL_ORDER_PDP_ENDIAN
+	#endif
+#else
+	#define ESL_ORDER_LITTLE_ENDIAN
 #endif
 
 #endif // ESL_MACROS_HPP

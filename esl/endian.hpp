@@ -1,34 +1,21 @@
-
 #ifndef ESL_ENDIAN_HPP
 #define ESL_ENDIAN_HPP
 
-#if __has_include(<endian.h>)
-	#define ESL_HAS_BSD_ENDIAN
-	#include <endian.h>
-#elif __has_include(<sys/endian.h>)
-	#define ESL_HAS_BSD_ENDIAN
-	#include <sys/endian.h>
-#endif
+#include "macros.hpp"
 
 namespace esl {
-#ifdef ESL_HAS_BSD_ENDIAN
 	// C++20 endian in <type_traits>
-	enum class endian {
-		little = __LITTLE_ENDIAN,
-		big    = __BIG_ENDIAN,
-		native = __BYTE_ORDER,
-	};
+enum class endian {
+	little = 1234,
+	big    = 4321,
+#ifdef ESL_ORDER_LITTLE_ENDIAN
+	native = little,
+#elif defined ESL_ORDER_BIG_ENDIAN
+	native = big,
 #else
-	enum class endian {
-		little = 1234,
-		big    = 4321,
-		#ifdef ESL_SUG_BIG_ENDIAN
-			native = big,
-		#else
-			native = little,
-		#endif
-	};
+	native = 3421,
 #endif
+};
 
 } // namespace esl
 
