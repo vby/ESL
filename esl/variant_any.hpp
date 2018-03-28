@@ -21,7 +21,7 @@ private:
 	using alternative_type_t = types_nth_t<I, Ts...>;
 
 	template <class T, class = types_index_t<std::decay_t<T>, Ts...>, class = types_rindex_t<std::decay_t<T>, Ts...>>
-	struct alternative_index;
+	struct alternative_index {};
 	template <class T, class I>
 	struct alternative_index<T, I, I> { using type = I; };
 	template <class T>
