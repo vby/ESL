@@ -10,6 +10,8 @@
 
 namespace esl {
 
+inline constexpr std::size_t npos = std::size_t(-1);
+
 struct not_fallback_t {};
 template <class D>
 struct fallback: std::false_type { using type = D; };
@@ -280,68 +282,83 @@ using not_void_or = std::conditional<!std::is_void_v<T>, T, U>;
 template <class T, class U>
 using not_void_or_t = typename not_void_or<T, U>::type;
 
-// nth_type, nth_type_t
+// types_nth, types_nth_t
 template <std::size_t I, class... Ts>
-struct nth_type;
+struct types_nth;
 template <std::size_t I, class First, class... Rest>
-struct nth_type<I, First, Rest...>: nth_type<I - 1, Rest...> { };
+struct types_nth<I, First, Rest...>: types_nth<I - 1, Rest...> { };
 template <class First, class... Rest>
-struct nth_type<0, First, Rest...> { using type = First; };
+struct types_nth<0, First, Rest...> { using type = First; };
 template <std::size_t I, class... Ts>
-using nth_type_t = typename nth_type<I, Ts...>::type;
+using types_nth_t = typename types_nth<I, Ts...>::type;
 
-// types_rindex, types_rindex_v
+// types_rindex, types_rindex_v, types_rindex_t
 template <class T, class... Ts>
-struct types_rindex;
-template <class T, class U, class... Ts>
-struct types_rindex<T, U, Ts...>: types_rindex<T, Ts...> {};
-template <class T, class... Ts>
-struct types_rindex<T, T, Ts...>: std::integral_constant<std::size_t, sizeof...(Ts)> {};
+struct types_rindex {};
+template <class T, class First, class... Rest>
+struct types_rindex<T, First, Rest...>: types_rindex<T, Rest...> {};
+template <class T, class... Rest>
+struct types_rindex<T, T, Rest...>: std::integral_constant<std::size_t, sizeof...(Rest)> {};
 template <class T, class... Ts>
 inline constexpr std::size_t types_rindex_v = types_rindex<T, Ts...>::value;
-
-// types_index, types_index_v
 template <class T, class... Ts>
-struct types_index: std::integral_constant<std::size_t, sizeof...(Ts) - types_rindex_v<T, Ts...> - 1> {};
+using types_rindex_t = typename types_rindex<T, Ts...>::type;
+
+// types_index, types_index_v, types_index_t
+//template <class T, class... Ts>
+//struct types_index: std::integral_constant<std::size_t, sizeof...(Ts) - types_rindex_v<T, Ts...> - 1> {};
+template <class T, std::size_t Size, class... Ts>
+struct types_index_ {};
+template <class T, std::size_t Size, class First, class... Rest>
+struct types_index_<T, Size, First, Rest...>: types_index_<T, Size, Rest...> {};
+template <class T, std::size_t Size, class... Rest>
+struct types_index_<T, Size, T, Rest...>: std::integral_constant<std::size_t, Size - sizeof...(Rest) - 1> {};
+template <class T, class... Ts>
+struct types_index: types_index_<T, sizeof...(Ts), Ts...> {};
 template <class T, class... Ts>
 inline constexpr std::size_t types_index_v = types_index<T, Ts...>::value;
+template <class T, class... Ts>
+using types_index_t = typename types_index<T, Ts...>::type;
 
-// is_type_in, is_type_in_v
+// in_types, in_types_v
 template <class T, class... Ts>
-struct is_type_in: std::false_type {};
-template <class T, class U, class... Ts>
-struct is_type_in<T, U, Ts...>: is_type_in<T, Ts...> {};
+struct in_types: std::false_type {};
+template <class T, class First, class... Rest>
+struct in_types<T, First, Rest...>: in_types<T, Rest...> {};
+template <class T, class... Rest>
+struct in_types<T, T, Rest...>: std::true_type {};
 template <class T, class... Ts>
-struct is_type_in<T, T, Ts...>: std::true_type {};
-template <class T, class... Ts>
-inline constexpr std::size_t is_type_in_v = is_type_in<T, Ts...>::value;
-
+inline constexpr std::size_t in_types_v = in_types<T, Ts...>::value;
 
 /// tuple traits ///
 
-// tuple_rindex, tuple_rindex_v
+// tuple_rindex, tuple_rindex_v, tuple_rindex_t
 template <class T, class Tup>
 struct tuple_rindex;
 template <class T, class... Ts>
 struct tuple_rindex<T, std::tuple<Ts...>>: types_rindex<T, Ts...> {};
 template <class T, class Tup>
 inline constexpr std::size_t tuple_rindex_v = tuple_rindex<T, Tup>::value;
+template <class T, class Tup>
+using tuple_rindex_t = typename tuple_rindex<T, Tup>::type;
 
-// tuple_index, tuple_index_v
+// tuple_index, tuple_index_v, tuple_index_t
 template <class T, class Tup>
 struct tuple_index;
 template <class T, class... Ts>
 struct tuple_index<T, std::tuple<Ts...>>: types_index<T, Ts...> {};
 template <class T, class Tup>
 inline constexpr std::size_t tuple_index_v = tuple_index<T, Tup>::value;
+template <class T, class Tup>
+using tuple_index_t = typename tuple_index<T, Tup>::type;
 
-// tuple_has
+// in_tuple, in_tuple_v
 template <class T, class Tup>
-struct tuple_has;
+struct in_tuple;
 template <class T, class... Ts>
-struct tuple_has<T, std::tuple<Ts...>>: is_type_in<T, Ts...> {};
+struct in_tuple<T, std::tuple<Ts...>>: in_types<T, Ts...> {};
 template <class T, class Tup>
-inline constexpr std::size_t tuple_has_v = tuple_has<T, Tup>::value;
+inline constexpr std::size_t in_tuple_v = in_tuple<T, Tup>::value;
 
 // tuple_sub, tuple_sub_t
 template <class Tup, std::size_t Pos, std::size_t Cnt, class = std::make_index_sequence<Cnt>>
@@ -354,7 +371,7 @@ template <class Tup, std::size_t Pos, std::size_t Cnt>
 using tuple_sub_t = typename tuple_sub<Tup, Pos, Cnt>::type;
 
 // tuple_unique, tuple_unique_t
-template <class Tup, class T, bool = tuple_has_v<T, Tup>>
+template <class Tup, class T, bool = in_tuple_v<T, Tup>>
 struct tuple_unique_append_ {
 	using type = Tup;
 };

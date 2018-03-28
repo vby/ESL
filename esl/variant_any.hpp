@@ -18,9 +18,10 @@ template <class... Ts>
 class variant_any: public std::any {
 private:
 	template <std::size_t I>
-	using alternative_type = nth_type_t<I, Ts...>;
+	using alternative_type = types_nth_t<I, Ts...>;
+
 	template <class T>
-	using alternative_index = types_index<std::decay_t<T>, Ts...>;
+	using alternative_index = types_index_t<std::decay_t<T>, Ts...>;
 
 private:
 	std::size_t index_;
@@ -120,7 +121,7 @@ struct variant_size<::esl::variant_any<Ts...>>: integral_constant<std::size_t, s
 
 // std::variant_alternative
 template <std::size_t I, class... Ts>
-struct variant_alternative<I, ::esl::variant_any<Ts...>>: ::esl::nth_type<I, Ts...> {};
+struct variant_alternative<I, ::esl::variant_any<Ts...>>: ::esl::types_nth<I, Ts...> {};
 
 // std::holds_alternative
 template <class T, class... Ts>
