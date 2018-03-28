@@ -14,24 +14,17 @@ namespace json {
 class value;
 
 // types
-struct null_t {
-	explicit constexpr null_t() noexcept = default;
-	constexpr bool operator==(const null_t&) const noexcept { return true; }
-	constexpr bool operator!=(const null_t&) const noexcept { return false; }
-	constexpr bool operator<(const null_t&) const noexcept { return false; }
-	constexpr bool operator>(const null_t&) const noexcept { return false; }
-	constexpr bool operator<=(const null_t&) const noexcept { return true; }
-	constexpr bool operator>=(const null_t&) const noexcept { return true; }
-	constexpr operator bool() const noexcept { return false; }
-};
+using null_t = std::nullptr_t;
 using boolean = bool;
 using number = double;
 using string = std::string;
 using array = std::vector<value>;
 using object = std::unordered_map<std::string, value>;
 
-inline constexpr null_t null{};
+// null
+inline constexpr null_t null = nullptr;
 
+// zero-base type index
 enum index {
     null_index = 0,
     boolean_index,
