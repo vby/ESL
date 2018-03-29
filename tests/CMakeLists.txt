@@ -59,6 +59,7 @@ esl_add_test(unicode_tests)
 esl_add_test(demangle_tests)
 esl_add_test(variant_any_tests)
 esl_add_test(json_tests)
+esl_add_test(yaml_tests)
 
 esl_add_test(shared_library_tests)
 target_link_libraries(shared_library_tests ${CMAKE_DL_LIBS})
