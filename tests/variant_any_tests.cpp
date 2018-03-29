@@ -19,7 +19,7 @@ TEST(VariantAnyTest, construct) {
 	{
 		esl::variant_any<int, bool, std::string> va(123);
 		ASSERT_EQ(va.index(), 0);
-		va = nullptr;
+		va = false;
 		ASSERT_EQ(va.index(), 1);
 		va = std::string("12345");
 		ASSERT_EQ(va.index(), 2);

@@ -97,10 +97,20 @@ using is_static_castable = decltype(is_static_castable_test<From, To>(nullptr));
 
 template <class T>
 struct overload_resolve_candidate { T operator()(T); };
+
 template <class... Ts>
-struct overload_resolve_overload: overload_resolve_candidate<Ts>... {
-    using overload_resolve_candidate<Ts>::operator()...;
+struct overload_resolve_overload_ {};
+template <class T, class... Rest>
+struct overload_resolve_overload_<T, Rest...>: T, overload_resolve_overload_<Rest...> {
+	    using T::operator();
+		    using overload_resolve_overload_<Rest...>::operator();
 };
+template <class T>
+struct overload_resolve_overload_<T>: T {
+	using T::operator();
+};
+template <class... Ts>
+struct overload_resolve_overload: overload_resolve_overload_<overload_resolve_candidate<Ts>...> {};
 
 template <class T, class... Ts>
 using overload_resolve_type = decltype(overload_resolve_overload<Ts...>{}(std::declval<T>()));
