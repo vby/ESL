@@ -2,6 +2,35 @@
 #include <gtest/gtest.h>
 #include <esl/variant_any.hpp>
 
+#include <string>
+
+TEST(VariantAnyTest, empty) {
+	esl::variant_any<> va;
+	ASSERT_TRUE(!va.has_value());
+}
+
+TEST(VariantAnyTest, construct) {
+	{
+		esl::variant_any<int, bool, std::string> va;
+		ASSERT_TRUE(!va.has_value());
+		ASSERT_TRUE(va.valueless_by_exception());
+		ASSERT_EQ(va.index(), std::variant_npos);
+	}
+	{
+		esl::variant_any<int, bool, std::string> va(123);
+		ASSERT_EQ(va.index(), 0);
+		va = nullptr;
+		ASSERT_EQ(va.index(), 1);
+		va = std::string("12345");
+		ASSERT_EQ(va.index(), 2);
+		va = "12345";
+		ASSERT_EQ(va.index(), 1);
+		//va = 1.23;
+		va = true;
+		ASSERT_EQ(va.index(), 1);
+	}
+}
+
 TEST(VariantAnyTest, comp) {
 	esl::variant_any<int, bool> va0;
 	esl::variant_any<int, bool> va00;

@@ -95,6 +95,28 @@ static std::false_type is_static_castable_test(...);
 template <class From, class To>
 using is_static_castable = decltype(is_static_castable_test<From, To>(nullptr));
 
+template <class T>
+struct overload_resolve_candidate { T operator()(T); };
+template <class... Ts>
+struct overload_resolve_overload: overload_resolve_candidate<Ts>... {
+    using overload_resolve_candidate<Ts>::operator()...;
+};
+
+template <class T, class... Ts>
+using overload_resolve_type = decltype(overload_resolve_overload<Ts...>{}(std::declval<T>()));
+
+template <class T, class Tuple, class = void>
+struct overload_resolve {};
+template <class T, class... Ts>
+struct overload_resolve<T, std::tuple<Ts...>, std::void_t<overload_resolve_type<T, Ts...>>> {
+    using type = overload_resolve_type<T, Ts...>;
+};
+
+template <class T, class Tuple, class = void>
+struct is_overload_resolvable: std::false_type {};
+template <class T, class... Ts>
+struct is_overload_resolvable<T, std::tuple<Ts...>, std::void_t<overload_resolve_type<T, Ts...>>>: std::true_type {};
+
 } // namespace details
 
 // is_base_of_template, is_base_of_template_v
@@ -282,6 +304,20 @@ using not_void_or = std::conditional<!std::is_void_v<T>, T, U>;
 template <class T, class U>
 using not_void_or_t = typename not_void_or<T, U>::type;
 
+// overload_resolve, overload_resolve_t
+template <class T, class... Ts>
+struct overload_resolve: details::overload_resolve<T, std::tuple<Ts...>> {};
+template <class T, class... Ts>
+using overload_resolve_t = typename overload_resolve<T, Ts...>::type;
+
+// is_overload_resolvable, is_overload_resolvable_v
+template <class T, class... Ts>
+struct is_overload_resolvable: details::is_overload_resolvable<T, std::tuple<Ts...>> {};
+template <class T, class... Ts>
+inline constexpr bool is_overload_resolvable_v = is_overload_resolvable<T, Ts...>::value;
+
+/// types traits ///
+
 // types_nth, types_nth_t
 template <std::size_t I, class... Ts>
 struct types_nth;
@@ -292,7 +328,7 @@ struct types_nth<0, First, Rest...> { using type = First; };
 template <std::size_t I, class... Ts>
 using types_nth_t = typename types_nth<I, Ts...>::type;
 
-// types_index, types_index_v, types_index_t
+// types_index, types_index_v
 template <class T, std::size_t Size, class... Ts>
 struct types_index_ {};
 template <class T, std::size_t Size, class First, class... Rest>
@@ -303,10 +339,8 @@ template <class T, class... Ts>
 struct types_index: types_index_<T, sizeof...(Ts), Ts...> {};
 template <class T, class... Ts>
 inline constexpr std::size_t types_index_v = types_index<T, Ts...>::value;
-template <class T, class... Ts>
-using types_index_t = typename types_index<T, Ts...>::type;
 
-// types_rindex, types_rindex_v, types_rindex_t
+// types_rindex, types_rindex_v
 template <class T, std::size_t Size, std::size_t CSize, class... Ts>
 struct types_rindex_: std::integral_constant<std::size_t, Size - CSize - 1> {};
 template <class T, std::size_t Size, std::size_t CSize, class First, class... Rest>
@@ -319,8 +353,6 @@ template <class T, class... Ts>
 struct types_rindex: types_rindex_<T, sizeof...(Ts), sizeof...(Ts), Ts...> {};
 template <class T, class... Ts>
 inline constexpr std::size_t types_rindex_v = types_rindex<T, Ts...>::value;
-template <class T, class... Ts>
-using types_rindex_t = typename types_rindex<T, Ts...>::type;
 
 // types_count, types_count_v
 template <class T, class... Ts>
@@ -332,27 +364,39 @@ struct types_count<T, T, Rest...>: std::integral_constant<std::size_t, types_cou
 template <class T, class... Ts>
 inline constexpr std::size_t types_count_v = types_count<T, Ts...>::value;
 
+// types_exactly_once, types_exactly_once_v
+template <class T, class... Ts>
+struct types_exactly_once: std::bool_constant<types_count_v<T, Ts...> == 1> {};
+template <class T, class... Ts>
+inline constexpr bool types_exactly_once_v = types_exactly_once<T, Ts...>::value;
+
+// types_exactly_once_index, types_exactly_once_index_v
+template <class T, bool Once, class... Ts>
+struct types_exactly_once_index_ {};
+template <class T, class... Ts>
+struct types_exactly_once_index_<T, true, Ts...>: types_index<T, Ts...> {};
+template <class T, class... Ts>
+struct types_exactly_once_index: types_exactly_once_index_<T, types_exactly_once_v<T, Ts...>, Ts...> {};
+template <class T, class... Ts>
+inline constexpr std::size_t types_exactly_once_index_v = types_exactly_once_index<T, Ts...>::value;
+
 /// tuple traits ///
 
-// tuple_index, tuple_index_v, tuple_index_t
+// tuple_index, tuple_index_v
 template <class T, class Tup>
 struct tuple_index;
 template <class T, class... Ts>
 struct tuple_index<T, std::tuple<Ts...>>: types_index<T, Ts...> {};
 template <class T, class Tup>
 inline constexpr std::size_t tuple_index_v = tuple_index<T, Tup>::value;
-template <class T, class Tup>
-using tuple_index_t = typename tuple_index<T, Tup>::type;
 
-// tuple_rindex, tuple_rindex_v, tuple_rindex_t
+// tuple_rindex, tuple_rindex_v
 template <class T, class Tup>
 struct tuple_rindex;
 template <class T, class... Ts>
 struct tuple_rindex<T, std::tuple<Ts...>>: types_rindex<T, Ts...> {};
 template <class T, class Tup>
 inline constexpr std::size_t tuple_rindex_v = tuple_rindex<T, Tup>::value;
-template <class T, class Tup>
-using tuple_rindex_t = typename tuple_rindex<T, Tup>::type;
 
 // tuple_count, tuple_count_v
 template <class T, class Tup>
@@ -361,6 +405,22 @@ template <class T, class... Ts>
 struct tuple_count<T, std::tuple<Ts...>>: types_count<T, Ts...> {};
 template <class T, class Tup>
 inline constexpr std::size_t tuple_count_v = tuple_count<T, Tup>::value;
+
+// tuple_exactly_once, tuple_exactly_once_v
+template <class T, class Tup>
+struct tuple_exactly_once;
+template <class T, class... Ts>
+struct tuple_exactly_once<T, std::tuple<Ts...>>: types_exactly_once<T, Ts...> {};
+template <class T, class... Ts>
+inline constexpr bool tuple_exactly_once_v = tuple_exactly_once<T, Ts...>::value;
+
+// tuple_exactly_once_index, tuple_exactly_once_index_v
+template <class T, class Tup>
+struct tuple_exactly_once_index;
+template <class T, class... Ts>
+struct tuple_exactly_once_index<T, std::tuple<Ts...>>: types_exactly_once_index<T, Ts...> {};
+template <class T, class Tup>
+inline constexpr std::size_t tuple_exactly_once_index_v = tuple_exactly_once_index<T, Tup>::value;
 
 // tuple_sub, tuple_sub_t
 template <class Tup, std::size_t Pos, std::size_t Cnt, class = std::make_index_sequence<Cnt>>

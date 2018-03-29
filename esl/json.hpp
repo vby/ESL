@@ -14,7 +14,7 @@ namespace json {
 class value;
 
 // types
-using null_t = std::nullptr_t;
+using null_t = std::monostate;
 using boolean = bool;
 using number = double;
 using string = std::string;
@@ -22,7 +22,7 @@ using array = std::vector<value>;
 using object = std::unordered_map<std::string, value>;
 
 // null
-inline constexpr null_t null = nullptr;
+inline constexpr null_t null{};
 
 // zero-base type index
 enum index {
