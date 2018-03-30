@@ -29,8 +29,8 @@ inline std::size_t hash_value(const void* p, std::size_t size) noexcept {
 #if (ESL_SIZE_WIDTH == 64)
 
 // Modified from boost/container_hash/hash.hpp
-inline constexpr void hash_value_combine_(std::uint64_t& h, std::uint64_t k) noexcept {
-	const std::uint64_t m = 0xc6a4a7935bd1e995U;
+inline constexpr void hash_value_combine_(std::size_t& h, std::size_t k) noexcept {
+	const std::size_t m = 0xc6a4a7935bd1e995U;
 
 	k *= m;
 	k ^= k >> 47;
@@ -46,9 +46,9 @@ inline constexpr void hash_value_combine_(std::uint64_t& h, std::uint64_t k) noe
 
 #else
 
-inline constexpr void hash_value_combine_(std::uint32_t& h, std::uint32_t k) noexcept {
-	const std::uint32_t c1 = 0xcc9e2d51U;
-	const std::uint32_t c2 = 0x1b873593U;
+inline constexpr void hash_value_combine_(std::size_t& h, std::size_t k) noexcept {
+	const std::size_t c1 = 0xcc9e2d51U;
+	const std::size_t c2 = 0x1b873593U;
 
 	k *= c1;
 	k = rotl(k, 15);
