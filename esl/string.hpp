@@ -312,12 +312,13 @@ static void format_out(std::basic_ostream<CharT, Traits>& os, const void* vp, fo
 				return;
 			}
 		}
-		if (xflags & (format_xflags::grouping | format_xflags::number)) {
-			auto loc = os.imbue(std::locale(""));
-			os << value;
-			os.imbue(loc);
-			return;
-		}
+		// always use global locale, std::locale("") is not a valid on osx
+		//if (xflags & (format_xflags::grouping | format_xflags::number)) {
+		//	auto loc = os.imbue(std::locale(""));
+		//	os << value;
+		//	os.imbue(loc);
+		//	return;
+		//}
 	}
 	// TODO
 	os << value;

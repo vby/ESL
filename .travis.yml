@@ -14,14 +14,14 @@ git:
 matrix:
   include:
     # OSX Clang
-    - env: COMPILER=clang++ BUILD_TYPE=Debug
-      os: osx
-      osx_image: xcode9.3beta
-      compiler: clang
-    - env: COMPILER=clang++ BUILD_TYPE=Release
-      os: osx
-      osx_image: xcode9.3beta
-      compiler: clang
+    #- env: COMPILER=clang++ BUILD_TYPE=Debug
+    #  os: osx
+    #  osx_image: xcode9.3beta
+    #  compiler: clang
+    #- env: COMPILER=clang++ BUILD_TYPE=Release
+    #  os: osx
+    #  osx_image: xcode9.3beta
+    #  compiler: clang
 
     # OSX GCC 7 
     - env: COMPILER=g++-7 BUILD_TYPE=Debug MATRIX_EVAL="brew cask uninstall oclint && brew install gcc@7"
