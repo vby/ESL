@@ -12,17 +12,12 @@ namespace esl {
 
 inline constexpr std::size_t npos = std::size_t(-1);
 
-struct not_fallback_t {};
-template <class D>
-struct fallback: std::false_type { using type = D; };
-template <>
-struct fallback<not_fallback_t> { using value_type = bool; static constexpr bool value = false; };
+// Macros to help impl traits
+// --------------------------------------------------------
 
-// macros
-
-// ESL_IMPL_WELL_FORMED
+// ESL_IMPL_IS_WELL_FORMED
 // name, name##_v
-#define ESL_IMPL_WELL_FORMED(name, type_expr) \
+#define ESL_IMPL_IS_WELL_FORMED(name, type_expr) \
 	template <class T, class = void> \
 	struct name: std::false_type {}; \
 	template <class T> \
@@ -30,9 +25,9 @@ struct fallback<not_fallback_t> { using value_type = bool; static constexpr bool
 	template <class T> \
 	inline constexpr bool name##_v = name<T>::value;
 
-// ESL_IMPL_WELL_FORMED_ARGS
+// ESL_IMPL_IS_WELL_FORMED_ARGS
 // name, name##_v
-#define ESL_IMPL_WELL_FORMED_ARGS(name, type_expr) \
+#define ESL_IMPL_IS_WELL_FORMED_ARGS(name, type_expr) \
 	template <class T, class Args, class = void> \
 	struct name##_tuple_: std::false_type {}; \
 	template <class T, class... Args> \
@@ -42,163 +37,16 @@ struct fallback<not_fallback_t> { using value_type = bool; static constexpr bool
 	template <class T, class... Args> \
 	inline constexpr bool name##_v = name<T, Args...>::value;
 
-// ESL_IMPL_HAS_MEMBER_VARIABLE
+// ESL_IMPL_HAS_MEMBER_TYPE
 // name, name##_v
-#define ESL_IMPL_HAS_MEMBER_VARIABLE(name, member) ESL_IMPL_WELL_FORMED(name, decltype(&T::member))
+#define ESL_IMPL_HAS_MEMBER_TYPE(name, member) ESL_IMPL_IS_WELL_FORMED(name, typename T::member)
 
-// ESL_IMPL_HAS_NON_OVERLOADED_MEMBER_FUNCTION
+// ESL_IMPL_HAS_NON_OVERLOADED_MEMBER
 // name, name##_v
-#define ESL_IMPL_HAS_NON_OVERLOADED_MEMBER_FUNCTION(name, member) ESL_IMPL_WELL_FORMED(name, decltype(&T::member))
+#define ESL_IMPL_HAS_NON_OVERLOADED_MEMBER(name, member) ESL_IMPL_IS_WELL_FORMED(name, decltype(&T::member))
 
-// ESL_IMPL_MEMBER_TYPE
-// name, name##_t
-#define ESL_IMPL_MEMBER_TYPE(name, member) \
-	template <class T, class D = ::esl::not_fallback_t, class = std::void_t<>> \
-	struct name: ::esl::fallback<D> {}; \
-	template <class T, class D> \
-	struct name<T, D, std::void_t<typename T::member>>: std::true_type { using type = typename T::member; }; \
-	template <class T> \
-	inline constexpr bool name##_v = name<T>::value; \
-	template <class T, class D = ::esl::not_fallback_t> \
-	using name##_t = typename name<T, D>::type;
-
-namespace details {
-
-// not standard
-//template <template <class...> class B, class... Ts>
-//std::true_type is_base_of_template_test(B<Ts...>*);
-template <template <class...> class B, class T>
-std::true_type is_base_of_template_test(B<T>*);
-template <template <class...> class B, class T, class T2>
-std::true_type is_base_of_template_test(B<T, T2>*);
-template <template <class...> class B, class T, class T2, class T3>
-std::true_type is_base_of_template_test(B<T, T2, T3>*);
-template <template <class...> class B, class T, class T2, class T3, class T4>
-std::true_type is_base_of_template_test(B<T, T2, T3, T4>*);
-template <template <class...> class B, class T, class T2, class T3, class T4, class T5>
-std::true_type is_base_of_template_test(B<T, T2, T3, T4, T5>*);
-template <template <class...> class B, class T, class T2, class T3, class T4, class T5, class T6>
-std::true_type is_base_of_template_test(B<T, T2, T3, T4, T5, T6>*);
-template <template <class...> class B>
-std::false_type is_base_of_template_test(void*);
-template <template <class...> class B, class D>
-using is_base_of_template_pre = decltype(details::is_base_of_template_test<B>(std::declval<D*>()));
-template <template <class...> class B, class D, class = void>
-struct is_base_of_template: std::is_class<D> {};
-template <template <class...> class B, class D>
-struct is_base_of_template<B, D, std::void_t<details::is_base_of_template_pre<B, D>>>: details::is_base_of_template_pre<B, D> {};
-
-template <class From, class To>
-static std::true_type is_static_castable_test(std::add_pointer_t<decltype(static_cast<To>(std::declval<From>()))>);
-template <class From, class To>
-static std::false_type is_static_castable_test(...);
-template <class From, class To>
-using is_static_castable = decltype(is_static_castable_test<From, To>(nullptr));
-
-template <class T>
-struct overload_resolve_candidate { T operator()(T); };
-
-template <class... Ts>
-struct overload_resolve_overload_ {};
-template <class T, class... Rest>
-struct overload_resolve_overload_<T, Rest...>: T, overload_resolve_overload_<Rest...> {
-	    using T::operator();
-		    using overload_resolve_overload_<Rest...>::operator();
-};
-template <class T>
-struct overload_resolve_overload_<T>: T {
-	using T::operator();
-};
-template <class... Ts>
-struct overload_resolve_overload: overload_resolve_overload_<overload_resolve_candidate<Ts>...> {};
-
-template <class T, class... Ts>
-using overload_resolve_type = decltype(overload_resolve_overload<Ts...>{}(std::declval<T>()));
-
-template <class T, class Tuple, class = void>
-struct overload_resolve {};
-template <class T, class... Ts>
-struct overload_resolve<T, std::tuple<Ts...>, std::void_t<overload_resolve_type<T, Ts...>>> {
-    using type = overload_resolve_type<T, Ts...>;
-};
-
-template <class T, class Tuple, class = void>
-struct is_overload_resolvable: std::false_type {};
-template <class T, class... Ts>
-struct is_overload_resolvable<T, std::tuple<Ts...>, std::void_t<overload_resolve_type<T, Ts...>>>: std::true_type {};
-
-} // namespace details
-
-// is_base_of_template, is_base_of_template_v
-template <template <class...> class B, class D>
-using is_base_of_template = details::is_base_of_template<B, std::remove_cv_t<D>>;
-template <template <class...> class B, class D>
-inline constexpr bool is_base_of_template_v = is_base_of_template<B, D>::value;
-
-// is_one_of
-template <class T, class... Us>
-struct is_one_of: std::false_type {};
-template <class T, class U, class... Us>
-struct is_one_of<T, U, Us...>: std::bool_constant<std::is_same_v<T, U> || is_one_of<T, Us...>::value> {};
-template <class T, class... Us>
-inline constexpr bool is_one_of_v = is_one_of<T, Us...>::value;
-
-#define ESL_IMPL_HAS_NON_OVERLOADED_MEMBER_FUNCTION_ESL_(name, member) \
-	ESL_IMPL_HAS_NON_OVERLOADED_MEMBER_FUNCTION(has_non_overloaded_##name, member)
-
-#define ESL_IMPL_MEMBER_TYPE_ESL_(name)  ESL_IMPL_MEMBER_TYPE(member_type_##name, name)
-
-// is_datable, is_datable_v
-ESL_IMPL_WELL_FORMED(is_datable, decltype(std::data(std::declval<T>())))
-
-// is_sizeable, is_sizeable_v
-ESL_IMPL_WELL_FORMED(is_sizeable, decltype(std::size(std::declval<T>())))
-
-// is_emptiable, is_emptiable_v
-ESL_IMPL_WELL_FORMED(is_emptiable, decltype(std::empty(std::declval<T>())))
-
-// is_static_castable, is_static_castable_v
-template <class From, class To>
-using is_static_castable = details::is_static_castable<From, To>;
-template <class From, class To>
-inline constexpr bool is_static_castable_v = is_static_castable<From, To>::value;
-
-// is_emplaceable, is_emplaceable_v
-ESL_IMPL_WELL_FORMED_ARGS(is_emplaceable, decltype(std::declval<T>().emplace(std::forward<Args>(std::declval<Args>())...)))
-
-// is_emplace_backable, is_emplace_backable_v
-ESL_IMPL_WELL_FORMED_ARGS(is_emplace_backable, decltype(std::declval<T>().emplace_back(std::forward<Args>(std::declval<Args>())...)))
-
-// has_non_overloaded_operator_parentheses, has_non_overloaded_operator_parentheses_v
-ESL_IMPL_HAS_NON_OVERLOADED_MEMBER_FUNCTION_ESL_(operator_parentheses, operator())
-
-// has_non_overloaded_operator_brackets, has_non_overloaded_operator_brackets_v
-ESL_IMPL_HAS_NON_OVERLOADED_MEMBER_FUNCTION_ESL_(operator_brackets, operator[])
-
-// member_type_##name, member_type_##name_t, member_type_##name_v
-ESL_IMPL_MEMBER_TYPE_ESL_(type)
-ESL_IMPL_MEMBER_TYPE_ESL_(value_type)
-ESL_IMPL_MEMBER_TYPE_ESL_(size_type)
-ESL_IMPL_MEMBER_TYPE_ESL_(difference_type)
-ESL_IMPL_MEMBER_TYPE_ESL_(allocator_type)
-ESL_IMPL_MEMBER_TYPE_ESL_(pointer)
-ESL_IMPL_MEMBER_TYPE_ESL_(const_pointer)
-ESL_IMPL_MEMBER_TYPE_ESL_(reference)
-ESL_IMPL_MEMBER_TYPE_ESL_(const_reference)
-ESL_IMPL_MEMBER_TYPE_ESL_(iterator)
-ESL_IMPL_MEMBER_TYPE_ESL_(const_iterator)
-ESL_IMPL_MEMBER_TYPE_ESL_(reverse_iterator)
-ESL_IMPL_MEMBER_TYPE_ESL_(const_reverse_iterator)
-ESL_IMPL_MEMBER_TYPE_ESL_(traits_type)
-ESL_IMPL_MEMBER_TYPE_ESL_(element_type)
-ESL_IMPL_MEMBER_TYPE_ESL_(deleter_type)
-ESL_IMPL_MEMBER_TYPE_ESL_(is_always_equal)
-ESL_IMPL_MEMBER_TYPE_ESL_(weak_type)
-ESL_IMPL_MEMBER_TYPE_ESL_(native_handle_type)
-ESL_IMPL_MEMBER_TYPE_ESL_(mutex_type)
-
-
-/// basic traits ///
+// Type traits
+// ---------------------------------------------------------
 
 // remove_cvr, remove_cvr_t
 template <class T>
@@ -238,21 +86,13 @@ using to_rvalue_reference_t = typename to_rvalue_reference<T>::type;
 
 // remove_low_const, remove_low_const_t
 template <class T>
-struct remove_low_const {
-	using type = T;
-};
+struct remove_low_const { using type = T; };
 template <class T>
-struct remove_low_const<const T&> {
-	using type = T&;
-};
+struct remove_low_const<const T&> { using type = T&; };
 template <class T>
-struct remove_low_const<const T&&> {
-	using type = T&&;
-};
+struct remove_low_const<const T&&> { using type = T&&; };
 template <class T>
-struct remove_low_const<const T*> {
-	using type = T*;
-};
+struct remove_low_const<const T*> { using type = T*; };
 template <class T>
 using remove_low_const_t = typename remove_low_const<T>::type;
 
@@ -270,55 +110,259 @@ inline constexpr bool is_pointer_or_reference_v = is_pointer_or_reference<T>::va
 
 // const_as, const_as_t
 template <class T, class Ref, bool = std::is_const_v<Ref>>
-struct const_as {
-	using type = std::remove_const_t<T>;
-};
+struct const_as { using type = std::remove_const_t<T>; };
 template <class T, class Ref>
-struct const_as<T, Ref, true> {
-	using type = std::add_const_t<T>;
-};
+struct const_as<T, Ref, true> { using type = std::add_const_t<T>; };
 template <class T, class Ref>
 using const_as_t = typename const_as<T, Ref>::type;
 
 // pointer_as, pointer_as_t
 template <class T, class Ref, bool = std::is_pointer_v<Ref>>
-struct pointer_as {
-	using type = std::remove_pointer_t<T>;
-};
+struct pointer_as { using type = std::remove_pointer_t<T>; };
 template <class T, class Ref>
-struct pointer_as<T, Ref, true> {
-	using type = std::add_pointer_t<T>;
-};
+struct pointer_as<T, Ref, true> { using type = std::add_pointer_t<T>; };
 template <class T, class Ref>
 using pointer_as_t = typename pointer_as<T, Ref>::type;
 
 // reference_as, reference_as_t
 template <class T, class Ref, class Enable = void>
-struct reference_as {
-	using type = std::remove_reference_t<T>;
-};
+struct reference_as { using type = std::remove_reference_t<T>; };
 template <class T, class Ref>
-struct reference_as<T, Ref, std::enable_if_t<std::is_lvalue_reference_v<Ref>>> {
-	using type = to_lvalue_reference_t<T>;
-};
+struct reference_as<T, Ref, std::enable_if_t<std::is_lvalue_reference_v<Ref>>> { using type = to_lvalue_reference_t<T>; };
 template <class T, class Ref>
-struct reference_as<T, Ref, std::enable_if_t<std::is_rvalue_reference_v<Ref>>> {
-	using type = to_rvalue_reference_t<T>;
-};
+struct reference_as<T, Ref, std::enable_if_t<std::is_rvalue_reference_v<Ref>>> { using type = to_rvalue_reference_t<T>; };
 template <class T, class Ref>
 using reference_as_t = typename reference_as<T, Ref>::type;
 
-// not_void_or, not_void_or_t
-template <class T, class U>
-using not_void_or = std::conditional<!std::is_void_v<T>, T, U>;
-template <class T, class U>
-using not_void_or_t = typename not_void_or<T, U>::type;
+// is_one_of, is_one_of_v
+template <class T, class... Us>
+struct is_one_of: std::false_type {};
+template <class T, class U, class... Us>
+struct is_one_of<T, U, Us...>: std::bool_constant<std::is_same_v<T, U> || is_one_of<T, Us...>::value> {};
+template <class T, class... Us>
+inline constexpr bool is_one_of_v = is_one_of<T, Us...>::value;
 
-// overload_resolve, overload_resolve_t
+namespace details {
+
+// is_base_of_template_test
+//template <template <class...> class B, class... Ts>
+//std::true_type is_base_of_template_test(B<Ts...>*);
+template <template <class...> class B, class T>
+std::true_type is_base_of_template_test(B<T>*);
+template <template <class...> class B, class T, class T2>
+std::true_type is_base_of_template_test(B<T, T2>*);
+template <template <class...> class B, class T, class T2, class T3>
+std::true_type is_base_of_template_test(B<T, T2, T3>*);
+template <template <class...> class B, class T, class T2, class T3, class T4>
+std::true_type is_base_of_template_test(B<T, T2, T3, T4>*);
+template <template <class...> class B, class T, class T2, class T3, class T4, class T5>
+std::true_type is_base_of_template_test(B<T, T2, T3, T4, T5>*);
+template <template <class...> class B, class T, class T2, class T3, class T4, class T5, class T6>
+std::true_type is_base_of_template_test(B<T, T2, T3, T4, T5, T6>*);
+template <template <class...> class B>
+std::false_type is_base_of_template_test(void*);
+template <template <class...> class B, class D>
+using is_base_of_template_pre = decltype(details::is_base_of_template_test<B>(std::declval<D*>()));
+template <template <class...> class B, class D, class = void>
+struct is_base_of_template: std::is_class<D> {};
+template <template <class...> class B, class D>
+struct is_base_of_template<B, D, std::void_t<details::is_base_of_template_pre<B, D>>>: details::is_base_of_template_pre<B, D> {};
+
+} //namespace details
+
+// is_base_of_template, is_base_of_template_v
+template <template <class...> class B, class D>
+using is_base_of_template = details::is_base_of_template<B, std::remove_cv_t<D>>;
+template <template <class...> class B, class D>
+inline constexpr bool is_base_of_template_v = is_base_of_template<B, D>::value;
+
+// is_function_or_function_pointer, is_function_or_function_pointer_v
+template <class T>
+using is_function_or_function_pointer = std::is_function<std::remove_pointer_t<T>>;
+template <class T>
+inline constexpr bool is_function_or_function_pointer_v = is_function_or_function_pointer<T>::value;
+
+// is_function_pointer, is_function_pointer_v
+template <class T>
+using is_function_pointer = std::bool_constant<std::is_pointer_v<T> && is_function_or_function_pointer_v<T>>;
+template <class T>
+inline constexpr bool is_function_pointer_v = is_function_pointer<T>::value;
+
+// is_primitive_function, is_primitive_function_v
+// function || function pointer || member function pointer
+template <class T>
+using is_primitive_function = std::bool_constant<is_function_or_function_pointer_v<T> || std::is_member_function_pointer_v<T>>;
+template <class T>
+inline constexpr bool is_primitive_function_v = is_primitive_function<T>::value;
+
+// Supported operations
+// ---------------------------------------------------------
+
+namespace details {
+
+// is_static_castable_test
+template <class From, class To>
+std::true_type is_static_castable_test(std::add_pointer_t<decltype(static_cast<To>(std::declval<From>()))>);
+template <class From, class To>
+std::false_type is_static_castable_test(...);
+template <class From, class To>
+using is_static_castable = decltype(is_static_castable_test<From, To>(nullptr));
+
+} //namespace details
+
+// is_static_castable, is_static_castable_v
+template <class From, class To>
+using is_static_castable = details::is_static_castable<From, To>;
+template <class From, class To>
+inline constexpr bool is_static_castable_v = is_static_castable<From, To>::value;
+
+// is_datable, is_datable_v
+ESL_IMPL_IS_WELL_FORMED(is_datable, decltype(std::data(std::declval<T>())))
+
+// is_sizeable, is_sizeable_v
+ESL_IMPL_IS_WELL_FORMED(is_sizeable, decltype(std::size(std::declval<T>())))
+
+// is_emptiable, is_emptiable_v
+ESL_IMPL_IS_WELL_FORMED(is_emptiable, decltype(std::empty(std::declval<T>())))
+
+// is_emplaceable, is_emplaceable_v
+ESL_IMPL_IS_WELL_FORMED_ARGS(is_emplaceable, decltype(std::declval<T>().emplace(std::forward<Args>(std::declval<Args>())...)))
+
+// is_emplace_backable, is_emplace_backable_v
+ESL_IMPL_IS_WELL_FORMED_ARGS(is_emplace_backable, decltype(std::declval<T>().emplace_back(std::forward<Args>(std::declval<Args>())...)))
+
+// Has member
+// ---------------------------------------------------------
+
+// has_member_type_##name, has_member_type_##name_v
+#define ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(name)  ESL_IMPL_HAS_MEMBER_TYPE(has_member_type_##name, name)
+ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(type)
+ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(value_type)
+ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(size_type)
+ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(difference_type)
+ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(allocator_type)
+ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(pointer)
+ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(const_pointer)
+ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(reference)
+ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(const_reference)
+ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(iterator)
+ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(const_iterator)
+ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(reverse_iterator)
+ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(const_reverse_iterator)
+ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(traits_type)
+ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(element_type)
+ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(deleter_type)
+ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(is_always_equal)
+ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(weak_type)
+ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(native_handle_type)
+ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_(mutex_type)
+#undef ESL_IMPL_HAS_MEMBER_TYPE_INTERNAL_
+
+// has_non_overloaded_operator_parentheses, has_non_overloaded_operator_parentheses_v
+ESL_IMPL_HAS_NON_OVERLOADED_MEMBER(has_non_overloaded_operator_parentheses, operator())
+
+// has_non_overloaded_operator_brackets, has_non_overloaded_operator_brackets_v
+ESL_IMPL_HAS_NON_OVERLOADED_MEMBER(has_non_overloaded_operator_brackets, operator[])
+
+// Variadic template traits
+// ---------------------------------------------------------
+
+// nth_type, nth_type_t
+template <std::size_t I, class... Ts>
+struct nth_type;
+template <std::size_t I, class First, class... Rest>
+struct nth_type<I, First, Rest...>: nth_type<I - 1, Rest...> { };
+template <class First, class... Rest>
+struct nth_type<0, First, Rest...> { using type = First; };
+template <std::size_t I, class... Ts>
+using nth_type_t = typename nth_type<I, Ts...>::type;
+
+// index_of, index_of_v
+template <class T, std::size_t Size, class... Ts>
+struct index_of_ {};
+template <class T, std::size_t Size, class First, class... Rest>
+struct index_of_<T, Size, First, Rest...>: index_of_<T, Size, Rest...> {};
+template <class T, std::size_t Size, class... Rest>
+struct index_of_<T, Size, T, Rest...>: std::integral_constant<std::size_t, Size - sizeof...(Rest) - 1> {};
 template <class T, class... Ts>
-struct overload_resolve: details::overload_resolve<T, std::tuple<Ts...>> {};
+struct index_of: index_of_<T, sizeof...(Ts), Ts...> {};
 template <class T, class... Ts>
-using overload_resolve_t = typename overload_resolve<T, Ts...>::type;
+inline constexpr std::size_t index_of_v = index_of<T, Ts...>::value;
+
+// rindex_of, rindex_of_v
+template <class T, std::size_t Size, std::size_t CSize, class... Ts>
+struct rindex_of_: std::integral_constant<std::size_t, Size - CSize - 1> {};
+template <class T, std::size_t Size, std::size_t CSize, class First, class... Rest>
+struct rindex_of_<T, Size, CSize, First, Rest...>: rindex_of_<T, Size, CSize, Rest...> {};
+template <class T, std::size_t Size, std::size_t CSize, class... Rest>
+struct rindex_of_<T, Size, CSize, T, Rest...>: rindex_of_<T, Size, sizeof...(Rest), Rest...> {};
+template <class T, std::size_t Size>
+struct rindex_of_<T, Size, Size> {};
+template <class T, class... Ts>
+struct rindex_of: rindex_of_<T, sizeof...(Ts), sizeof...(Ts), Ts...> {};
+template <class T, class... Ts>
+inline constexpr std::size_t rindex_of_v = rindex_of<T, Ts...>::value;
+
+// count_of, count_of_v
+template <class T, class... Ts>
+struct count_of: std::integral_constant<std::size_t, 0> {};
+template <class T, class First, class... Rest>
+struct count_of<T, First, Rest...>: count_of<T, Rest...> {};
+template <class T, class... Rest>
+struct count_of<T, T, Rest...>: std::integral_constant<std::size_t, count_of<T, Rest...>::value + 1> {};
+template <class T, class... Ts>
+inline constexpr std::size_t count_of_v = count_of<T, Ts...>::value;
+
+// is_exactly_once, is_exactly_once_v
+template <class T, class... Ts>
+struct is_exactly_once: std::bool_constant<count_of_v<T, Ts...> == 1> {};
+template <class T, class... Ts>
+inline constexpr bool is_exactly_once_v = is_exactly_once<T, Ts...>::value;
+
+namespace details {
+
+template <class... Ts>
+struct overloaded {};
+template <class T, class... Rest>
+struct overloaded<T, Rest...>: T, overloaded<Rest...> {
+	using T::operator();
+	using overloaded<Rest...>::operator();
+};
+template <class T>
+struct overloaded<T>: T { using T::operator(); };
+
+template <class T>
+struct overload_resolution_candidate { T operator()(T); };
+template <class... Ts>
+struct overload_resolution_overloaded: overloaded<overload_resolution_candidate<Ts>...> {};
+template <class T, class... Ts>
+using overload_resolution_type = decltype(overload_resolution_overloaded<Ts...>{}(std::declval<T>()));
+
+template <class T, class Tuple, class = void>
+struct overload_resolution {};
+template <class T, class... Ts>
+struct overload_resolution<T, std::tuple<Ts...>, std::void_t<overload_resolution_type<T, Ts...>>> {
+    using type = overload_resolution_type<T, Ts...>;
+};
+
+template <class T, class Tuple, class = void>
+struct is_overload_resolvable: std::false_type {};
+template <class T, class... Ts>
+struct is_overload_resolvable<T, std::tuple<Ts...>, std::void_t<overload_resolution_type<T, Ts...>>>: std::true_type {};
+
+} // namespace details
+
+// overload, overload_t
+template <class... Ts>
+struct overload { using type = details::overloaded<Ts...>; };
+template <class... Ts>
+using overload_t = typename overload<Ts...>::type;
+
+// overload_resolution, overload_resolution_t
+template <class T, class... Ts>
+struct overload_resolution: details::overload_resolution<T, std::tuple<Ts...>> {};
+template <class T, class... Ts>
+using overload_resolution_t = typename overload_resolution<T, Ts...>::type;
 
 // is_overload_resolvable, is_overload_resolvable_v
 template <class T, class... Ts>
@@ -326,77 +370,14 @@ struct is_overload_resolvable: details::is_overload_resolvable<T, std::tuple<Ts.
 template <class T, class... Ts>
 inline constexpr bool is_overload_resolvable_v = is_overload_resolvable<T, Ts...>::value;
 
-/// types traits ///
-
-// types_nth, types_nth_t
-template <std::size_t I, class... Ts>
-struct types_nth;
-template <std::size_t I, class First, class... Rest>
-struct types_nth<I, First, Rest...>: types_nth<I - 1, Rest...> { };
-template <class First, class... Rest>
-struct types_nth<0, First, Rest...> { using type = First; };
-template <std::size_t I, class... Ts>
-using types_nth_t = typename types_nth<I, Ts...>::type;
-
-// types_index, types_index_v
-template <class T, std::size_t Size, class... Ts>
-struct types_index_ {};
-template <class T, std::size_t Size, class First, class... Rest>
-struct types_index_<T, Size, First, Rest...>: types_index_<T, Size, Rest...> {};
-template <class T, std::size_t Size, class... Rest>
-struct types_index_<T, Size, T, Rest...>: std::integral_constant<std::size_t, Size - sizeof...(Rest) - 1> {};
-template <class T, class... Ts>
-struct types_index: types_index_<T, sizeof...(Ts), Ts...> {};
-template <class T, class... Ts>
-inline constexpr std::size_t types_index_v = types_index<T, Ts...>::value;
-
-// types_rindex, types_rindex_v
-template <class T, std::size_t Size, std::size_t CSize, class... Ts>
-struct types_rindex_: std::integral_constant<std::size_t, Size - CSize - 1> {};
-template <class T, std::size_t Size, std::size_t CSize, class First, class... Rest>
-struct types_rindex_<T, Size, CSize, First, Rest...>: types_rindex_<T, Size, CSize, Rest...> {};
-template <class T, std::size_t Size, std::size_t CSize, class... Rest>
-struct types_rindex_<T, Size, CSize, T, Rest...>: types_rindex_<T, Size, sizeof...(Rest), Rest...> {};
-template <class T, std::size_t Size>
-struct types_rindex_<T, Size, Size> {};
-template <class T, class... Ts>
-struct types_rindex: types_rindex_<T, sizeof...(Ts), sizeof...(Ts), Ts...> {};
-template <class T, class... Ts>
-inline constexpr std::size_t types_rindex_v = types_rindex<T, Ts...>::value;
-
-// types_count, types_count_v
-template <class T, class... Ts>
-struct types_count: std::integral_constant<std::size_t, 0> {};
-template <class T, class First, class... Rest>
-struct types_count<T, First, Rest...>: types_count<T, Rest...> {};
-template <class T, class... Rest>
-struct types_count<T, T, Rest...>: std::integral_constant<std::size_t, types_count<T, Rest...>::value + 1> {};
-template <class T, class... Ts>
-inline constexpr std::size_t types_count_v = types_count<T, Ts...>::value;
-
-// types_exactly_once, types_exactly_once_v
-template <class T, class... Ts>
-struct types_exactly_once: std::bool_constant<types_count_v<T, Ts...> == 1> {};
-template <class T, class... Ts>
-inline constexpr bool types_exactly_once_v = types_exactly_once<T, Ts...>::value;
-
-// types_exactly_once_index, types_exactly_once_index_v
-template <class T, bool Once, class... Ts>
-struct types_exactly_once_index_ {};
-template <class T, class... Ts>
-struct types_exactly_once_index_<T, true, Ts...>: types_index<T, Ts...> {};
-template <class T, class... Ts>
-struct types_exactly_once_index: types_exactly_once_index_<T, types_exactly_once_v<T, Ts...>, Ts...> {};
-template <class T, class... Ts>
-inline constexpr std::size_t types_exactly_once_index_v = types_exactly_once_index<T, Ts...>::value;
-
-/// tuple traits ///
+// Tuple traits
+// ---------------------------------------------------------
 
 // tuple_index, tuple_index_v
 template <class T, class Tup>
 struct tuple_index;
 template <class T, class... Ts>
-struct tuple_index<T, std::tuple<Ts...>>: types_index<T, Ts...> {};
+struct tuple_index<T, std::tuple<Ts...>>: index_of<T, Ts...> {};
 template <class T, class Tup>
 inline constexpr std::size_t tuple_index_v = tuple_index<T, Tup>::value;
 
@@ -404,7 +385,7 @@ inline constexpr std::size_t tuple_index_v = tuple_index<T, Tup>::value;
 template <class T, class Tup>
 struct tuple_rindex;
 template <class T, class... Ts>
-struct tuple_rindex<T, std::tuple<Ts...>>: types_rindex<T, Ts...> {};
+struct tuple_rindex<T, std::tuple<Ts...>>: rindex_of<T, Ts...> {};
 template <class T, class Tup>
 inline constexpr std::size_t tuple_rindex_v = tuple_rindex<T, Tup>::value;
 
@@ -412,25 +393,17 @@ inline constexpr std::size_t tuple_rindex_v = tuple_rindex<T, Tup>::value;
 template <class T, class Tup>
 struct tuple_count;
 template <class T, class... Ts>
-struct tuple_count<T, std::tuple<Ts...>>: types_count<T, Ts...> {};
+struct tuple_count<T, std::tuple<Ts...>>: count_of<T, Ts...> {};
 template <class T, class Tup>
 inline constexpr std::size_t tuple_count_v = tuple_count<T, Tup>::value;
 
-// tuple_exactly_once, tuple_exactly_once_v
+// is_tuple_exactly_once, is_tuple_exactly_once_v
 template <class T, class Tup>
-struct tuple_exactly_once;
+struct is_tuple_exactly_once;
 template <class T, class... Ts>
-struct tuple_exactly_once<T, std::tuple<Ts...>>: types_exactly_once<T, Ts...> {};
+struct is_tuple_exactly_once<T, std::tuple<Ts...>>: is_exactly_once<T, Ts...> {};
 template <class T, class... Ts>
-inline constexpr bool tuple_exactly_once_v = tuple_exactly_once<T, Ts...>::value;
-
-// tuple_exactly_once_index, tuple_exactly_once_index_v
-template <class T, class Tup>
-struct tuple_exactly_once_index;
-template <class T, class... Ts>
-struct tuple_exactly_once_index<T, std::tuple<Ts...>>: types_exactly_once_index<T, Ts...> {};
-template <class T, class Tup>
-inline constexpr std::size_t tuple_exactly_once_index_v = tuple_exactly_once_index<T, Tup>::value;
+inline constexpr bool is_tuple_exactly_once_v = is_tuple_exactly_once<T, Ts...>::value;
 
 // tuple_sub, tuple_sub_t
 template <class Tup, std::size_t Pos, std::size_t Cnt, class = std::make_index_sequence<Cnt>>
@@ -466,30 +439,17 @@ struct tuple_apply_template<TT, std::tuple<Ts...>> {
 template <template <class...> class TT, class Tup>
 using tuple_apply_template_t = typename tuple_apply_template<TT, Tup>::type;
 
-// aligned_type_storage
+// Miscellaneous transformations
+// ---------------------------------------------------------
+
+// aligned_type_storage, aligned_type_storage_t
 template <class T>
 using aligned_type_storage = std::aligned_storage<sizeof(T), alignof(T)>;
+template <class T>
+using aligned_type_storage_t = typename aligned_type_storage<T>::type;
 
-/// function traits ///
-
-// is_function_or_function_pointer, is_function_or_function_pointer_v
-template <class T>
-using is_function_or_function_pointer = std::is_function<std::remove_pointer_t<T>>;
-template <class T>
-inline constexpr bool is_function_or_function_pointer_v = is_function_or_function_pointer<T>::value;
-
-// is_function_pointer, is_function_pointer_v
-template <class T>
-using is_function_pointer = std::bool_constant<std::is_pointer_v<T> && is_function_or_function_pointer_v<T>>;
-template <class T>
-inline constexpr bool is_function_pointer_v = is_function_pointer<T>::value;
-
-// is_primitive_function, is_primitive_function_v
-// function || function pointer || member function pointer
-template <class T>
-using is_primitive_function = std::bool_constant<is_function_or_function_pointer_v<T> || std::is_member_function_pointer_v<T>>;
-template <class T>
-inline constexpr bool is_primitive_function_v = is_primitive_function<T>::value;
+// Function traits
+// ---------------------------------------------------------
 
 // is_non_overloaded_invocable, is_non_overloaded_invocable_v
 // primitive function || has non-overloaded operator()

@@ -3,17 +3,12 @@
 #include <vector>
 #include <esl/type_traits.hpp>
 
-TEST(TypeTraitsTest, member_type) {
-	EXPECT_FALSE(esl::member_type_type_v<int>);
-	EXPECT_TRUE(esl::member_type_type_v<std::true_type>);
-	EXPECT_FALSE(esl::member_type_size_type_v<std::true_type>);
-
-	EXPECT_FALSE(esl::member_type_type_v<esl::member_type_type<int>>);
-	EXPECT_TRUE((std::is_same_v<esl::member_type_type_t<int, char>, char>));
-
-	EXPECT_FALSE(esl::member_type_size_type_v<std::true_type>);
-	EXPECT_TRUE((std::is_same_v<esl::member_type_type_t<std::true_type, int>, std::true_type>));
-	EXPECT_TRUE((std::is_same_v<esl::member_type_size_type_t<std::true_type, int>, int>));
+TEST(TypeTraitsTest, has_member_type) {
+	EXPECT_FALSE(esl::has_member_type_type_v<int>);
+	EXPECT_TRUE(esl::has_member_type_type_v<std::true_type>);
+	EXPECT_FALSE(esl::has_member_type_size_type_v<std::true_type>);
+	EXPECT_TRUE(esl::has_member_type_type_v<esl::has_member_type_type<int>>);
+	EXPECT_FALSE(esl::has_member_type_size_type_v<std::true_type>);
 }
 
 void type_traits_test_function_a(int, char) {}

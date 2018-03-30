@@ -111,24 +111,42 @@ template <class T>
 using stdchar_as_stdzstring_t = typename stdchar_as_stdzstring<T>::type;
 
 // string_traits
-template <class T, bool = is_stdzstring_v<T>, bool = is_string_v<T> || is_string_view_v<T>>
-struct string_traits;
+
+namespace details {
+
+template <class T, class Enable = void>
+struct string_traits: std::false_type {};
 template <class T>
-struct string_traits<T, true, false> {
+struct string_traits<T, std::enable_if_t<is_stdzstring_v<T>>>: std::true_type {
 	using value_type = remove_pcv_t<std::decay_t<T>>;
 	using traits_type = std::char_traits<value_type>;
 	using allocator_type = std::allocator<value_type>;
-	using string_type = std::basic_string<value_type, traits_type, allocator_type>;
-	using string_view_type = std::basic_string_view<value_type, traits_type>;
 };
 template <class T>
-struct string_traits<T, false, true> {
+struct string_traits<T, std::enable_if_t<is_string_v<T>>>: std::true_type {
+	using value_type = typename T::value_type;
+	using traits_type = typename T::traits_type;
+	using allocator_type = typename T::allocator_type;
+};
+template <class T>
+struct string_traits<T, std::enable_if_t<is_string_view_v<T>>>: std::true_type {
+	using value_type = typename T::value_type;
+	using traits_type = typename T::traits_type;
+	using allocator_type = std::allocator<value_type>;
+};
+
+} // namespace details
+
+template <class T, bool = details::string_traits<std::remove_cv_t<T>>::value>
+struct string_traits;
+template <class T>
+struct string_traits<T, true> {
 private:
-	using type = std::remove_cv_t<T>;
+	using base_type = details::string_traits<std::remove_cv_t<T>>;
 public:
-	using value_type = typename type::value_type;
-	using traits_type = typename type::traits_type;
-	using allocator_type = member_type_allocator_type_t<type, std::allocator<value_type>>;
+	using value_type = typename base_type::value_type;
+	using traits_type = typename base_type::traits_type;
+	using allocator_type = typename base_type::allocator_type;
 	using string_type = std::basic_string<value_type, traits_type, allocator_type>;
 	using string_view_type = std::basic_string_view<value_type, traits_type>;
 };

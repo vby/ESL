@@ -1,7 +1,6 @@
 
 #include <gtest/gtest.h>
 #include <esl/variant_any.hpp>
-
 #include <string>
 
 TEST(VariantAnyTest, empty) {
@@ -29,6 +28,44 @@ TEST(VariantAnyTest, construct) {
 		va = true;
 		ASSERT_EQ(va.index(), 1);
 	}
+}
+
+TEST(VariantAnyTest, visit) {
+	esl::variant_any<int, bool, std::string> va(false);
+	auto f = [](auto&& arg) -> std::size_t {
+			return esl::index_of_v<std::remove_reference_t<decltype(arg)>, int, bool, std::string>;
+		};
+
+	auto index = std::visit(f, va);
+	ASSERT_EQ(index, 1);
+	ASSERT_EQ(index, va.index());
+
+	va.emplace<0>(123);
+	index = std::visit(f, va);
+	ASSERT_EQ(index, 0);
+	ASSERT_EQ(index, va.index());
+}
+
+TEST(VariantAnyTest, hash) {
+	using va_type = esl::variant_any<int, bool, int>;
+
+	va_type va(std::in_place_index<0>, 100);
+	auto h1 = esl::hash_value(va);
+	ASSERT_NE(h1, 100);
+
+	va.emplace<2>(100);
+	auto h2 = esl::hash_value(va);
+	ASSERT_NE(h2, 100);
+	ASSERT_NE(h2, h1);
+
+	va.emplace<1>(101);
+	auto h3 = esl::hash_value(va);
+	ASSERT_NE(h3, h1);
+	ASSERT_NE(h3, h2);
+
+	va.emplace<2>(100);
+	auto h4 = esl::hash_value(va);
+	ASSERT_EQ(h4, h2);
 }
 
 TEST(VariantAnyTest, comp) {
