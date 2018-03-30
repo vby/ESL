@@ -12,7 +12,25 @@ git:
 
 matrix:
   include:
-    # Clang 5.0
+    # OSX Clang
+    - env: COMPILER=clang++ BUILD_TYPE=Debug
+      os: osx
+      osx_image: xcode9.3beta
+      compiler: clang
+    - env: COMPILER=clang++ BUILD_TYPE=Release
+      os: osx
+      osx_image: xcode9.3beta
+      compiler: clang
+
+    # OSX GCC 7 
+    - env: COMPILER=g++-7 BUILD_TYPE=Debug MATRIX_EVAL="brew install gcc"
+      os: osx
+      osx_image: xcode9.3beta
+    - env: COMPILER=g++-7 BUILD_TYPE=Release MATRIX_EVAL="brew install gcc"
+      os: osx
+      osx_image: xcode9.3beta
+
+    # Linux Clang 5.0
     - env: COMPILER=clang++-5.0 BUILD_TYPE=Debug
       addons: &clang50
         apt:
@@ -25,7 +43,7 @@ matrix:
     - env: COMPILER=clang++-5.0 BUILD_TYPE=Release
       addons: *clang50
 
-    # GCC 7
+    # Linux GCC 7
     - env: COMPILER=g++-7 BUILD_TYPE=Debug
       addons: &gcc70
         apt:
@@ -37,6 +55,7 @@ matrix:
       addons: *gcc70
 
 before_install:
+  - eval ${MATRIX_EVAL}
   - export CXX=${COMPILER}
   - ${CXX} --version
   - cmake --version

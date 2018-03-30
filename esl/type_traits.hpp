@@ -2,8 +2,6 @@
 #ifndef ESL_TYPE_TRAITS_HPP
 #define ESL_TYPE_TRAITS_HPP
 
-#include "macros.hpp"
-
 #include <type_traits>
 #include <iterator>
 #include <tuple>
