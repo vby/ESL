@@ -2,9 +2,13 @@
 #ifndef ESL_DETAILS_SHARED_LIBRARY_POSIX_HPP
 #define ESL_DETAILS_SHARED_LIBRARY_POSIX_HPP
 
-#include <system_error>
+#if __has_include(<dlfcn.h>)
+	#include <dlfcn.h>
+#else
+	#error "Not implemented."
+#endif
 
-#include <dlfcn.h>
+#include <system_error>
 
 namespace esl::details {
 

@@ -13,10 +13,8 @@
 
 #ifdef ESL_SOURCE_WIN32
 	#include "details/shared_library_win32.hpp"
-#elif defined ESL_SOURCE_POSIX
-	#include "details/shared_library_posix.hpp"
 #else
-	#error "Not implemented."
+	#include "details/shared_library_posix.hpp"
 #endif
 
 namespace esl {
