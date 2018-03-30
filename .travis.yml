@@ -3,6 +3,7 @@ language: cpp
 
 os: linux
 dist: trusty
+sudo: false
 
 notifications:
   email: false
@@ -23,10 +24,10 @@ matrix:
       compiler: clang
 
     # OSX GCC 7 
-    - env: COMPILER=g++-7 BUILD_TYPE=Debug MATRIX_EVAL="brew install gcc@7"
+    - env: COMPILER=g++-7 BUILD_TYPE=Debug MATRIX_EVAL="brew cask uninstall oclint && brew install gcc@7"
       os: osx
       osx_image: xcode9.3beta
-    - env: COMPILER=g++-7 BUILD_TYPE=Release MATRIX_EVAL="brew install gcc@7"
+    - env: COMPILER=g++-7 BUILD_TYPE=Release MATRIX_EVAL="brew cask uninstall oclint && brew install gcc@7"
       os: osx
       osx_image: xcode9.3beta
 
