@@ -37,7 +37,7 @@ esl_add_test(lazy_tests)
 esl_add_test(codecs_tests)
 esl_add_test(unicode_tests)
 esl_add_test(demangle_tests)
-esl_add_test(variant_any_tests)
+esl_add_test(any_variant_tests)
 esl_add_test(json_tests)
 esl_add_test(yaml_tests)
 

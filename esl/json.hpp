@@ -1,7 +1,7 @@
 #ifndef ESL_JSON_HPP
 #define ESL_JSON_HPP
 
-#include "variant_any.hpp"
+#include "any_variant.hpp"
 
 #include <string>
 #include <vector>
@@ -34,11 +34,11 @@ enum index {
     object_index,
 };
 
-class value: public variant_any<null_t, boolean, number, string, array, object> {
+class value: public any_variant<null_t, boolean, number, string, array, object> {
 public:
-    using variant_any::variant_any;
+    using any_variant::any_variant;
 
-    using variant_any::operator=;
+    using any_variant::operator=;
 };
 
 } // namespace json

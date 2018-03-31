@@ -1,22 +1,22 @@
 
 #include <gtest/gtest.h>
-#include <esl/variant_any.hpp>
+#include <esl/any_variant.hpp>
 #include <string>
 
-TEST(VariantAnyTest, empty) {
-	esl::variant_any<> va;
+TEST(AnyVariantTest, empty) {
+	esl::any_variant<> va;
 	ASSERT_TRUE(!va.has_value());
 }
 
-TEST(VariantAnyTest, construct) {
+TEST(AnyVariantTest, construct) {
 	{
-		esl::variant_any<int, bool, std::string> va;
+		esl::any_variant<int, bool, std::string> va;
 		ASSERT_TRUE(!va.has_value());
 		ASSERT_TRUE(va.valueless_by_exception());
 		ASSERT_EQ(va.index(), std::variant_npos);
 	}
 	{
-		esl::variant_any<int, bool, std::string> va(123);
+		esl::any_variant<int, bool, std::string> va(123);
 		ASSERT_EQ(va.index(), 0);
 		va = false;
 		ASSERT_EQ(va.index(), 1);
@@ -31,8 +31,8 @@ TEST(VariantAnyTest, construct) {
 }
 
 // Not work on MSVC
-//TEST(VariantAnyTest, visit) {
-//	esl::variant_any<int, bool, std::string> va(false);
+//TEST(AnyVariantTest, visit) {
+//	esl::any_variant<int, bool, std::string> va(false);
 //	auto f = [](auto&& arg) -> std::size_t {
 //			return esl::index_of_v<std::remove_reference_t<decltype(arg)>, int, bool, std::string>;
 //		};
@@ -47,8 +47,8 @@ TEST(VariantAnyTest, construct) {
 //	ASSERT_EQ(index, va.index());
 //}
 
-TEST(VariantAnyTest, hash) {
-	using va_type = esl::variant_any<int, bool, int>;
+TEST(AnyVariantTest, hash) {
+	using va_type = esl::any_variant<int, bool, int>;
 
 	va_type va(std::in_place_index<0>, 100);
 	auto h1 = esl::hash_value(va);
@@ -69,13 +69,13 @@ TEST(VariantAnyTest, hash) {
 	ASSERT_EQ(h4, h2);
 }
 
-TEST(VariantAnyTest, comp) {
-	esl::variant_any<int, bool> va0;
-	esl::variant_any<int, bool> va00;
-	esl::variant_any<int, bool> va1(123);
-	esl::variant_any<int, bool> va2(123);
-	esl::variant_any<int, bool> va3(456);
-	esl::variant_any<int, bool> va4(true);
+TEST(AnyVariantTest, comp) {
+	esl::any_variant<int, bool> va0;
+	esl::any_variant<int, bool> va00;
+	esl::any_variant<int, bool> va1(123);
+	esl::any_variant<int, bool> va2(123);
+	esl::any_variant<int, bool> va3(456);
+	esl::any_variant<int, bool> va4(true);
 	ASSERT_EQ(va0, va0);
 	ASSERT_EQ(va0, va00);
 	ASSERT_FALSE(va0 != va00);

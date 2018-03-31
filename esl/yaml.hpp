@@ -3,7 +3,7 @@
 
 #include <yaml.h>
 
-#include "variant_any.hpp"
+#include "any_variant.hpp"
 
 #include <cstdint>
 #include <string>
@@ -46,11 +46,11 @@ enum index {
     map_index,
 };
 
-class node: public variant_any<null_t, bool_t, int_t, float_t, str, seq, map> {
+class node: public any_variant<null_t, bool_t, int_t, float_t, str, seq, map> {
 public:
-    using variant_any::variant_any;
+    using any_variant::any_variant;
 
-    using variant_any::operator=;
+    using any_variant::operator=;
 };
 
 class parse_error: public std::runtime_error {
