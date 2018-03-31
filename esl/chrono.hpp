@@ -26,7 +26,7 @@ struct cast_from_duration_<std::timespec> {
 		auto nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(d).count();
 		timespec ts;
 		ts.tv_sec = static_cast<std::time_t>(nsec / std::nano::den);
-		ts.tv_nsec = static_cast<long>(nsec - (ts.tv_sec * std::nano::den)); 
+		ts.tv_nsec = static_cast<long>(nsec - (ts.tv_sec * std::nano::den));
 		return ts;
 	}
 };
@@ -52,7 +52,7 @@ struct cast_from_time_point_ {
 	}
 };
 template <class Clock, class ToDuration>
-struct cast_from_time_point_<std::chrono::time_point<Clock, ToDuration>> { 
+struct cast_from_time_point_<std::chrono::time_point<Clock, ToDuration>> {
 	template <class Duration>
 	static constexpr std::chrono::time_point<Clock, ToDuration> cast(const std::chrono::time_point<Clock, Duration>& t) noexcept {
 		return std::chrono::time_point_cast<ToDuration>(t);

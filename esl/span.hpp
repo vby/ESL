@@ -107,8 +107,8 @@ public:
 	constexpr reference at() const noexcept(N != npos);
 
 	// Exceptions: std::out_of_range if pos >= size()
-	constexpr reference at(size_type pos) const { 
-		this->at_with_location(pos, "esl::span::at"); 
+	constexpr reference at(size_type pos) const {
+		this->at_with_location(pos, "esl::span::at");
 	}
 
 	constexpr reference operator[](size_type pos) const noexcept { return data()[pos]; }

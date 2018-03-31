@@ -14,7 +14,7 @@ private:
 	std::uint_least32_t column_;
 
 public:
-	constexpr source_location() noexcept: file_(""), func_(""), line_(0), column_(0) {} 
+	constexpr source_location() noexcept: file_(""), func_(""), line_(0), column_(0) {}
 
 	constexpr source_location(const source_location&) = default;
 
@@ -48,8 +48,8 @@ public:
 		sl.line_ = line;
 		sl.column_ = column;
 		return sl;
-	}   
-}; 
+	}
+};
 
 } // namespace esl
 
