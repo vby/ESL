@@ -265,13 +265,13 @@ public:
 	template <class T>
 	constexpr T& get() {
 		static_assert(is_exactly_once_v<T, Ts...>, "T should occur for exactly once in alternatives");
-		return storage_.get<T>();
+		return this->template get<index_of_v<T, Ts...>>();
 	}
 
 	template <class T>
 	constexpr const T& get() const {
 		static_assert(is_exactly_once_v<T, Ts...>, "T should occur for exactly once in alternatives");
-		return storage_.get<T>();
+		return this->template get<index_of_v<T, Ts...>>();
 	}
 };
 
@@ -359,12 +359,12 @@ private:
 		return ::esl::hash_combine(std::get<I>(hashers)(std::get<I>(va)), I);
 	}
 	template <size_t... Is>
-	static constexpr array<hash_func_type, sizeof...(Ts)> gen_hashers(index_sequence<Is...>) {
+	static constexpr array<hash_func_type, sizeof...(Ts)> gen_hash_vtable(index_sequence<Is...>) {
 		return {{hash_<Is>...}};
 	}
-	static constexpr auto hashers = gen_hashers(index_sequence_for<Ts...>{});
+	static constexpr auto hash_vtable = gen_hash_vtable(index_sequence_for<Ts...>{});
 public:
-	size_t operator()(const ::esl::any_variant<Ts...>& va) const { return hashers[va.index()](hashers_, va); }
+	size_t operator()(const ::esl::any_variant<Ts...>& va) const { return hash_vtable[va.index()](hashers_, va); }
 };
 
 } // namespace std
@@ -380,19 +380,19 @@ using std::get_if;
 
 namespace details {
 
-template <template <class> class comp, class... Ts>
+template <template <class> class Comp, class... Ts>
 struct any_variant_comp {
 private:
 	using comp_func_type = bool (*)(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs);
 	template <std::size_t I, class T>
-	static bool comp_(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) { return comp<T>{}(std::get<I>(lhs), std::get<I>(rhs)); }
+	static bool comp_(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) { return Comp<T>{}(std::get<I>(lhs), std::get<I>(rhs)); }
 	template <std::size_t... Is>
-	static constexpr std::array<comp_func_type, sizeof...(Ts)> gen_comps(std::index_sequence<Is...>) {
+	static constexpr std::array<comp_func_type, sizeof...(Ts)> gen_comp_vtable(std::index_sequence<Is...>) {
 		return {{comp_<Is, Ts>...}};
 	}
-	static constexpr auto comps = gen_comps(std::index_sequence_for<Ts...>{});
+	static constexpr auto comp_vtable = gen_comp_vtable(std::index_sequence_for<Ts...>{});
 public:
-	constexpr bool operator()(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) const { return comps[lhs.index()](lhs, rhs); }
+	constexpr bool operator()(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) const { return comp_vtable[lhs.index()](lhs, rhs); }
 };
 
 } // namespace details
