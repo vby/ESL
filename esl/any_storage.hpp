@@ -15,7 +15,7 @@ namespace esl {
 // * construct: this (uninitialized) -> this (initialized)
 // * from(copy): this (uninitialized), other (initialized) -> this (initialized), other (initialized)
 // * from(move): this (uninitialized), other (initialized) -> this (initialized), other (uninitialized)
-// * destruct: this (initialized)
+// * destruct: this (initialized) -> this (uninitialized)
 // * swap: this (initialized), other (initialized) -> this (initialized), other (initialized)
 
 template <std::size_t MaxSize = 4 * sizeof(void*), std::size_t MaxAlign = alignof(std::max_align_t)>
@@ -172,13 +172,23 @@ public:
 	}
 
 	template <class T>
-	T& get() noexcept {
+	T& get() & noexcept {
 		return Manager<std::decay_t<T>>::get(storage_);
 	}
 
 	template <class T>
-	const T& get() const noexcept {
+	const T& get() const& noexcept {
 		return Manager<std::decay_t<T>>::get(storage_);
+	}
+
+	template <class T>
+	T&& get() && noexcept {
+		return std::move(Manager<std::decay_t<T>>::get(storage_));
+	}
+
+	template <class T>
+	const T&& get() const&& noexcept {
+		return std::move(Manager<std::decay_t<T>>::get(storage_));
 	}
 };
 

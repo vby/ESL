@@ -30,6 +30,12 @@ TEST(AnyVariantTest, construct) {
 	}
 }
 
+TEST(AnyVariantTest, get) {
+	esl::any_variant<int, bool, std::string> va(false);
+	bool&& rb = std::move(va).get<bool>();
+	ASSERT_EQ(rb, false);
+}
+
 // Not work on MSVC
 //TEST(AnyVariantTest, visit) {
 //	esl::any_variant<int, bool, std::string> va(false);

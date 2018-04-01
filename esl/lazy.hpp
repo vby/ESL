@@ -14,11 +14,7 @@ namespace esl {
 template <class T, class... Args>
 class lazy {
 public:
-	using type = T;
-	using reference = T&;
-	using const_reference = const T&;
-	using pointer = T*;
-	using const_pointer = const T*;
+	using value_type = T;
 
 private:
 	mutable std::aligned_storage_t<sizeof(T), alignof(T)> val_;
@@ -26,13 +22,13 @@ private:
 	mutable std::once_flag once_flag_;
 
 	template <std::size_t... Is>
-	void construct_(std::index_sequence<Is...>) const {
-		std::call_once(once_flag_, [this]() { new(static_cast<void*>(&val_)) T(std::forward<Args>(std::get<Is>(args_))...); });
+	void construct(std::index_sequence<Is...>) const {
+		std::call_once(once_flag_, [this]() { new(&val_) T(std::forward<Args>(std::get<Is>(args_))...); });
 	}
 
-	pointer construct_() const {
-		this->construct_(std::index_sequence_for<Args...>{});
-		return reinterpret_cast<pointer>(&val_);
+	T& construct() const {
+		this->construct(std::index_sequence_for<Args...>{});
+		return reinterpret_cast<T&>(val_);
 	}
 
 public:
@@ -40,22 +36,34 @@ public:
 	explicit lazy(FArgs&&... args): args_(std::forward<FArgs>(args)...) {}
 
 	lazy(const lazy&) = delete;
-
 	lazy(lazy&&) = delete;
-
-	~lazy() { reinterpret_cast<pointer>(&val_)->~T(); }
-
 	lazy& operator=(const lazy&) = delete;
-
 	lazy& operator=(lazy&&) = delete;
 
-	reference get() { return *this->construct_(); }
+	~lazy() { reinterpret_cast<T*>(&val_)->~T(); }
 
-	const_reference get() const { return *this->construct_(); }
+	// value
+	T& value() & { return this->construct(); }
 
-	pointer operator&() { return this->construct_(); }
+	const T& value() const& { return this->construct(); }
 
-	const_pointer operator&() const { return this->construct_(); }
+	T&& value() && { return std::move(this->construct()); }
+
+	const T&& value() const&& { return std::move(this->construct()); }
+
+	// operator->
+	T* operator->() { return &this->value(); }
+
+	const T* operator->() const { return &this->value(); }
+
+	// operator*
+	T& operator*() & { return this->value(); }
+
+	const T& operator*() const& { return this->value(); }
+
+	T&& operator*() && { return this->value(); }
+
+	const T&& operator*() const&& { return this->value(); }
 };
 
 } // namespace esl

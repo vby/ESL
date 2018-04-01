@@ -36,19 +36,19 @@ TEST(LazyTest, lazy_without_args) {
 		ASSERT_EQ(class_a_count, 0);
 
 		// operator&
-		ASSERT_EQ((&lazy_a1)->x, 1);
+		ASSERT_EQ(lazy_a1->x, 1);
 		ASSERT_EQ(class_a_count, 1);
 
 		// address
-		ASSERT_EQ(lazy_a1.get().x, 1);
+		ASSERT_EQ(lazy_a1.value().x, 1);
 		ASSERT_EQ(class_a_count, 1);
 
-		(&lazy_a1)->x = 10;
-		ASSERT_EQ((&lazy_a1)->x, 10);
+		lazy_a1->x = 10;
+		ASSERT_EQ(lazy_a1->x, 10);
 		ASSERT_EQ(class_a_count, 1);
 
 		LazyClassA lazy_a2;
-		ASSERT_EQ((&lazy_a2)->x, 2);
+		ASSERT_EQ(lazy_a2->x, 2);
 		ASSERT_EQ(class_a_count, 2);
 	}
 
@@ -60,23 +60,23 @@ TEST(LazyTest, lazy_with_args) {
 	{
 		esl::lazy<ClassA, int, const std::string&> lazy_a(10, "a1");
 		ASSERT_EQ(class_a_count, 0);
-		ASSERT_EQ((&lazy_a)->x, 11);
-		ASSERT_EQ((&lazy_a)->s, "a1");
+		ASSERT_EQ(lazy_a->x, 11);
+		ASSERT_EQ(lazy_a->s, "a1");
 		ASSERT_EQ(class_a_count, 1);
 	}
 	{
 		esl::lazy<ClassA, int, std::string&&> lazy_a(10, "a1");
 		ASSERT_EQ(class_a_count, 0);
-		ASSERT_EQ((&lazy_a)->x, 12);
-		ASSERT_EQ((&lazy_a)->s, "a1");
+		ASSERT_EQ(lazy_a->x, 12);
+		ASSERT_EQ(lazy_a->s, "a1");
 		ASSERT_EQ(class_a_count, 1);
 	}
 	// decay type of args
 	{
 		esl::lazy<ClassA, int, std::string> lazy_a(10, "a1");
 		ASSERT_EQ(class_a_count, 0);
-		ASSERT_EQ((&lazy_a)->x, 12);
-		ASSERT_EQ((&lazy_a)->s, "a1");
+		ASSERT_EQ(lazy_a->x, 12);
+		ASSERT_EQ(lazy_a->s, "a1");
 		ASSERT_EQ(class_a_count, 1);
 	}
 }

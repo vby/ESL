@@ -66,23 +66,6 @@ namespace esl {
 template <class... Ts>
 class any_variant {
 private:
-	template <class T, bool = is_exactly_once_v<T, Ts...>>
-	struct exactly_once_index {};
-	template <class T>
-	struct exactly_once_index<T, true>: index_of<T, Ts...> {};
-
-	template <class T, class RT>
-	using select_type_enable_if = std::enable_if<is_exactly_once_v<RT, Ts...> && std::is_constructible_v<RT, T>, RT>;
-	template <class T, bool = is_overload_resolvable_v<T, Ts...>>
-	struct select_type {};
-	template <class T>
-	struct select_type<T, true>: select_type_enable_if<T, overload_resolution_t<T, Ts...>> {};
-	// workaround for clang++
-	template <class T, bool = std::is_same_v<std::decay_t<T>, any_variant>>
-	struct accepted_type {};
-	template <class T>
-	struct accepted_type<T, false>: select_type<T> {};
-
 	using Storage = any_storage<>;
 
 	template <class T>
@@ -107,9 +90,26 @@ private:
 	static constexpr auto storage_destruct_vtable = make_vtable_v<StorageDestruct, Ts...>;
 	static constexpr auto storage_swap_vtable = make_vtable2_v<StorageSwap, std::tuple<Ts...>, std::tuple<Ts...>>;
 
-private:
 	Storage storage_;
 	std::size_t index_;
+
+private:
+	template <class T, bool = is_exactly_once_v<T, Ts...>>
+	struct ExactlyOnceIndex {};
+	template <class T>
+	struct ExactlyOnceIndex<T, true>: index_of<T, Ts...> {};
+
+	template <class T, class RT>
+	using SelectTypeEnableIf = std::enable_if<is_exactly_once_v<RT, Ts...> && std::is_constructible_v<RT, T>, RT>;
+	template <class T, bool = is_overload_resolvable_v<T, Ts...>>
+	struct SelectType {};
+	template <class T>
+	struct SelectType<T, true>: SelectTypeEnableIf<T, overload_resolution_t<T, Ts...>> {};
+	// workaround for clang++
+	template <class T, bool = std::is_same_v<std::decay_t<T>, any_variant>>
+	struct AcceptedType {};
+	template <class T>
+	struct AcceptedType<T, false>: SelectType<T> {};
 
 public:
 	constexpr any_variant() noexcept: index_(std::variant_npos) {}
@@ -127,14 +127,14 @@ public:
 		}
 	}
 
-	template <class T, class AT = typename accepted_type<T&&>::type>
+	template <class T, class AT = typename AcceptedType<T&&>::type>
 	any_variant(T&& value): any_variant(std::in_place_type<AT>, std::forward<T>(value)) {}
 
-	template <class T, class... Args, class I = typename exactly_once_index<T>::type>
+	template <class T, class... Args, class I = typename ExactlyOnceIndex<T>::type>
 	explicit any_variant(std::in_place_type_t<T>, Args&&... args):
 		storage_(std::in_place_type<T>, std::forward<Args>(args)...), index_(I::value) {}
 
-	template <class T, class U, class... Args, class I = typename exactly_once_index<T>::type>
+	template <class T, class U, class... Args, class I = typename ExactlyOnceIndex<T>::type>
 	explicit any_variant(std::in_place_type_t<T>, std::initializer_list<U> il, Args&&... args):
 		storage_(std::in_place_type<T>, il, std::forward<Args>(args)...), index_(I::value) {}
 
@@ -167,7 +167,7 @@ public:
 		return *this;
 	}
 
-	template <class T, class AT = typename accepted_type<T&&>::type>
+	template <class T, class AT = typename AcceptedType<T&&>::type>
 	any_variant& operator=(T&& value) {
 		this->emplace<AT>(std::forward<T>(value));
 		return *this;
@@ -192,7 +192,7 @@ public:
 
 protected:
 	template <class T, std::size_t I, class... Args>
-	ESL_ATTR_FORCEINLINE T& emplace(Args&&... args) {
+	ESL_ATTR_FORCEINLINE T& do_emplace(Args&&... args) {
 		this->reset();
 		auto& val = storage_.construct<T>(std::forward<Args>(args)...);
 		index_ = I;
@@ -200,24 +200,24 @@ protected:
 	}
 
 public:
-	template <class T, class... Args, class I = typename exactly_once_index<T>::type>
+	template <class T, class... Args, class I = typename ExactlyOnceIndex<T>::type>
 	T& emplace(Args&&... args) {
-		return this->emplace<T, I::value>(std::forward<Args>(args)...);
+		return this->do_emplace<T, I::value>(std::forward<Args>(args)...);
 	}
 
-	template <class T, class U, class... Args, class I = typename exactly_once_index<T>::type>
+	template <class T, class U, class... Args, class I = typename ExactlyOnceIndex<T>::type>
 	T& emplace(std::initializer_list<U> il, Args&&... args) {
-		return this->emplace<T, I::value>(il, std::forward<Args>(args)...);
+		return this->do_emplace<T, I::value>(il, std::forward<Args>(args)...);
 	}
 
 	template <std::size_t I, class... Args>
 	std::variant_alternative_t<I, any_variant>& emplace(Args&&... args) {
-		return this->emplace<std::variant_alternative_t<I, any_variant>, I>(std::forward<Args>(args)...);
+		return this->do_emplace<std::variant_alternative_t<I, any_variant>, I>(std::forward<Args>(args)...);
 	}
 
 	template <std::size_t I, class U, class... Args>
 	std::variant_alternative_t<I, any_variant>& emplace(std::initializer_list<U> il, Args&&... args) {
-		return this->emplace<std::variant_alternative_t<I, any_variant>, I>(il, std::forward<Args>(args)...);
+		return this->do_emplace<std::variant_alternative_t<I, any_variant>, I>(il, std::forward<Args>(args)...);
 	}
 
 	void swap(any_variant& other) noexcept {
@@ -246,32 +246,59 @@ public:
 		}
 	}
 
+protected:
 	template <std::size_t I>
-	constexpr std::variant_alternative_t<I, any_variant>& get() {
+	ESL_ATTR_FORCEINLINE constexpr void do_check_index() const {
 		if (index_ == std::variant_npos || index_ != I) {
 			throw std::bad_variant_access{};
 		}
+	}
+
+public:
+	template <std::size_t I>
+	constexpr std::variant_alternative_t<I, any_variant>& get() & {
+		this->do_check_index<I>();
 		return storage_.get<std::variant_alternative_t<I, any_variant>>();
 	}
 
 	template <std::size_t I>
-	constexpr const std::variant_alternative_t<I, any_variant>& get() const {
-		if (index_ == std::variant_npos || index_ != I) {
-			throw std::bad_variant_access{};
-		}
+	constexpr const std::variant_alternative_t<I, any_variant>& get() const& {
+		this->do_check_index<I>();
 		return storage_.get<std::variant_alternative_t<I, any_variant>>();
 	}
 
-	template <class T>
-	constexpr T& get() {
-		static_assert(is_exactly_once_v<T, Ts...>, "T should occur for exactly once in alternatives");
-		return this->template get<index_of_v<T, Ts...>>();
+	template <std::size_t I>
+	constexpr std::variant_alternative_t<I, any_variant>&& get() && {
+		return std::move(this->get<I>());
+	}
+
+	template <std::size_t I>
+	constexpr const std::variant_alternative_t<I, any_variant>&& get() const&& {
+		return std::move(this->get<I>());
 	}
 
 	template <class T>
-	constexpr const T& get() const {
+	constexpr T& get() & {
 		static_assert(is_exactly_once_v<T, Ts...>, "T should occur for exactly once in alternatives");
-		return this->template get<index_of_v<T, Ts...>>();
+		return this->get<index_of_v<T, Ts...>>();
+	}
+
+	template <class T>
+	constexpr const T& get() const& {
+		static_assert(is_exactly_once_v<T, Ts...>, "T should occur for exactly once in alternatives");
+		return this->get<index_of_v<T, Ts...>>();
+	}
+
+	template <class T>
+	constexpr T&& get() && {
+		static_assert(is_exactly_once_v<T, Ts...>, "T should occur for exactly once in alternatives");
+		return std::move(this->get<index_of_v<T, Ts...>>());
+	}
+
+	template <class T>
+	constexpr const T&& get() const&& {
+		static_assert(is_exactly_once_v<T, Ts...>, "T should occur for exactly once in alternatives");
+		return std::move(this->get<index_of_v<T, Ts...>>());
 	}
 };
 
@@ -292,7 +319,7 @@ inline constexpr variant_alternative_t<I, ::esl::any_variant<Ts...>>& get(::esl:
 }
 template <size_t I, class... Ts>
 inline constexpr variant_alternative_t<I, ::esl::any_variant<Ts...>>&& get(::esl::any_variant<Ts...>&& v) {
-	return std::move(v.template get<I>());
+	return std::move(v).template get<I>();
 }
 template <size_t I, class... Ts>
 inline constexpr variant_alternative_t<I, ::esl::any_variant<Ts...>> const& get(const ::esl::any_variant<Ts...>& v) {
@@ -300,7 +327,7 @@ inline constexpr variant_alternative_t<I, ::esl::any_variant<Ts...>> const& get(
 }
 template <size_t I, class... Ts>
 inline constexpr variant_alternative_t<I, ::esl::any_variant<Ts...>> const&& get(const ::esl::any_variant<Ts...>&& v) {
-	return std::move(v.template get<I>());
+	return std::move(v).template get<I>();
 }
 template <class T, class... Ts>
 inline constexpr T& get(::esl::any_variant<Ts...>& v) {
@@ -308,7 +335,7 @@ inline constexpr T& get(::esl::any_variant<Ts...>& v) {
 }
 template <class T, class... Ts>
 inline constexpr T&& get(::esl::any_variant<Ts...>&& v) {
-	return std::move(v.template get<T>());
+	return std::move(v).template get<T>();
 }
 template <class T, class... Ts>
 inline constexpr const T& get(const ::esl::any_variant<Ts...>& v) {
@@ -316,7 +343,7 @@ inline constexpr const T& get(const ::esl::any_variant<Ts...>& v) {
 }
 template <class T, class... Ts>
 inline constexpr const T&& get(const ::esl::any_variant<Ts...>&& v) {
-	return std::move(v.template get<T>());
+	return std::move(v).template get<T>();
 }
 
 // std::get_if
