@@ -1,10 +1,10 @@
 
 #include <gtest/gtest.h>
-#include <esl/utils.hpp>
+#include <esl/utility.hpp>
 
 using namespace esl::casts;
 
-TEST(UtilsTest, casts) {
+TEST(UtilityTest, casts) {
 	struct A {
 		int a;
 	};

@@ -24,7 +24,7 @@ function(esl_add_test name)
 endfunction()
 
 set(CMAKE_CXX_EXTENSIONS OFF)
-esl_add_test(utils_tests)
+esl_add_test(utility_tests)
 esl_add_test(type_traits_tests)
 esl_add_test(source_location_tests)
 esl_add_test(functional_tests)
