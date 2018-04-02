@@ -75,7 +75,7 @@ inline constexpr decltype(auto) array_access(const std::array<T, N>& a, std::siz
 template <std::size_t... Is>
 struct array_get {
 	template <class T>
-	static constexpr decltype(auto) get(T& a) noexcept { return a; }
+	static constexpr T& get(T& a) noexcept { return a; }
 };
 template <std::size_t First, std::size_t... Rest>
 struct array_get<First, Rest...> {
@@ -126,19 +126,19 @@ inline constexpr const array_element_t<sizeof...(Poss), std::array<T, N>>&& acce
 namespace std {
 
 // get
-template <size_t... Is, class T, std::size_t N>
+template <size_t... Is, class T, std::size_t N, class = std::enable_if_t<sizeof...(Is) != 1>>
 inline constexpr ::esl::array_element_t<sizeof...(Is), std::array<T, N>>& get(std::array<T, N>& a) noexcept {
 	return ::esl::details::array_get<Is...>::get(a);
 }
-template <size_t... Is, class T, std::size_t N>
+template <size_t... Is, class T, std::size_t N, class = std::enable_if_t<sizeof...(Is) != 1>>
 inline constexpr const ::esl::array_element_t<sizeof...(Is), std::array<T, N>>& get(const std::array<T, N>& a) noexcept {
 	return ::esl::details::array_get<Is...>::get(a);
 }
-template <size_t... Is, class T, std::size_t N>
+template <size_t... Is, class T, std::size_t N, class = std::enable_if_t<sizeof...(Is) != 1>>
 inline constexpr ::esl::array_element_t<sizeof...(Is), std::array<T, N>>&& get(std::array<T, N>&& a) noexcept {
 	return move(::esl::details::array_get<Is...>::get(a));
 }
-template <size_t... Is, class T, std::size_t N>
+template <size_t... Is, class T, std::size_t N, class = std::enable_if_t<sizeof...(Is) != 1>>
 inline constexpr const ::esl::array_element_t<sizeof...(Is), std::array<T, N>>&& get(const std::array<T, N>&& a) noexcept {
 	return move(::esl::details::array_get<Is...>::get(a));
 }

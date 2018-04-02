@@ -374,17 +374,22 @@ private:
 	static constexpr ResultType invoke_alt(Visitor vis, Variants... vars) {
 		return std::invoke(std::forward<Visitor>(vis), std::get<Is>(std::forward<Variants>(vars))...);
 	}
-
-	using FuncPtr = ResultType(*)(Visitor, Variants...);
-	using ArrayType = multi_array_t<FuncPtr, std::variant_size_v<std::remove_reference_t<Variants>>...>;
-	using Indexs = tuple_combination_t<integer_sequence_tuple_t<std::make_index_sequence<std::variant_size_v<std::remove_reference_t<Variants>>>>...>;
+	// Failed compile on MSVC(VS 2017)
+	// MSVC std::make_index_sequence use __make_integer_seq, bugly expend with Variadic parameters
+	template <std::size_t... Dimensions>
+	struct MultiArray {
+		using type = multi_array_t<ResultType(*)(Visitor, Variants...), Dimensions...>;
+		using indexes_type = tuple_combination_t<integer_sequence_tuple_t<std::make_index_sequence<Dimensions>>...>;
+	};
+	using VTableMultiArray = MultiArray<std::variant_size_v<std::remove_reference_t<Variants>>...>;
+	using ArrayType = typename VTableMultiArray::type;
 
 	template <std::size_t... Is>
 	static constexpr void apply_alt(ArrayType& vtbl, std::index_sequence<Is...>) {
 		std::get<Is...>(vtbl) = invoke_alt<Is...>;
 	}
 
-	template <class Tup = Indexs>
+	template <class Tup = typename VTableMultiArray::indexes_type>
 	struct VTable {};
 	template <class... Ts>
 	struct VTable<std::tuple<Ts...>> {
