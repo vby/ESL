@@ -3,17 +3,17 @@
 #include <esl/any_variant.hpp>
 #include <string>
 
-TEST(AnyVariantTest, empty) {
-	esl::any_variant<> va;
-	ASSERT_TRUE(!va.has_value());
+TEST(AnyVariantTest, default_construct) {
+	esl::any_variant<std::string, bool> v;
+	ASSERT_EQ(v.index(), 0);
+	ASSERT_FALSE(v.valueless_by_exception());
 }
 
 TEST(AnyVariantTest, construct) {
 	{
 		esl::any_variant<int, bool, std::string> va;
-		ASSERT_TRUE(!va.has_value());
-		ASSERT_TRUE(va.valueless_by_exception());
-		ASSERT_EQ(va.index(), std::variant_npos);
+		ASSERT_FALSE(va.valueless_by_exception());
+		ASSERT_EQ(va.index(), 0);
 	}
 	{
 		esl::any_variant<int, bool, std::string> va(123);
@@ -31,27 +31,39 @@ TEST(AnyVariantTest, construct) {
 }
 
 TEST(AnyVariantTest, get) {
-	esl::any_variant<int, bool, std::string> va(false);
-	bool&& rb = std::move(va).get<bool>();
+	esl::any_variant<int, bool, std::string> v(false);
+	ASSERT_THROW(std::get<int>(v), std::bad_variant_access);
+	bool&& rb = std::get<bool>(std::move(v));
 	ASSERT_EQ(rb, false);
 }
 
-// Not work on MSVC
-//TEST(AnyVariantTest, visit) {
-//	esl::any_variant<int, bool, std::string> va(false);
-//	auto f = [](auto&& arg) -> std::size_t {
-//			return esl::index_of_v<std::remove_reference_t<decltype(arg)>, int, bool, std::string>;
-//		};
-//
-//	auto index = std::visit(f, va);
-//	ASSERT_EQ(index, 1);
-//	ASSERT_EQ(index, va.index());
-//
-//	va.emplace<0>(123);
-//	index = std::visit(f, va);
-//	ASSERT_EQ(index, 0);
-//	ASSERT_EQ(index, va.index());
-//}
+TEST(AnyVariantTest, get_if) {
+	esl::any_variant<int, bool, std::string> v(std::string("hello"));
+	int* ip = std::get_if<int>(&v);
+	ASSERT_EQ(ip, nullptr);
+	std::string* sp = std::get_if<std::string>(&v);
+	ASSERT_NE(sp, nullptr);
+}
+
+TEST(AnyVariantTest, visit) {
+	esl::any_variant<int, bool, std::string> v1(false);
+	esl::any_variant<float, std::string> v2(std::string("hello"));
+	auto f = [](auto&& arg, auto&& arg2) -> std::size_t {
+			return esl::index_of_v<std::remove_reference_t<decltype(arg)>, int, bool, std::string>
+				+ esl::index_of_v<std::remove_reference_t<decltype(arg2)>, float, std::string>;
+		};
+
+	auto index = esl::visit(f, v1, v2);
+	ASSERT_EQ(index, 2);
+
+	v1.emplace<0>(123);
+	index = esl::visit(f, v1, v2);
+	ASSERT_EQ(index, 1);
+
+	v2.emplace<float>(1.0);
+	index = esl::visit(f, v1, v2);
+	ASSERT_EQ(index, 0);
+}
 
 TEST(AnyVariantTest, hash) {
 	using va_type = esl::any_variant<int, bool, int>;

@@ -3,6 +3,7 @@
 #define ESL_UTILITY_HPP
 
 #include "type_traits.hpp"
+#include "array.hpp"
 
 #include <cstdint>
 #include <limits>

@@ -403,6 +403,60 @@ struct is_tuple_exactly_once<T, std::tuple<Ts...>>: is_exactly_once<T, Ts...> {}
 template <class T, class... Ts>
 inline constexpr bool is_tuple_exactly_once_v = is_tuple_exactly_once<T, Ts...>::value;
 
+// tuple_concat, tuple_concat_t
+template <class... Tups>
+struct tuple_concat {};
+template <class... Ts>
+struct tuple_concat<std::tuple<Ts...>> { using type = std::tuple<Ts...>; };
+template <class... Ts, class... Ts2>
+struct tuple_concat<std::tuple<Ts...>, std::tuple<Ts2...>> { using type = std::tuple<Ts..., Ts2...>; };
+template <class... Ts, class... Rest>
+struct tuple_concat<std::tuple<Ts...>, Rest...> {
+	using type = typename tuple_concat<std::tuple<Ts...>, typename tuple_concat<Rest...>::type>::type;
+};
+template <class... Tups>
+using tuple_concat_t = typename tuple_concat<Tups...>::type;
+
+// tuple_tuple_concat, tuple_tuple_concat_t
+template <class Tup, class TupTup>
+struct tuple_tuple_concat {};
+template <class Tup, class... Tups>
+struct tuple_tuple_concat<Tup, std::tuple<Tups...>> { using type = std::tuple<tuple_concat_t<Tup, Tups>...>; };
+template <class Tup, class TupTup>
+using tuple_tuple_concat_t = typename tuple_tuple_concat<Tup, TupTup>::type;
+
+// tuple_combination, tuple_combination_t
+template <class... Tups>
+struct tuple_combination { using type = std::tuple<>; };
+template <class... Ts>
+struct tuple_combination<std::tuple<Ts...>> { using type = std::tuple<std::tuple<Ts>...>; };
+template <class... Ts, class... Rest>
+struct tuple_combination<std::tuple<Ts...>, Rest...> {
+	using type = tuple_concat_t<tuple_tuple_concat_t<std::tuple<Ts>, typename tuple_combination<Rest...>::type>...>;
+};
+template <class... Tups>
+using tuple_combination_t = typename tuple_combination<Tups...>::type;
+
+// integer_sequence_tuple, integer_sequence_tuple_t
+template <class IntSeq>
+struct integer_sequence_tuple {};
+template <class T, T... Ints>
+struct integer_sequence_tuple<std::integer_sequence<T, Ints...>> {
+	using type = std::tuple<std::integral_constant<T, Ints>...>;
+};
+template <class IntSeq>
+using integer_sequence_tuple_t = typename integer_sequence_tuple<IntSeq>::type;
+
+// tuple_integer_sequence, tuple_integer_sequence_t
+template <class T, class Tup>
+struct tuple_integer_sequence {};
+template <class T>
+struct tuple_integer_sequence<T, std::tuple<>> { using type = std::integer_sequence<T>; };
+template <class T, class... Ts>
+struct tuple_integer_sequence<T, std::tuple<Ts...>> { using type = std::integer_sequence<T, Ts::value...>; };
+template <class T, class Tup>
+using tuple_integer_sequence_t = typename tuple_integer_sequence<T, Tup>::type;
+
 // tuple_sub, tuple_sub_t
 template <class Tup, std::size_t Pos, std::size_t Cnt, class = std::make_index_sequence<Cnt>>
 struct tuple_sub;

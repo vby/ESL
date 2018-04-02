@@ -4,16 +4,15 @@
 #include "any_storage.hpp"
 #include "type_traits.hpp"
 #include "utility.hpp"
+#include "array.hpp"
 #include "functional.hpp"
 
-#include <utility>
-#include <array>
+#include <variant>
 
 // any_variant
 // * Use for create a variant with incomplete types
 // * any_variant satisfied with std::variant
 //  except:
-//    * Default constructed is no state and is valueless_by_exception()
 //    * Costructors are not constexpr except default
 
 namespace esl {
@@ -22,32 +21,6 @@ template <class... Ts>
 class any_variant;
 
 } // namespace esl
-
-
-// FIXME: must include this file before <variant>, otherwise std::visit will not work.
-// Forward declaration for std::visit
-namespace std {
-template <size_t I, class T>
-struct variant_alternative;
-template <size_t I, class... Ts>
-constexpr typename variant_alternative<I, ::esl::any_variant<Ts...>>::type& get(::esl::any_variant<Ts...>& v);
-template <size_t I, class... Ts>
-constexpr typename variant_alternative<I, ::esl::any_variant<Ts...>>::type&& get(::esl::any_variant<Ts...>&& v);
-template <size_t I, class... Ts>
-constexpr typename variant_alternative<I, ::esl::any_variant<Ts...>>::type const& get(const ::esl::any_variant<Ts...>& v);
-template <size_t I, class... Ts>
-constexpr typename variant_alternative<I, ::esl::any_variant<Ts...>>::type const&& get(const ::esl::any_variant<Ts...>&& v);
-template <class T, class... Ts>
-constexpr T& get(::esl::any_variant<Ts...>& v);
-template <class T, class... Ts>
-constexpr T&& get(::esl::any_variant<Ts...>&& v);
-template <class T, class... Ts>
-constexpr const T& get(const ::esl::any_variant<Ts...>& v);
-template <class T, class... Ts>
-constexpr const T&& get(const ::esl::any_variant<Ts...>&& v);
-} // namespace std
-
-#include <variant>
 
 namespace std {
 
@@ -63,9 +36,15 @@ struct variant_alternative<I, ::esl::any_variant<Ts...>>: ::esl::nth_type<I, Ts.
 
 namespace esl {
 
+namespace details {
+	struct any_variant_storage_access;
+}
+
 template <class... Ts>
 class any_variant {
 private:
+	friend struct details::any_variant_storage_access;
+
 	using Storage = any_storage<>;
 
 	template <class T>
@@ -111,8 +90,24 @@ private:
 	template <class T>
 	struct AcceptedType<T, false>: SelectType<T> {};
 
+protected:
+	void reset() noexcept {
+		if (index_ != std::variant_npos) {
+			storage_destruct_vtable[index_](storage_);
+			index_ = std::variant_npos;
+		}
+	}
+
+	template <class T, std::size_t I, class... Args>
+	ESL_ATTR_FORCEINLINE T& do_emplace(Args&&... args) {
+		this->reset();
+		auto& val = storage_.construct<T>(std::forward<Args>(args)...);
+		index_ = I;
+		return val;
+	}
+
 public:
-	constexpr any_variant() noexcept: index_(std::variant_npos) {}
+	constexpr any_variant() noexcept: storage_(std::in_place_type<nth_type_t<0, Ts...>>), index_(0) {}
 
 	any_variant(const any_variant& other): index_(other.index_) {
 		if (index_ != std::variant_npos) {
@@ -183,21 +178,9 @@ public:
 
 	constexpr std::size_t index() const noexcept { return index_; }
 
-	constexpr bool has_value() const noexcept { return index_ != std::variant_npos; }
-
-	// satisfied with std::variant
-	constexpr bool valueless_by_exception() const noexcept { return !this->has_value(); }
+	constexpr bool valueless_by_exception() const noexcept { return index_ == std::variant_npos; }
 
 	// Modifiers
-
-protected:
-	template <class T, std::size_t I, class... Args>
-	ESL_ATTR_FORCEINLINE T& do_emplace(Args&&... args) {
-		this->reset();
-		auto& val = storage_.construct<T>(std::forward<Args>(args)...);
-		index_ = I;
-		return val;
-	}
 
 public:
 	template <class T, class... Args, class I = typename ExactlyOnceIndex<T>::type>
@@ -238,69 +221,17 @@ public:
 			}
 		}
 	}
-
-	void reset() noexcept {
-		if (index_ != std::variant_npos) {
-			storage_destruct_vtable[index_](storage_);
-			index_ = std::variant_npos;
-		}
-	}
-
-protected:
-	template <std::size_t I>
-	ESL_ATTR_FORCEINLINE constexpr void do_check_index() const {
-		if (index_ == std::variant_npos || index_ != I) {
-			throw std::bad_variant_access{};
-		}
-	}
-
-public:
-	template <std::size_t I>
-	constexpr std::variant_alternative_t<I, any_variant>& get() & {
-		this->do_check_index<I>();
-		return storage_.get<std::variant_alternative_t<I, any_variant>>();
-	}
-
-	template <std::size_t I>
-	constexpr const std::variant_alternative_t<I, any_variant>& get() const& {
-		this->do_check_index<I>();
-		return storage_.get<std::variant_alternative_t<I, any_variant>>();
-	}
-
-	template <std::size_t I>
-	constexpr std::variant_alternative_t<I, any_variant>&& get() && {
-		return std::move(this->get<I>());
-	}
-
-	template <std::size_t I>
-	constexpr const std::variant_alternative_t<I, any_variant>&& get() const&& {
-		return std::move(this->get<I>());
-	}
-
-	template <class T>
-	constexpr T& get() & {
-		static_assert(is_exactly_once_v<T, Ts...>, "T should occur for exactly once in alternatives");
-		return this->get<index_of_v<T, Ts...>>();
-	}
-
-	template <class T>
-	constexpr const T& get() const& {
-		static_assert(is_exactly_once_v<T, Ts...>, "T should occur for exactly once in alternatives");
-		return this->get<index_of_v<T, Ts...>>();
-	}
-
-	template <class T>
-	constexpr T&& get() && {
-		static_assert(is_exactly_once_v<T, Ts...>, "T should occur for exactly once in alternatives");
-		return std::move(this->get<index_of_v<T, Ts...>>());
-	}
-
-	template <class T>
-	constexpr const T&& get() const&& {
-		static_assert(is_exactly_once_v<T, Ts...>, "T should occur for exactly once in alternatives");
-		return std::move(this->get<index_of_v<T, Ts...>>());
-	}
 };
+
+namespace details {
+	struct any_variant_storage_access {
+		template <class... Ts>
+		static typename any_variant<Ts...>::Storage& get(any_variant<Ts...>& v) noexcept { return v.storage_; }
+
+		template <class... Ts>
+		static const typename any_variant<Ts...>::Storage& get(const any_variant<Ts...>& v) noexcept { return v.storage_; }
+	};
+}
 
 } // namespace esl
 
@@ -308,64 +239,77 @@ namespace std {
 
 // std::holds_alternative
 template <class T, class... Ts>
-inline constexpr bool holds_alternative(const ::esl::any_variant<Ts...>& va) noexcept {
-	return va.index() == ::esl::index_of_v<T, Ts...>;
+inline constexpr bool holds_alternative(const ::esl::any_variant<Ts...>& v) noexcept {
+	return v.index() == ::esl::index_of_v<T, Ts...>;
 }
 
-// std::get
+// std::get<I>
 template <size_t I, class... Ts>
 inline constexpr variant_alternative_t<I, ::esl::any_variant<Ts...>>& get(::esl::any_variant<Ts...>& v) {
-	return v.template get<I>();
+	if (v.index() != I) {
+		throw std::bad_variant_access{};
+	}
+	return ::esl::details::any_variant_storage_access::get(v).template get<variant_alternative_t<I, ::esl::any_variant<Ts...>>>();
+}
+template <size_t I, class... Ts>
+inline constexpr const variant_alternative_t<I, ::esl::any_variant<Ts...>>& get(const ::esl::any_variant<Ts...>& v) {
+	if (v.index() != I) {
+		throw std::bad_variant_access{};
+	}
+	return ::esl::details::any_variant_storage_access::get(v).template get<variant_alternative_t<I, ::esl::any_variant<Ts...>>>();
 }
 template <size_t I, class... Ts>
 inline constexpr variant_alternative_t<I, ::esl::any_variant<Ts...>>&& get(::esl::any_variant<Ts...>&& v) {
-	return std::move(v).template get<I>();
-}
-template <size_t I, class... Ts>
-inline constexpr variant_alternative_t<I, ::esl::any_variant<Ts...>> const& get(const ::esl::any_variant<Ts...>& v) {
-	return v.template get<I>();
+	return std::move(std::get<I>(v));
 }
 template <size_t I, class... Ts>
 inline constexpr variant_alternative_t<I, ::esl::any_variant<Ts...>> const&& get(const ::esl::any_variant<Ts...>&& v) {
-	return std::move(v).template get<I>();
+	return std::move(std::get<I>(v));
 }
+// std::get<T>
 template <class T, class... Ts>
 inline constexpr T& get(::esl::any_variant<Ts...>& v) {
-	return v.template get<T>();
-}
-template <class T, class... Ts>
-inline constexpr T&& get(::esl::any_variant<Ts...>&& v) {
-	return std::move(v).template get<T>();
+	static_assert(::esl::is_exactly_once_v<T, Ts...>, "T should occur for exactly once in alternatives");
+	return get<::esl::index_of_v<T, Ts...>>(v);
 }
 template <class T, class... Ts>
 inline constexpr const T& get(const ::esl::any_variant<Ts...>& v) {
-	return v.template get<T>();
+	static_assert(::esl::is_exactly_once_v<T, Ts...>, "T should occur for exactly once in alternatives");
+	return get<::esl::index_of_v<T, Ts...>>(v);
+}
+template <class T, class... Ts>
+inline constexpr T&& get(::esl::any_variant<Ts...>&& v) {
+	return move(get<T>(v));
 }
 template <class T, class... Ts>
 inline constexpr const T&& get(const ::esl::any_variant<Ts...>&& v) {
-	return std::move(v).template get<T>();
+	return move(get<T>(v));
 }
 
 // std::get_if
 template <size_t I, class... Ts>
 inline constexpr add_pointer_t<variant_alternative_t<I, ::esl::any_variant<Ts...>>> get_if(::esl::any_variant<Ts...>* vap) {
-	return (vap && vap->index() == I) ? &std::get<I>(vap) : nullptr;
+	if (!vap || vap->index() != I) {
+		return nullptr;
+	}
+	return &::esl::details::any_variant_storage_access::get(*vap).template get<variant_alternative_t<I, ::esl::any_variant<Ts...>>>();
 }
 template <size_t I, class... Ts>
 inline constexpr add_pointer_t<const variant_alternative_t<I, ::esl::any_variant<Ts...>>> get_if(const ::esl::any_variant<Ts...>* vap) {
-	return (vap && vap->index() == I) ? &std::get<I>(vap) : nullptr;
+	if (!vap || vap->index() != I) {
+		return nullptr;
+	}
+	return &::esl::details::any_variant_storage_access::get(*vap).template get<variant_alternative_t<I, ::esl::any_variant<Ts...>>>();
 }
 template <class T, class... Ts>
 inline constexpr add_pointer_t<T> get_if(::esl::any_variant<Ts...>* vap) {
 	static_assert(::esl::is_exactly_once_v<T, Ts...>, "T should occur for exactly once in alternatives");
-	using index_type = ::esl::index_of<T, Ts...>;
-	return (vap && vap->index() == index_type::value) ? &std::get<index_type::value>(vap) : nullptr;
+	return get_if<::esl::index_of_v<T, Ts...>>(vap);
 }
 template <class T, class... Ts>
 inline constexpr add_pointer_t<const T> get_if(const ::esl::any_variant<Ts...>* vap) {
 	static_assert(::esl::is_exactly_once_v<T, Ts...>, "T should occur for exactly once in alternatives");
-	using index_type = ::esl::index_of<T, Ts...>;
-	return (vap && vap->index() == index_type::value) ? &std::get<index_type::value>(vap) : nullptr;
+	return get_if<::esl::index_of_v<T, Ts...>>(vap);
 }
 
 // std::swap
@@ -382,8 +326,8 @@ private:
 	using hash_func_type = size_t (*)(const hasher_tuple_type&, const ::esl::any_variant<Ts...>&);
 	hasher_tuple_type hashers_;
 	template <size_t I>
-	static size_t hash_(const hasher_tuple_type& hashers, const ::esl::any_variant<Ts...>& va) {
-		return ::esl::hash_combine(std::get<I>(hashers)(std::get<I>(va)), I);
+	static size_t hash_(const hasher_tuple_type& hashers, const ::esl::any_variant<Ts...>& v) {
+		return ::esl::hash_combine(std::get<I>(hashers)(std::get<I>(v)), I);
 	}
 	template <size_t... Is>
 	static constexpr array<hash_func_type, sizeof...(Ts)> gen_hash_vtable(index_sequence<Is...>) {
@@ -391,7 +335,7 @@ private:
 	}
 	static constexpr auto hash_vtable = gen_hash_vtable(index_sequence_for<Ts...>{});
 public:
-	size_t operator()(const ::esl::any_variant<Ts...>& va) const { return hash_vtable[va.index()](hashers_, va); }
+	size_t operator()(const ::esl::any_variant<Ts...>& v) const { return hash_vtable[v.index()](hashers_, v); }
 };
 
 } // namespace std
@@ -400,6 +344,7 @@ namespace esl {
 
 using std::variant_size;
 using std::variant_size_v;
+using std::variant_alternative;
 using std::variant_alternative_t;
 using std::holds_alternative;
 using std::get;
@@ -422,7 +367,50 @@ public:
 	constexpr bool operator()(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) const { return comp_vtable[lhs.index()](lhs, rhs); }
 };
 
+template <class ResultType, class Visitor, class... Variants>
+struct variant_visit {
+private:
+	template <std::size_t... Is>
+	static constexpr ResultType invoke_alt(Visitor vis, Variants... vars) {
+		return std::invoke(std::forward<Visitor>(vis), std::get<Is>(std::forward<Variants>(vars))...);
+	}
+
+	using FuncPtr = ResultType(*)(Visitor, Variants...);
+	using ArrayType = multi_array_t<FuncPtr, std::variant_size_v<std::remove_reference_t<Variants>>...>;
+	using Indexs = tuple_combination_t<integer_sequence_tuple_t<std::make_index_sequence<std::variant_size_v<std::remove_reference_t<Variants>>>>...>;
+
+	template <std::size_t... Is>
+	static constexpr void apply_alt(ArrayType& vtbl, std::index_sequence<Is...>) {
+		std::get<Is...>(vtbl) = invoke_alt<Is...>;
+	}
+
+	template <class Tup = Indexs>
+	struct VTable {};
+	template <class... Ts>
+	struct VTable<std::tuple<Ts...>> {
+		static constexpr ArrayType gen_vtable() {
+			ArrayType vtbl{};
+			(..., apply_alt(vtbl, tuple_integer_sequence_t<std::size_t, Ts>{}));
+			return vtbl;
+		}
+		static constexpr ArrayType value = gen_vtable();
+	};
+
+public:
+	static constexpr ResultType invoke(Visitor vis, Variants... vars) {
+		return access(VTable<>::value, vars.index()...)(std::forward<Visitor>(vis), std::forward<Variants>(vars)...);
+	}
+};
+
 } // namespace details
+
+// visit
+template <class Visitor, class... Variants>
+inline constexpr decltype(auto) visit(Visitor&& vis, Variants&&... vars) {
+	// TODO: use std::common_type, libstdc++ seems also get result type by this way
+	using ResultType = decltype(std::invoke(std::forward<Visitor>(vis), std::get<0>(std::forward<Variants>(vars))...));
+	return details::variant_visit<ResultType, Visitor&&, Variants&&...>::invoke(std::forward<Visitor>(vis), std::forward<Variants>(vars)...);
+}
 
 // operators
 template <class... Ts>
