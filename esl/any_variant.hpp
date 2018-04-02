@@ -1,6 +1,7 @@
 #ifndef ESL_ANY_VARIANT_HPP
 #define ESL_ANY_VARIANT_HPP
 
+#include "macros.hpp"
 #include "any_storage.hpp"
 #include "type_traits.hpp"
 #include "utility.hpp"
@@ -374,12 +375,15 @@ private:
 	static constexpr ResultType invoke_alt(Visitor vis, Variants... vars) {
 		return std::invoke(std::forward<Visitor>(vis), std::get<Is>(std::forward<Variants>(vars))...);
 	}
-	// Failed compile on MSVC(VS 2017)
-	// MSVC std::make_index_sequence use __make_integer_seq, bugly expend with Variadic parameters
 	template <std::size_t... Dimensions>
 	struct MultiArray {
 		using type = multi_array_t<ResultType(*)(Visitor, Variants...), Dimensions...>;
-		using indexes_type = tuple_combination_t<integer_sequence_tuple_t<std::make_index_sequence<Dimensions>>...>;
+	#ifdef ESL_COMPILER_MSVC
+		// MSVC std::make_index_sequence use __make_integer_seq, bugly expend with Variadic parameters
+		using indexes_type = integer_sequence_combination_t<std::size_t, make_index_sequence<Dimensions>...>;
+	#else
+		using indexes_type = integer_sequence_combination_t<std::size_t, std::make_index_sequence<Dimensions>...>;
+	#endif
 	};
 	using VTableMultiArray = MultiArray<std::variant_size_v<std::remove_reference_t<Variants>>...>;
 	using ArrayType = typename VTableMultiArray::type;
@@ -391,11 +395,11 @@ private:
 
 	template <class Tup = typename VTableMultiArray::indexes_type>
 	struct VTable {};
-	template <class... Ts>
-	struct VTable<std::tuple<Ts...>> {
+	template <class... IntSeq>
+	struct VTable<std::tuple<IntSeq...>> {
 		static constexpr ArrayType gen_vtable() {
 			ArrayType vtbl{};
-			(..., apply_alt(vtbl, tuple_integer_sequence_t<std::size_t, Ts>{}));
+			(..., apply_alt(vtbl, IntSeq{}));
 			return vtbl;
 		}
 		static constexpr ArrayType value = gen_vtable();

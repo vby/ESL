@@ -39,6 +39,41 @@ inline constexpr To bit_cast(const From& v) noexcept {
 
 } // inline namespace casts
 
+namespace details {
+
+template <class Se1, class Seq2>
+struct IntegerSequenceConcat;
+template <class T, std::size_t... Ints1, std::size_t... Ints2>
+struct IntegerSequenceConcat<std::integer_sequence<T, Ints1...>, std::integer_sequence<T, Ints2...>> {
+	using type = std::integer_sequence<T, Ints1..., (Ints2 + sizeof...(Ints1))...>;
+};
+template <class T, std::size_t N>
+struct BuildIntegerSequence: IntegerSequenceConcat<typename BuildIntegerSequence<T, N / 2>::type, typename BuildIntegerSequence<T, N - N / 2>::type> {};
+template <class T>
+struct BuildIntegerSequence<T, 1> { using type = std::integer_sequence<T, 0>; };
+template <class T>
+struct BuildIntegerSequence<T, 0> { using type = std::integer_sequence<T>; };
+template <class T, T N>
+struct MakeIntegerSequence {
+	static_assert(N >= 0, "std::make_integer_sequence input shall not be negative");
+	using type = typename BuildIntegerSequence<T, static_cast<std::size_t>(N)>::type;
+};
+
+} // namespace details
+
+// make_integer_sequence
+template <class T, T N>
+using make_integer_sequence = typename details::MakeIntegerSequence<T, N>::type;
+// index_sequence
+template <size_t... Ints>
+using index_sequence = std::integer_sequence<std::size_t, Ints...>;
+// make_index_sequence
+template <size_t N>
+using make_index_sequence = make_integer_sequence<std::size_t, N>;
+// index_sequence_for
+template <class... Ts>
+using index_sequence_for = make_index_sequence<sizeof...(Ts)>;
+
 // make_vtable, make_vtable_t, make_vtable_v
 template <template <class> class F, class... Ts>
 struct make_vtable {

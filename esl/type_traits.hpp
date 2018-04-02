@@ -405,7 +405,7 @@ inline constexpr bool is_tuple_exactly_once_v = is_tuple_exactly_once<T, Ts...>:
 
 // tuple_concat, tuple_concat_t
 template <class... Tups>
-struct tuple_concat {};
+struct tuple_concat;
 template <class... Ts>
 struct tuple_concat<std::tuple<Ts...>> { using type = std::tuple<Ts...>; };
 template <class... Ts, class... Ts2>
@@ -419,7 +419,7 @@ using tuple_concat_t = typename tuple_concat<Tups...>::type;
 
 // tuple_tuple_concat, tuple_tuple_concat_t
 template <class Tup, class TupTup>
-struct tuple_tuple_concat {};
+struct tuple_tuple_concat;
 template <class Tup, class... Tups>
 struct tuple_tuple_concat<Tup, std::tuple<Tups...>> { using type = std::tuple<tuple_concat_t<Tup, Tups>...>; };
 template <class Tup, class TupTup>
@@ -427,7 +427,7 @@ using tuple_tuple_concat_t = typename tuple_tuple_concat<Tup, TupTup>::type;
 
 // tuple_combination, tuple_combination_t
 template <class... Tups>
-struct tuple_combination { using type = std::tuple<>; };
+struct tuple_combination;
 template <class... Ts>
 struct tuple_combination<std::tuple<Ts...>> { using type = std::tuple<std::tuple<Ts>...>; };
 template <class... Ts, class... Rest>
@@ -456,6 +456,18 @@ template <class T, class... Ts>
 struct tuple_integer_sequence<T, std::tuple<Ts...>> { using type = std::integer_sequence<T, Ts::value...>; };
 template <class T, class Tup>
 using tuple_integer_sequence_t = typename tuple_integer_sequence<T, Tup>::type;
+
+// integer_sequence_combination, integer_sequence_combination_t
+template <class T, class CombTup>
+struct integer_sequence_combination_;
+template <class T, class... Tups>
+struct integer_sequence_combination_<T, std::tuple<Tups...>> {
+	using type = std::tuple<tuple_integer_sequence_t<T, Tups>...>;
+};
+template <class T, class... IntSeq>
+struct integer_sequence_combination: integer_sequence_combination_<T, tuple_combination_t<integer_sequence_tuple_t<IntSeq>...>> {};
+template <class T, class... IntSeq>
+using integer_sequence_combination_t = typename integer_sequence_combination<T, IntSeq...>::type;
 
 // tuple_sub, tuple_sub_t
 template <class Tup, std::size_t Pos, std::size_t Cnt, class = std::make_index_sequence<Cnt>>
