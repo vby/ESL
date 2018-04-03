@@ -190,6 +190,24 @@ public:
 	const T&& get() const&& noexcept {
 		return std::move(Manager<std::decay_t<T>>::get(storage_));
 	}
+
+public:
+	template <class T>
+	struct copy_function {
+		static void value(any_storage& to, const any_storage& other) { to.template from<T>(other); }
+	};
+	template <class T>
+	struct move_function {
+		static void value(any_storage& to, any_storage&& other) { to.template from<T>(std::move(other)); }
+	};
+	template <class T>
+	struct destruct_function {
+		static void value(any_storage& s) { s.template destruct<T>(); }
+	};
+	template <class T, class U>
+	struct swap_function {
+		static void value(any_storage& s, any_storage& other) { s.template swap<T, U>(other); }
+	};
 };
 
 } // namespace esl

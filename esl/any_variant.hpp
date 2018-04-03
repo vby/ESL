@@ -48,27 +48,10 @@ private:
 
 	using Storage = any_storage<>;
 
-	template <class T>
-	struct StorageCopy {
-		static void value(Storage& to, const Storage& other) { to.template from<T>(other); }
-	};
-	template <class T>
-	struct StorageMove {
-		static void value(Storage& to, Storage&& other) { to.template from<T>(std::move(other)); }
-	};
-	template <class T>
-	struct StorageDestruct {
-		static void value(Storage& s) { s.template destruct<T>(); }
-	};
-	template <class T, class U>
-	struct StorageSwap {
-		static void value(Storage& s, Storage& other) { s.template swap<T, U>(other); }
-	};
-
-	static constexpr auto storage_copy_vtable = make_vtable_v<StorageCopy, std::tuple<Ts...>>;
-	static constexpr auto storage_move_vtable = make_vtable_v<StorageMove, std::tuple<Ts...>>;
-	static constexpr auto storage_destruct_vtable = make_vtable_v<StorageDestruct, std::tuple<Ts...>>;
-	static constexpr auto storage_swap_vtable = make_vtable_v<StorageSwap, std::tuple<Ts...>, std::tuple<Ts...>>;
+	static constexpr auto storage_copy_vtable = make_tuple_vtable_v<Storage::copy_function, std::tuple<Ts...>>;
+	static constexpr auto storage_move_vtable = make_tuple_vtable_v<Storage::move_function, std::tuple<Ts...>>;
+	static constexpr auto storage_destruct_vtable = make_tuple_vtable_v<Storage::destruct_function, std::tuple<Ts...>>;
+	static constexpr auto storage_swap_vtable = make_tuple_vtable_v<Storage::swap_function, std::tuple<Ts...>, std::tuple<Ts...>>;
 
 	Storage storage_;
 	std::size_t index_;
@@ -323,20 +306,17 @@ inline void swap(::esl::any_variant<Ts...>& lhs, ::esl::any_variant<Ts...>& rhs)
 template <class... Ts>
 struct hash<::esl::any_variant<Ts...>> {
 private:
-	using hasher_tuple_type = tuple<hash<remove_const_t<Ts>>...>;
-	using hash_func_type = size_t (*)(const hasher_tuple_type&, const ::esl::any_variant<Ts...>&);
-	hasher_tuple_type hashers_;
-	template <size_t I>
-	static size_t hash_(const hasher_tuple_type& hashers, const ::esl::any_variant<Ts...>& v) {
-		return ::esl::hash_combine(std::get<I>(hashers)(std::get<I>(v)), I);
-	}
-	template <size_t... Is>
-	static constexpr array<hash_func_type, sizeof...(Ts)> gen_hash_vtable(index_sequence<Is...>) {
-		return {{hash_<Is>...}};
-	}
-	static constexpr auto hash_vtable = gen_hash_vtable(index_sequence_for<Ts...>{});
+	using hasher_type = tuple<hash<decay_t<Ts>>...>;
+	hasher_type hasher_;
+
+	template <size_t I> struct HashFunction {
+		static size_t value(const hasher_type& hasher, const ::esl::any_variant<Ts...>& v) {
+			return ::esl::hash_combine(get<I>(hasher)(std::get<I>(v)), I);
+		}
+	};
+	static constexpr auto vtable = ::esl::make_index_sequence_vtable_v<HashFunction, sizeof...(Ts)>;
 public:
-	size_t operator()(const ::esl::any_variant<Ts...>& v) const { return hash_vtable[v.index()](hashers_, v); }
+	size_t operator()(const ::esl::any_variant<Ts...>& v) const { return vtable[v.index()](hasher_, v); }
 };
 
 } // namespace std
@@ -354,60 +334,30 @@ using std::get_if;
 namespace details {
 
 template <template <class> class Comp, class... Ts>
-struct any_variant_comp {
+struct VariantComp {
 private:
-	using comp_func_type = bool (*)(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs);
-	template <std::size_t I, class T>
-	static bool comp_(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) { return Comp<T>{}(std::get<I>(lhs), std::get<I>(rhs)); }
-	template <std::size_t... Is>
-	static constexpr std::array<comp_func_type, sizeof...(Ts)> gen_comp_vtable(std::index_sequence<Is...>) {
-		return {{comp_<Is, Ts>...}};
-	}
-	static constexpr auto comp_vtable = gen_comp_vtable(std::index_sequence_for<Ts...>{});
+	template <std::size_t I> struct CompFunction {
+		static bool value(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) {
+			return Comp<nth_type_t<I, Ts...>>{}(std::get<I>(lhs), std::get<I>(rhs));
+		}
+	};
+	static constexpr auto vtable = make_index_sequence_vtable_v<CompFunction, sizeof...(Ts)>;
 public:
-	constexpr bool operator()(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) const { return comp_vtable[lhs.index()](lhs, rhs); }
+	constexpr bool operator()(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) const { return vtable[lhs.index()](lhs, rhs); }
 };
 
 template <class ResultType, class Visitor, class... Variants>
-struct variant_visit {
+struct VariantVisit {
 private:
-	template <std::size_t... Is>
-	static constexpr ResultType invoke_alt(Visitor vis, Variants... vars) {
-		return std::invoke(std::forward<Visitor>(vis), std::get<Is>(std::forward<Variants>(vars))...);
-	}
-	template <std::size_t... Dimensions>
-	struct MultiArray {
-		using type = multi_array_t<ResultType(*)(Visitor, Variants...), Dimensions...>;
-	#ifdef ESL_COMPILER_MSVC
-		// MSVC std::make_index_sequence use __make_integer_seq, bugly expend with Variadic parameters
-		using indexes_type = integer_sequence_combination_t<make_index_sequence<Dimensions>...>;
-	#else
-		using indexes_type = integer_sequence_combination_t<std::make_index_sequence<Dimensions>...>;
-	#endif
-	};
-	using VTableMultiArray = MultiArray<std::variant_size_v<std::remove_reference_t<Variants>>...>;
-	using ArrayType = typename VTableMultiArray::type;
-
-	template <std::size_t... Is>
-	static constexpr void apply_alt(ArrayType& vtbl, std::index_sequence<Is...>) {
-		std::get<Is...>(vtbl) = invoke_alt<Is...>;
-	}
-
-	template <class Tup = typename VTableMultiArray::indexes_type>
-	struct VTable {};
-	template <class... IntSeq>
-	struct VTable<std::tuple<IntSeq...>> {
-		static constexpr ArrayType gen_vtable() {
-			ArrayType vtbl{};
-			(..., apply_alt(vtbl, IntSeq{}));
-			return vtbl;
+	template <std::size_t... Is> struct InvokeFunction {
+		static constexpr ResultType value(Visitor vis, Variants... vars) {
+			return std::invoke(std::forward<Visitor>(vis), std::get<Is>(std::forward<Variants>(vars))...);
 		}
-		static constexpr ArrayType value = gen_vtable();
 	};
-
+	static constexpr auto vtable = make_index_sequence_vtable_v<InvokeFunction, std::variant_size_v<std::remove_reference_t<Variants>>...>;
 public:
 	static constexpr ResultType invoke(Visitor vis, Variants... vars) {
-		return access(VTable<>::value, vars.index()...)(std::forward<Visitor>(vis), std::forward<Variants>(vars)...);
+		return access(vtable, vars.index()...)(std::forward<Visitor>(vis), std::forward<Variants>(vars)...);
 	}
 };
 
@@ -418,17 +368,17 @@ template <class Visitor, class... Variants>
 inline constexpr decltype(auto) visit(Visitor&& vis, Variants&&... vars) {
 	// TODO: use std::common_type, libstdc++ seems also get result type by this way
 	using ResultType = decltype(std::invoke(std::forward<Visitor>(vis), std::get<0>(std::forward<Variants>(vars))...));
-	return details::variant_visit<ResultType, Visitor&&, Variants&&...>::invoke(std::forward<Visitor>(vis), std::forward<Variants>(vars)...);
+	return details::VariantVisit<ResultType, Visitor&&, Variants&&...>::invoke(std::forward<Visitor>(vis), std::forward<Variants>(vars)...);
 }
 
 // operators
 template <class... Ts>
 inline constexpr bool operator==(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) {
-	return lhs.index() == rhs.index() && (lhs.valueless_by_exception() || details::any_variant_comp<std::equal_to, Ts...>{}(lhs, rhs));
+	return lhs.index() == rhs.index() && (lhs.valueless_by_exception() || details::VariantComp<std::equal_to, Ts...>{}(lhs, rhs));
 }
 template <class... Ts>
 inline constexpr bool operator!=(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) {
-	return lhs.index() != rhs.index() || (!lhs.valueless_by_exception() && details::any_variant_comp<std::not_equal_to, Ts...>{}(lhs, rhs));
+	return lhs.index() != rhs.index() || (!lhs.valueless_by_exception() && details::VariantComp<std::not_equal_to, Ts...>{}(lhs, rhs));
 }
 template <class... Ts>
 inline constexpr bool operator<(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) {
@@ -438,7 +388,7 @@ inline constexpr bool operator<(const any_variant<Ts...>& lhs, const any_variant
 	if (lhs.valueless_by_exception()) {
 		return true;
 	}
-	return lhs.index() < rhs.index() || (lhs.index() == rhs.index() && details::any_variant_comp<std::less, Ts...>{}(lhs, rhs));
+	return lhs.index() < rhs.index() || (lhs.index() == rhs.index() && details::VariantComp<std::less, Ts...>{}(lhs, rhs));
 }
 template <class... Ts>
 inline constexpr bool operator>(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) {
@@ -448,7 +398,7 @@ inline constexpr bool operator>(const any_variant<Ts...>& lhs, const any_variant
 	if (rhs.valueless_by_exception()) {
 		return true;
 	}
-	return lhs.index() > rhs.index() || (lhs.index() == rhs.index() && details::any_variant_comp<std::greater, Ts...>{}(lhs, rhs));
+	return lhs.index() > rhs.index() || (lhs.index() == rhs.index() && details::VariantComp<std::greater, Ts...>{}(lhs, rhs));
 }
 template <class... Ts>
 inline constexpr bool operator<=(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) {
@@ -458,7 +408,7 @@ inline constexpr bool operator<=(const any_variant<Ts...>& lhs, const any_varian
 	if (rhs.valueless_by_exception()) {
 		return false;
 	}
-	return lhs.index() < rhs.index() || (lhs.index() == rhs.index() && details::any_variant_comp<std::less_equal, Ts...>{}(lhs, rhs));
+	return lhs.index() < rhs.index() || (lhs.index() == rhs.index() && details::VariantComp<std::less_equal, Ts...>{}(lhs, rhs));
 }
 template <class... Ts>
 inline constexpr bool operator>=(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) {
@@ -468,7 +418,7 @@ inline constexpr bool operator>=(const any_variant<Ts...>& lhs, const any_varian
 	if (lhs.valueless_by_exception()) {
 		return false;
 	}
-	return lhs.index() > rhs.index() || (lhs.index() == rhs.index() && details::any_variant_comp<std::greater_equal, Ts...>{}(lhs, rhs));
+	return lhs.index() > rhs.index() || (lhs.index() == rhs.index() && details::VariantComp<std::greater_equal, Ts...>{}(lhs, rhs));
 }
 
 } // namespace esl

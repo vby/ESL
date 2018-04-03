@@ -40,9 +40,8 @@ inline constexpr To bit_cast(const From& v) noexcept {
 
 } // inline namespace casts
 
-// make_vtable, make_vtable_t, make_vtable_v
 template <template <class...> class F, class... Tups>
-struct make_vtable {
+struct make_tuple_vtable {
 	using type = multi_array_t<decltype(&F<std::tuple_element_t<0, Tups>...>::value), std::tuple_size_v<Tups>...>;
 private:
 	template <std::size_t... Is>
@@ -54,14 +53,42 @@ private:
 		type vt{};
 		(..., apply_alt(vt, IntSeq{}));
 		return vt;
-	};
+	}
 public:
 	static constexpr type value = gen_vtable(index_sequence_combination_for<Tups...>{});
 };
 template <template <class...> class F, class... Tups>
-using make_vtable_t = typename make_vtable<F, Tups...>::type;
+using make_tuple_vtable_t = typename make_tuple_vtable<F, Tups...>::type;
 template <template <class...> class F, class... Tups>
-inline constexpr make_vtable_t<F, Tups...> make_vtable_v = make_vtable<F, Tups...>::value;
+inline constexpr auto make_tuple_vtable_v = make_tuple_vtable<F, Tups...>::value;
+
+// make_index_sequence_vtable, make_index_sequence_vtable_t, make_index_sequence_vtable_v
+template <template <std::size_t...> class F, std::size_t... Dimensions>
+struct make_index_sequence_vtable {
+private:
+	template <std::size_t>
+	struct AlwaysZero { static constexpr std::size_t value = 0; };
+public:
+	using type = multi_array_t<decltype(&F<AlwaysZero<Dimensions>::value...>::value), Dimensions...>;
+private:
+	template <std::size_t... Is>
+	static constexpr void apply_alt(type& vt, std::index_sequence<Is...>) {
+		std::get<Is...>(vt) = F<Is...>::value;
+	}
+	template <class... IntSeq>
+	static constexpr type gen_vtable(std::tuple<IntSeq...>) {
+		type vt{};
+		(..., apply_alt(vt, IntSeq{}));
+		return vt;
+	}
+public:
+	static constexpr type value = gen_vtable(make_index_sequence_combination<Dimensions...>{});
+};
+template <template <std::size_t...> class F, std::size_t... Dimensions>
+using make_index_sequence_vtable_t = typename make_index_sequence_vtable<F, Dimensions...>::type;
+template <template <std::size_t...> class F, std::size_t... Dimensions>
+inline constexpr auto make_index_sequence_vtable_v = make_index_sequence_vtable<F, Dimensions...>::value;
+
 
 // transpose_integer_array
 template <class T, std::size_t Size, std::size_t N, class U>

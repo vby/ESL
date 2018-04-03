@@ -554,7 +554,7 @@ template <class T, T... Ns>
 using make_integer_sequence_combination = integer_sequence_combination_t<make_integer_sequence<T, Ns>...>;
 
 // make_integer_sequence_combination
-template <std::size_t ... Ns>
+template <std::size_t... Ns>
 using make_index_sequence_combination = make_integer_sequence_combination<std::size_t, Ns...>;
 
 // index_sequence_combination_for
