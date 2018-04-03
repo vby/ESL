@@ -65,10 +65,10 @@ private:
 		static void value(Storage& s, Storage& other) { s.template swap<T, U>(other); }
 	};
 
-	static constexpr auto storage_copy_vtable = make_tuple_vtable_v<StorageCopy, std::tuple<Ts...>>;
-	static constexpr auto storage_move_vtable = make_tuple_vtable_v<StorageMove, std::tuple<Ts...>>;
-	static constexpr auto storage_destruct_vtable = make_tuple_vtable_v<StorageDestruct, std::tuple<Ts...>>;
-	static constexpr auto storage_swap_vtable = make_tuple_vtable_v<StorageSwap, std::tuple<Ts...>, std::tuple<Ts...>>;
+	static constexpr auto storage_copy_vtable = make_vtable_v<StorageCopy, std::tuple<Ts...>>;
+	static constexpr auto storage_move_vtable = make_vtable_v<StorageMove, std::tuple<Ts...>>;
+	static constexpr auto storage_destruct_vtable = make_vtable_v<StorageDestruct, std::tuple<Ts...>>;
+	static constexpr auto storage_swap_vtable = make_vtable_v<StorageSwap, std::tuple<Ts...>, std::tuple<Ts...>>;
 
 	Storage storage_;
 	std::size_t index_;

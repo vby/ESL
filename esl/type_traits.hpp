@@ -482,6 +482,29 @@ using tuple_apply_t = typename tuple_apply<TT, Tup>::type;
 // integer_sequence traits
 // ---------------------------------------------------------
 
+// make_integer_sequence
+// Workaround for the MSVC bug of Parameter pack expansion
+namespace details {
+
+template <class T, T N>
+struct MakeIntegerSequence {
+        using type = std::make_integer_sequence<T, N>;
+};
+
+} // namespace details
+
+// make_integer_sequence
+template <class T, T N>
+using make_integer_sequence = typename details::MakeIntegerSequence<T, N>::type;
+
+// make_index_sequence
+template <std::size_t N>
+using make_index_sequence = typename details::MakeIntegerSequence<std::size_t, N>::type;
+
+// index_sequence_for
+template <class... Ts>
+using index_sequence_for = make_index_sequence<sizeof...(Ts)>;
+
 // integer_sequence_tuple, integer_sequence_tuple_t
 template <class IntSeq>
 struct integer_sequence_tuple;
@@ -525,6 +548,18 @@ struct integer_sequence_combination<std::integer_sequence<T, Ints...>, Rest...> 
 };
 template <class... IntSeq>
 using integer_sequence_combination_t = typename integer_sequence_combination<IntSeq...>::type;
+
+// make_integer_sequence_combination
+template <class T, T... Ns>
+using make_integer_sequence_combination = integer_sequence_combination_t<make_integer_sequence<T, Ns>...>;
+
+// make_integer_sequence_combination
+template <std::size_t ... Ns>
+using make_index_sequence_combination = make_integer_sequence_combination<std::size_t, Ns...>;
+
+// index_sequence_combination_for
+template <class... Tups>
+using index_sequence_combination_for = make_index_sequence_combination<std::tuple_size_v<Tups>...>;
 
 // Miscellaneous transformations
 // ---------------------------------------------------------

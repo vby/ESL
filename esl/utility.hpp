@@ -40,71 +40,28 @@ inline constexpr To bit_cast(const From& v) noexcept {
 
 } // inline namespace casts
 
-namespace details {
-
-template <class Se1, class Seq2>
-struct IntegerSequenceConcat;
-template <class T, std::size_t... Ints1, std::size_t... Ints2>
-struct IntegerSequenceConcat<std::integer_sequence<T, Ints1...>, std::integer_sequence<T, Ints2...>> {
-	using type = std::integer_sequence<T, Ints1..., (Ints2 + sizeof...(Ints1))...>;
-};
-template <class T, std::size_t N>
-struct BuildIntegerSequence: IntegerSequenceConcat<typename BuildIntegerSequence<T, N / 2>::type, typename BuildIntegerSequence<T, N - N / 2>::type> {};
-template <class T>
-struct BuildIntegerSequence<T, 1> { using type = std::integer_sequence<T, 0>; };
-template <class T>
-struct BuildIntegerSequence<T, 0> { using type = std::integer_sequence<T>; };
-template <class T, T N>
-struct MakeIntegerSequence {
-	static_assert(N >= 0, "std::make_integer_sequence input shall not be negative");
-	using type = typename BuildIntegerSequence<T, static_cast<std::size_t>(N)>::type;
-};
-
-} // namespace details
-
-// make_integer_sequence
-template <class T, T N>
-using make_integer_sequence = typename details::MakeIntegerSequence<T, N>::type;
-// index_sequence
-template <size_t... Ints>
-using index_sequence = std::integer_sequence<std::size_t, Ints...>;
-// make_index_sequence
-template <size_t N>
-using make_index_sequence = make_integer_sequence<std::size_t, N>;
-// index_sequence_for
-template <class... Ts>
-using index_sequence_for = make_index_sequence<sizeof...(Ts)>;
-
-// make_tuple_vtable, make_tuple_vtable_t, make_tuple_vtable_v
+// make_vtable, make_vtable_t, make_vtable_v
 template <template <class...> class F, class... Tups>
-struct make_tuple_vtable {
+struct make_vtable {
 	using type = multi_array_t<decltype(&F<std::tuple_element_t<0, Tups>...>::value), std::tuple_size_v<Tups>...>;
 private:
 	template <std::size_t... Is>
-	static constexpr void apply_alt(type& vtbl, std::index_sequence<Is...>) {
-		std::get<Is...>(vtbl) = &F<std::tuple_element_t<Is, Tups>...>::value;
+	static constexpr void apply_alt(type& vt, std::index_sequence<Is...>) {
+		std::get<Is...>(vt) = F<std::tuple_element_t<Is, Tups>...>::value;
 	}
-	template <class TupIntSeq>
-	struct VTable {};
 	template <class... IntSeq>
-	struct VTable<std::tuple<IntSeq...>> {
-		static constexpr type gen_vtable() {
-			type vtbl{};
-			(..., apply_alt(vtbl, IntSeq{}));
-			return vtbl;
-		}
+	static constexpr type gen_vtable(std::tuple<IntSeq...>) {
+		type vt{};
+		(..., apply_alt(vt, IntSeq{}));
+		return vt;
 	};
 public:
-#ifdef ESL_COMPILER_MSVC
-	static constexpr type value = VTable<integer_sequence_combination_t<make_index_sequence<std::tuple_size_v<Tups>>...>>::gen_vtable();
-#else
-	static constexpr type value = VTable<integer_sequence_combination_t<std::make_index_sequence<std::tuple_size_v<Tups>>...>>::gen_vtable();
-#endif
+	static constexpr type value = gen_vtable(index_sequence_combination_for<Tups...>{});
 };
 template <template <class...> class F, class... Tups>
-using make_tuple_vtable_t = typename make_tuple_vtable<F, Tups...>::type;
+using make_vtable_t = typename make_vtable<F, Tups...>::type;
 template <template <class...> class F, class... Tups>
-inline constexpr auto make_tuple_vtable_v = make_tuple_vtable<F, Tups...>::value;
+inline constexpr make_vtable_t<F, Tups...> make_vtable_v = make_vtable<F, Tups...>::value;
 
 // transpose_integer_array
 template <class T, std::size_t Size, std::size_t N, class U>
