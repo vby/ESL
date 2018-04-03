@@ -15,11 +15,14 @@
 #include <utility>
 #include <tuple>
 
+#include <vector>
+#include <unordered_map>
+
 namespace esl {
 
 // hash_value
 template <class T>
-inline std::size_t hash_value(const T& value) noexcept {
+inline std::size_t hash_value(const T& value) noexcept(noexcept(std::declval<std::hash<T>>()(std::declval<const T&>()))) {
 	return std::hash<T>{}(value);
 }
 inline std::size_t hash_value(const void* p, std::size_t size) noexcept {
@@ -61,56 +64,56 @@ inline constexpr void hash_value_combine_(std::size_t& h, std::size_t k) noexcep
 
 #endif
 
-// hash_combiner
+// hashval
 // operator|: combine two hash value
 // operator+: combine hash value with a object
-class hash_combiner {
+class hashval {
 private:
 	std::size_t h_;
 
 public:
-	constexpr hash_combiner() noexcept: h_(0) {}
+	constexpr hashval(): h_(0) {}
 
-	constexpr hash_combiner(std::size_t h) noexcept: h_(h) {}
+	constexpr hashval(std::size_t h): h_(h) {}
 
-	constexpr std::size_t value() const noexcept { return h_; }
+	constexpr std::size_t value() const { return h_; }
 
-	constexpr operator std::size_t() const noexcept { return h_; }
+	constexpr operator std::size_t() const { return h_; }
 
-	constexpr hash_combiner operator|(std::size_t k) const noexcept {
+	constexpr hashval operator|(std::size_t k) const {
 		std::size_t h = h_;
 		hash_value_combine_(h, k);
 		return h;
 	}
 
-	constexpr hash_combiner& operator|=(std::size_t k) noexcept {
+	constexpr hashval& operator|=(std::size_t k) {
 		hash_value_combine_(h_, k);
 		return *this;
 	}
 
 	template <class T>
-	constexpr hash_combiner operator+(const T& value) const noexcept {
+	constexpr hashval operator+(const T& value) const {
 		std::size_t h = h_;
 		hash_value_combine_(h, hash_value(value));
 		return h;
 	}
 
 	template <class T>
-	constexpr hash_combiner& operator+=(const T& value) noexcept {
+	constexpr hashval& operator+=(const T& value) {
 		hash_value_combine_(h_, hash_value(value));
 		return *this;
 	}
 };
 
 // hash_value_combine
-inline std::size_t hash_value_combine(std::size_t h, std::size_t k) noexcept {
+inline constexpr std::size_t hash_value_combine(std::size_t h, std::size_t k) {
 	hash_value_combine_(h, k);
 	return h;
 }
 
 // hash_combine
 template <class T>
-inline std::size_t hash_combine(std::size_t h, const T& value) noexcept {
+inline std::size_t hash_combine(std::size_t h, const T& value) {
 	return hash_value_combine(h, hash_value(value));
 }
 
@@ -121,7 +124,7 @@ namespace std {
 // hash<std::pair<T1, T2>>
 template <class T1, class T2>
 struct hash<std::pair<T1, T2>> {
-	std::size_t operator()(const std::pair<T1, T2>& p) const noexcept {
+	std::size_t operator()(const std::pair<T1, T2>& p) const {
 		return ::esl::hash_combine(::esl::hash_value(p.first), p.second);
 	}
 };
@@ -129,16 +132,40 @@ struct hash<std::pair<T1, T2>> {
 // hash<std::tuple<Ts..>>
 template <class... Ts>
 struct hash<std::tuple<Ts...>> {
-	std::size_t operator()(const std::tuple<Ts...>& t) const noexcept {
+	std::size_t operator()(const std::tuple<Ts...>& t) const {
 		return hash_(t, std::make_index_sequence<sizeof...(Ts)>{});
 	}
 private:
 	template <std::size_t... I>
-	std::size_t hash_(const std::tuple<Ts...>& t, std::index_sequence<I...>) const noexcept {
-		::esl::hash_combiner hc;
-		return (hc += ... += std::get<I>(t));
+	std::size_t hash_(const std::tuple<Ts...>& t, std::index_sequence<I...>) const {
+		::esl::hashval h;
+		return (h += ... += std::get<I>(t));
 	}
 };
+
+// hash<std::vector>
+template <class T, class Alloc>
+struct hash<std::vector<T, Alloc>> {
+	std::size_t operator()(const std::vector<T, Alloc>& vec) const {
+		::esl::hashval h;
+		for (auto& v: vec) {
+			h += v;
+		}
+		return h;
+	}
+};
+template <class Key, class T, class Hash, class KeyEqual, class Alloc>
+struct hash<std::unordered_map<Key, T, Hash, KeyEqual, Alloc>> {
+	std::size_t operator()(const std::unordered_map<Key, T, Hash, KeyEqual, Alloc>& m) const {
+		::esl::hashval h;
+		for (auto& v: m) {
+			h += v;
+		}
+		return h;
+	}
+};
+
+// TODO more container
 
 } // namespace std
 

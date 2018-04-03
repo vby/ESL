@@ -28,6 +28,13 @@ TEST(AnyVariantTest, construct) {
 		va = true;
 		ASSERT_EQ(va.index(), 1);
 	}
+	{
+		esl::any_variant<int, int> v;
+		ASSERT_EQ(v.index(), 0);
+		v.emplace<1>(10);
+		ASSERT_EQ(v.index(), 1);
+		ASSERT_EQ(std::get<1>(v), 10);
+	}
 }
 
 TEST(AnyVariantTest, get) {
@@ -45,7 +52,6 @@ TEST(AnyVariantTest, get_if) {
 	ASSERT_NE(sp, nullptr);
 }
 
-#ifndef ESL_COMPILER_MSVC // fatal error C1001
 TEST(AnyVariantTest, visit) {
 	esl::any_variant<int, bool, std::string> v1(false);
 	esl::any_variant<float, std::string> v2(std::string("hello"));
@@ -65,7 +71,6 @@ TEST(AnyVariantTest, visit) {
 	index = esl::visit(f, v1, v2);
 	ASSERT_EQ(index, 0);
 }
-#endif
 
 TEST(AnyVariantTest, hash) {
 	using va_type = esl::any_variant<int, bool, int>;

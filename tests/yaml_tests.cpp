@@ -4,7 +4,7 @@
 
 namespace yaml = esl::yaml;
 
-TEST(YamlTest, parse) {
+TEST(YamlTest, load) {
 	std::string_view s = R"(
 k1: v1
 k2: v2
@@ -16,7 +16,7 @@ kmap:
   mk2: mv2
   mk3: mv3
 )";
-	auto docs = yaml::parse(s.data(), s.size());
+	auto docs = yaml::load(s.data(), s.size());
 	ASSERT_EQ(docs.size(), 1);
 
 	auto& doc = docs[0];
@@ -24,7 +24,9 @@ kmap:
 
 	auto& m = std::get<yaml::map>(doc);
 	ASSERT_EQ(m.size(), 3);
-	ASSERT_EQ(std::get<yaml::str>(m["k1"]), "v1");
+	//ASSERT_EQ(std::get<yaml::str>(m["k1"]), "v1");
+	char k1[] = "k1";
+	ASSERT_EQ(std::get<yaml::str>(m[k1]), "v1");
 	ASSERT_EQ(std::get<yaml::str>(m["k2"]), "v2");
 
 	auto& submap = m["kmap"];

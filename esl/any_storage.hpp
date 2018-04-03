@@ -94,7 +94,7 @@ private:
 			return *static_cast<T*>(s.ptr);
 		}
 		static const T& get(const Storage& s) noexcept {
-			return *static_cast<const T*>(s);
+			return *static_cast<const T*>(s.ptr);
 		}
 		template <class U>
 		static void swap(Storage& s, Storage& other) noexcept {

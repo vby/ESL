@@ -4,6 +4,7 @@
 #include <yaml.h>
 
 #include "any_variant.hpp"
+#include "functional.hpp"
 
 #include <cstdint>
 #include <string>
@@ -28,7 +29,7 @@ using int_t = std::int64_t;
 using float_t  = double;
 using str = std::string;
 using seq = std::vector<node>;
-using map = std::unordered_map<std::string, node>;
+using map = std::unordered_map<node, node>;
 
 // TODO additional types: binary, omap, set
 
@@ -46,12 +47,40 @@ enum index {
     map_index,
 };
 
-class node: public any_variant<null_t, bool_t, int_t, float_t, str, seq, map> {
+using node_base = any_variant<null_t, bool_t, int_t, float_t, str, seq, map>;
+
+class node: public node_base {
 public:
     using any_variant::any_variant;
 
     using any_variant::operator=;
+
+	// Enforce const char* deduce to std::string
+
+	template <class T, class = std::enable_if_t<!std::is_convertible_v<T&&, const char*>>>
+	node(T&& v): any_variant(std::forward<T>(v)) {}
+
+	node(const char* s): any_variant(std::in_place_index<str_index>, s) {}
 };
+
+} // namespace yaml
+
+} // namespace esl
+
+namespace std {
+
+template <>
+struct hash<::esl::yaml::node> {
+	size_t operator()(const ::esl::yaml::node& n) const {
+		return hash<::esl::yaml::node_base>{}(n);
+	}
+};
+
+} // namespace std
+
+namespace esl {
+
+namespace yaml {
 
 class parse_error: public std::runtime_error {
 public:
@@ -60,150 +89,132 @@ public:
 
 namespace details {
 
-class parser: public yaml_parser_t {
+struct yaml_event: public yaml_event_t {
+private:
+	bool f_;
 public:
-	parser() {
+	yaml_event() noexcept: f_(false) {}
+
+	yaml_event(const yaml_event&) = delete;
+	yaml_event& operator=(const yaml_event&) = delete;
+
+	~yaml_event() { this->reset(); }
+
+	void reset() noexcept {
+		if (f_) {
+			yaml_event_delete(this);
+		} else {
+			f_ = true;
+		}
+	}
+};
+
+struct yaml_parser: yaml_parser_t {
+	yaml_parser() {
 		if (!yaml_parser_initialize(this)) {
 			throw std::bad_alloc{};
 		}
 	}
-	parser(const parser&) = delete;
-	~parser() { yaml_parser_delete(this); }
-	parser& operator=(const parser&) = delete;
 
-protected:
-	class event: public yaml_event_t {
-	private:
-		bool f_;
-	public:
-		event() noexcept: f_(false) {}
-		event(const event&) = delete;
-		event& operator=(const event&) = delete;
-		~event() { this->reset(); }
-		void reset() noexcept {
-			if (f_) {
-				yaml_event_delete(this);
-			} else {
-				f_ = true;
-			}
-		}
-	};
+	yaml_parser(const yaml_parser&) = delete;
+	yaml_parser& operator=(const yaml_parser&) = delete;
 
-	void parse_event(event& ev) {
+	~yaml_parser() { yaml_parser_delete(this); }
+
+	void parse(yaml_event& ev) {
 		ev.reset();
 		if (!yaml_parser_parse(this, &ev)) {
 			throw parse_error("parse error");
 		}
 	}
+};
 
-	node parse_scalar(yaml_event_t& ev) {
-		// TODO type resolve
-		auto& scalar = ev.data.scalar;
-		std::string_view sv(reinterpret_cast<char*>(scalar.value), scalar.length);
-		return node(std::in_place_type<str>, std::string(sv));
+node parse_map(yaml_parser& parser);
+node parse_seq(yaml_parser& parser);
+node parse_scalar(yaml_event& ev);
+
+inline node parse_node(yaml_parser& parser, yaml_event& ev) {
+	switch (ev.type) {
+	case YAML_MAPPING_START_EVENT:
+		return parse_map(parser);
+	case YAML_SEQUENCE_START_EVENT:
+		return parse_seq(parser);
+	case YAML_SCALAR_EVENT:
+		return parse_scalar(ev);
+	default:
+		throw parse_error("unexpect type");
 	}
+}
 
-	void parse_seq(node& n) {
-		auto& s = n.emplace<seq>();
-		event ev;
-		while (this->parse_event(ev), ev.type != YAML_SEQUENCE_END_EVENT) {
-			switch (ev.type) {
-			case YAML_MAPPING_START_EVENT:
-				parse_map(s.emplace_back());
-				break;
-			case YAML_SEQUENCE_START_EVENT:
-				parse_seq(s.emplace_back());
-				break;
-			case YAML_SCALAR_EVENT:
-				s.emplace_back(parse_scalar(ev));
-				break;
-			default:
-				throw parse_error("unexpect type in seq");
-			}
+inline node parse_scalar(yaml_event& ev) {
+	// TODO type resolve
+	auto& scalar = ev.data.scalar;
+	std::string_view sv(reinterpret_cast<char*>(scalar.value), scalar.length);
+	return node(std::in_place_type<str>, std::string(sv));
+}
+
+inline node parse_seq(yaml_parser& parser) {
+	node n;
+	auto& s = n.emplace<seq>();
+	yaml_event ev;
+	while (parser.parse(ev), ev.type != YAML_SEQUENCE_END_EVENT) {
+		s.emplace_back(parse_node(parser, ev));
+	}
+	return n;
+}
+
+inline node parse_map(yaml_parser& parser) {
+	node n;
+	auto& m = n.emplace<map>();
+	yaml_event ev;
+	node* vn = nullptr;
+	while (parser.parse(ev), ev.type != YAML_MAPPING_END_EVENT) {
+		if (vn) {
+			*vn = parse_node(parser, ev);
+			vn = nullptr;
+		} else {
+			auto ok_it = m.emplace(parse_node(parser, ev), node{});
+			vn = &(ok_it.first->second);
 		}
 	}
+	return n;
+}
 
-	void parse_map_value(event& ev, node& n) {
+inline node parse_doc(yaml_parser& parser) {
+	node n;
+	yaml_event ev;
+	if (parser.parse(ev), ev.type != YAML_DOCUMENT_END_EVENT) {
+		n = parse_node(parser, ev);
+		if (parser.parse(ev), ev.type != YAML_DOCUMENT_END_EVENT) {
+			throw parse_error("unexpect type");
+		}
+	}
+	return n;
+}
+
+inline std::vector<node> load(const char* data, std::size_t size) {
+	yaml_parser parser;
+	yaml_parser_set_input_string(&parser, reinterpret_cast<const unsigned char*>(data), size);
+	//yaml_parser_set_encoding
+	std::vector<node> docs;
+	yaml_event ev;
+	while (parser.parse(ev), ev.type != YAML_STREAM_END_EVENT) {
 		switch (ev.type) {
-		case YAML_MAPPING_START_EVENT:
-			parse_map(n);
+		case YAML_STREAM_START_EVENT:
 			break;
-		case YAML_SEQUENCE_START_EVENT:
-			parse_seq(n);
-			break;
-		case YAML_SCALAR_EVENT:
-			n = parse_scalar(ev);
+		case YAML_DOCUMENT_START_EVENT:
+			docs.emplace_back(parse_doc(parser));
 			break;
 		default:
-			throw parse_error("unexpect type in map");
+			throw parse_error("unexpect type");
 		}
 	}
-
-	void parse_map(node& n) {
-		auto& m = n.emplace<map>();
-		event ev;
-		node* vn = nullptr;
-		while (this->parse_event(ev), ev.type != YAML_MAPPING_END_EVENT) {
-			if (vn) {
-				parse_map_value(ev, *vn);
-				vn = nullptr;
-				continue;
-			}
-			if (ev.type == YAML_SCALAR_EVENT) {
-				auto ok_it = m.emplace(std::piecewise_construct, std::forward_as_tuple(std::get<str>(parse_scalar(ev))), std::forward_as_tuple());
-				vn = &(ok_it.first->second);
-			} else {
-				throw parse_error("error map key type");
-			}
-		}
-	}
-
-	void parse_doc(node& n) {
-		event ev;
-		while (this->parse_event(ev), ev.type != YAML_DOCUMENT_END_EVENT) {
-			switch (ev.type) {
-			case YAML_MAPPING_START_EVENT:
-				parse_map(n);
-				break;
-			case YAML_SEQUENCE_START_EVENT:
-				parse_seq(n);
-				break;
-			case YAML_SCALAR_EVENT:
-				n = parse_scalar(ev);
-				break;
-			default:
-				throw parse_error("unexpect type in doc");
-			}
-		}
-	}
-
-public:
-	std::vector<node> parse(const char* data, std::size_t size) {
-		yaml_parser_set_input_string(this, reinterpret_cast<const unsigned char*>(data), size);
-		//yaml_parser_set_encoding
-		std::vector<node> docs;
-		event ev;
-		while (this->parse_event(ev), ev.type != YAML_STREAM_END_EVENT) {
-			switch (ev.type) {
-			case YAML_DOCUMENT_START_EVENT:
-				parse_doc(docs.emplace_back());
-				break;
-			case YAML_STREAM_START_EVENT:
-				break;
-			default:
-				throw parse_error("unexpect type in stream");
-			}
-		}
-		return docs;
-	}
-};
+	return docs;
+}
 
 } // namespace details
 
-inline std::vector<node> parse(const char* data, std::size_t size) {
-	details::parser psr;
-	return psr.parse(data, size);
-}
+using details::load;
 
 } // namespace yaml
 

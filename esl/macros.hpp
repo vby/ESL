@@ -113,7 +113,7 @@
 	#define ESL_ATTR_EXPORT __attribute__((visibility("default")))
 	#define ESL_ATTR_IMPORT __attribute__((visibility("default")))
 #else
-	#define ESL_ATTR_FORCEINLINE
+	#define ESL_ATTR_FORCEINLINE inline
 	#define ESL_ATTR_NOINLINE
 	#define ESL_ATTR_EXPORT
 	#define ESL_ATTR_IMPORT
