@@ -2,6 +2,7 @@
 #ifndef ESL_UTILITY_HPP
 #define ESL_UTILITY_HPP
 
+#include "macros.hpp"
 #include "type_traits.hpp"
 #include "array.hpp"
 
@@ -74,44 +75,36 @@ using make_index_sequence = make_integer_sequence<std::size_t, N>;
 template <class... Ts>
 using index_sequence_for = make_index_sequence<sizeof...(Ts)>;
 
-// make_vtable, make_vtable_t, make_vtable_v
-template <template <class> class F, class... Ts>
-struct make_vtable {
-	using type = std::array<decltype(&F<nth_type_t<0, Ts...>>::value), sizeof...(Ts)>;
-	static constexpr type value{{F<Ts>::value...}};
-};
-template <template <class> class F>
-struct make_vtable<F> {
-	using type = std::array<decltype(&F<void>::value), 0>;
-	static constexpr type value{};
-};
-template <template <class> class F, class... Ts>
-using make_vtable_t = typename make_vtable<F, Ts...>::type;
-template <template <class> class F, class... Ts>
-inline constexpr auto make_vtable_v = make_vtable<F, Ts...>::value;
-
-// make_vtable2, make_vtable2_t, make_vtable2_v
-template <template <class, class> class F2, class T1, class T2>
-struct make_vtable2;
-template <template <class, class> class F2, class... T1s, class... T2s>
-struct make_vtable2<F2, std::tuple<T1s...>, std::tuple<T2s...>> {
-	template <class T1>
-	struct make_vtable2_1 {
-		using type = std::array<decltype(&F2<T1, nth_type_t<0, T2s...>>::value), sizeof...(T2s)>;
-		static constexpr type value{{F2<T1, T2s>::value...}};
+// make_tuple_vtable, make_tuple_vtable_t, make_tuple_vtable_v
+template <template <class...> class F, class... Tups>
+struct make_tuple_vtable {
+	using type = multi_array_t<decltype(&F<std::tuple_element_t<0, Tups>...>::value), std::tuple_size_v<Tups>...>;
+private:
+	template <std::size_t... Is>
+	static constexpr void apply_alt(type& vtbl, std::index_sequence<Is...>) {
+		std::get<Is...>(vtbl) = &F<std::tuple_element_t<Is, Tups>...>::value;
+	}
+	template <class TupIntSeq>
+	struct VTable {};
+	template <class... IntSeq>
+	struct VTable<std::tuple<IntSeq...>> {
+		static constexpr type gen_vtable() {
+			type vtbl{};
+			(..., apply_alt(vtbl, IntSeq{}));
+			return vtbl;
+		}
 	};
-	using type = std::array<typename make_vtable2_1<nth_type_t<0, T1s...>>::type, sizeof...(T1s)>;
-	static constexpr type value{{make_vtable2_1<T1s>::value...}};
+public:
+#ifdef ESL_COMPILER_MSVC
+	static constexpr type value = VTable<integer_sequence_combination_t<make_index_sequence<std::tuple_size_v<Tups>>...>>::gen_vtable();
+#else
+	static constexpr type value = VTable<integer_sequence_combination_t<std::make_index_sequence<std::tuple_size_v<Tups>>...>>::gen_vtable();
+#endif
 };
-template <template <class, class> class F2>
-struct make_vtable2<F2, std::tuple<>, std::tuple<>> {
-	using type = std::array<std::array<decltype(&F2<void, void>::value), 0>, 0>;
-	static constexpr type value{};
-};
-template <template <class, class> class F2, class T1, class T2>
-using make_vtable2_t = typename make_vtable2<F2, T1, T2>::type;
-template <template <class, class> class F2, class T1, class T2>
-inline constexpr auto make_vtable2_v = make_vtable2<F2, T1, T2>::value;
+template <template <class...> class F, class... Tups>
+using make_tuple_vtable_t = typename make_tuple_vtable<F, Tups...>::type;
+template <template <class...> class F, class... Tups>
+inline constexpr auto make_tuple_vtable_v = make_tuple_vtable<F, Tups...>::value;
 
 // transpose_integer_array
 template <class T, std::size_t Size, std::size_t N, class U>

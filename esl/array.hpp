@@ -145,5 +145,11 @@ inline constexpr const ::esl::array_element_t<sizeof...(Is), std::array<T, N>>&&
 
 } // namespace std
 
+namespace esl {
+
+using std::get;
+
+} // namespace esl
+
 #endif // ESL_ARRAY_HPP
 

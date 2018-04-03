@@ -65,10 +65,10 @@ private:
 		static void value(Storage& s, Storage& other) { s.template swap<T, U>(other); }
 	};
 
-	static constexpr auto storage_copy_vtable = make_vtable_v<StorageCopy, Ts...>;
-	static constexpr auto storage_move_vtable = make_vtable_v<StorageMove, Ts...>;
-	static constexpr auto storage_destruct_vtable = make_vtable_v<StorageDestruct, Ts...>;
-	static constexpr auto storage_swap_vtable = make_vtable2_v<StorageSwap, std::tuple<Ts...>, std::tuple<Ts...>>;
+	static constexpr auto storage_copy_vtable = make_tuple_vtable_v<StorageCopy, std::tuple<Ts...>>;
+	static constexpr auto storage_move_vtable = make_tuple_vtable_v<StorageMove, std::tuple<Ts...>>;
+	static constexpr auto storage_destruct_vtable = make_tuple_vtable_v<StorageDestruct, std::tuple<Ts...>>;
+	static constexpr auto storage_swap_vtable = make_tuple_vtable_v<StorageSwap, std::tuple<Ts...>, std::tuple<Ts...>>;
 
 	Storage storage_;
 	std::size_t index_;
@@ -380,9 +380,9 @@ private:
 		using type = multi_array_t<ResultType(*)(Visitor, Variants...), Dimensions...>;
 	#ifdef ESL_COMPILER_MSVC
 		// MSVC std::make_index_sequence use __make_integer_seq, bugly expend with Variadic parameters
-		using indexes_type = integer_sequence_combination_t<std::size_t, make_index_sequence<Dimensions>...>;
+		using indexes_type = integer_sequence_combination_t<make_index_sequence<Dimensions>...>;
 	#else
-		using indexes_type = integer_sequence_combination_t<std::size_t, std::make_index_sequence<Dimensions>...>;
+		using indexes_type = integer_sequence_combination_t<std::make_index_sequence<Dimensions>...>;
 	#endif
 	};
 	using VTableMultiArray = MultiArray<std::variant_size_v<std::remove_reference_t<Variants>>...>;

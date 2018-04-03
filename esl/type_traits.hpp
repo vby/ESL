@@ -368,7 +368,7 @@ struct is_overload_resolvable: details::is_overload_resolvable<T, std::tuple<Ts.
 template <class T, class... Ts>
 inline constexpr bool is_overload_resolvable_v = is_overload_resolvable<T, Ts...>::value;
 
-// Tuple traits
+// tuple traits
 // ---------------------------------------------------------
 
 // tuple_index, tuple_index_v
@@ -410,20 +410,20 @@ template <class... Ts>
 struct tuple_concat<std::tuple<Ts...>> { using type = std::tuple<Ts...>; };
 template <class... Ts, class... Ts2>
 struct tuple_concat<std::tuple<Ts...>, std::tuple<Ts2...>> { using type = std::tuple<Ts..., Ts2...>; };
-template <class... Ts, class... Rest>
-struct tuple_concat<std::tuple<Ts...>, Rest...> {
-	using type = typename tuple_concat<std::tuple<Ts...>, typename tuple_concat<Rest...>::type>::type;
+template <class First, class... Rest>
+struct tuple_concat<First, Rest...> {
+	using type = typename tuple_concat<First, typename tuple_concat<Rest...>::type>::type;
 };
 template <class... Tups>
 using tuple_concat_t = typename tuple_concat<Tups...>::type;
 
-// tuple_tuple_concat, tuple_tuple_concat_t
+// tuple_concat_to, tuple_concat_to_t
 template <class Tup, class TupTup>
-struct tuple_tuple_concat;
+struct tuple_concat_to;
 template <class Tup, class... Tups>
-struct tuple_tuple_concat<Tup, std::tuple<Tups...>> { using type = std::tuple<tuple_concat_t<Tup, Tups>...>; };
+struct tuple_concat_to<Tup, std::tuple<Tups...>> { using type = std::tuple<tuple_concat_t<Tup, Tups>...>; };
 template <class Tup, class TupTup>
-using tuple_tuple_concat_t = typename tuple_tuple_concat<Tup, TupTup>::type;
+using tuple_concat_to_t = typename tuple_concat_to<Tup, TupTup>::type;
 
 // tuple_combination, tuple_combination_t
 template <class... Tups>
@@ -432,24 +432,14 @@ template <class... Ts>
 struct tuple_combination<std::tuple<Ts...>> { using type = std::tuple<std::tuple<Ts>...>; };
 template <class... Ts, class... Rest>
 struct tuple_combination<std::tuple<Ts...>, Rest...> {
-	using type = tuple_concat_t<tuple_tuple_concat_t<std::tuple<Ts>, typename tuple_combination<Rest...>::type>...>;
+	using type = tuple_concat_t<tuple_concat_to_t<std::tuple<Ts>, typename tuple_combination<Rest...>::type>...>;
 };
 template <class... Tups>
 using tuple_combination_t = typename tuple_combination<Tups...>::type;
 
-// integer_sequence_tuple, integer_sequence_tuple_t
-template <class IntSeq>
-struct integer_sequence_tuple {};
-template <class T, T... Ints>
-struct integer_sequence_tuple<std::integer_sequence<T, Ints...>> {
-	using type = std::tuple<std::integral_constant<T, Ints>...>;
-};
-template <class IntSeq>
-using integer_sequence_tuple_t = typename integer_sequence_tuple<IntSeq>::type;
-
 // tuple_integer_sequence, tuple_integer_sequence_t
 template <class T, class Tup>
-struct tuple_integer_sequence {};
+struct tuple_integer_sequence;
 template <class T>
 struct tuple_integer_sequence<T, std::tuple<>> { using type = std::integer_sequence<T>; };
 template <class T, class... Ts>
@@ -457,27 +447,13 @@ struct tuple_integer_sequence<T, std::tuple<Ts...>> { using type = std::integer_
 template <class T, class Tup>
 using tuple_integer_sequence_t = typename tuple_integer_sequence<T, Tup>::type;
 
-// integer_sequence_combination, integer_sequence_combination_t
-template <class T, class CombTup>
-struct integer_sequence_combination_;
-template <class T, class... Tups>
-struct integer_sequence_combination_<T, std::tuple<Tups...>> {
-	using type = std::tuple<tuple_integer_sequence_t<T, Tups>...>;
-};
-template <class T, class... IntSeq>
-struct integer_sequence_combination: integer_sequence_combination_<T, tuple_combination_t<integer_sequence_tuple_t<IntSeq>...>> {};
-template <class T, class... IntSeq>
-using integer_sequence_combination_t = typename integer_sequence_combination<T, IntSeq...>::type;
-
 // tuple_sub, tuple_sub_t
-template <class Tup, std::size_t Pos, std::size_t Cnt, class = std::make_index_sequence<Cnt>>
+template <std::size_t Pos, std::size_t Cnt, class Tup, class = std::make_index_sequence<Cnt>>
 struct tuple_sub;
-template <class Tup, std::size_t Pos, std::size_t Cnt, std::size_t... Is>
-struct tuple_sub<Tup, Pos, Cnt, std::index_sequence<Is...>> {
-	using type = std::tuple<std::tuple_element_t<Pos + Is, Tup>...>;
-};
-template <class Tup, std::size_t Pos, std::size_t Cnt>
-using tuple_sub_t = typename tuple_sub<Tup, Pos, Cnt>::type;
+template <std::size_t Pos, std::size_t Cnt, class Tup, std::size_t... Is>
+struct tuple_sub<Pos, Cnt, Tup, std::index_sequence<Is...>> { using type = std::tuple<std::tuple_element_t<Pos + Is, Tup>...>; };
+template <std::size_t Pos, std::size_t Cnt, class Tup>
+using tuple_sub_t = typename tuple_sub<Pos, Cnt, Tup>::type;
 
 // tuple_unique, tuple_unique_t
 template <class Tup, class T, bool = tuple_count_v<T, Tup> != 0>
@@ -493,15 +469,62 @@ struct tuple_unique<std::tuple<T, Ts...>, TupU> { using type = typename tuple_un
 template <class Tup>
 using tuple_unique_t = typename tuple_unique<Tup>::type;
 
-// tuple_apply_template, tuple_apply_template_t
+// tuple_apply, tuple_apply_t
 template <template <class...> class TT, class Tup>
-struct tuple_apply_template;
+struct tuple_apply;
 template <template <class...> class TT, class... Ts>
-struct tuple_apply_template<TT, std::tuple<Ts...>> {
+struct tuple_apply<TT, std::tuple<Ts...>> {
 	using type = TT<Ts...>;
 };
 template <template <class...> class TT, class Tup>
-using tuple_apply_template_t = typename tuple_apply_template<TT, Tup>::type;
+using tuple_apply_t = typename tuple_apply<TT, Tup>::type;
+
+// integer_sequence traits
+// ---------------------------------------------------------
+
+// integer_sequence_tuple, integer_sequence_tuple_t
+template <class IntSeq>
+struct integer_sequence_tuple;
+template <class T, T... Ints>
+struct integer_sequence_tuple<std::integer_sequence<T, Ints...>> {
+	using type = std::tuple<std::integral_constant<T, Ints>...>;
+};
+template <class IntSeq>
+using integer_sequence_tuple_t = typename integer_sequence_tuple<IntSeq>::type;
+
+// integer_sequence_concat, integer_sequence_concat_t
+template <class... IntSeq>
+struct integer_sequence_concat;
+template <class T, T... Ints>
+struct integer_sequence_concat<std::integer_sequence<T, Ints...>> { using type = std::integer_sequence<T, Ints...>; };
+template <class T, T... Ints, T... Ints2>
+struct integer_sequence_concat<std::integer_sequence<T, Ints...>, std::integer_sequence<T, Ints2...>> { using type = std::integer_sequence<T, Ints..., Ints2...>; };
+template <class First, class... Rest>
+struct integer_sequence_concat<First, Rest...> {
+	using type = typename integer_sequence_concat<First, typename integer_sequence_concat<Rest...>::type>::type;
+};
+template <class... IntSeq>
+using integer_sequence_concat_t = typename integer_sequence_concat<IntSeq...>::type;
+
+// integer_sequence_concat_to, integer_sequence_concat_to_t
+template <class IntSeq, class TupIntSeq>
+struct integer_sequence_concat_to;
+template <class IntSeq, class... IntSeqs>
+struct integer_sequence_concat_to<IntSeq, std::tuple<IntSeqs...>> { using type = std::tuple<integer_sequence_concat_t<IntSeq, IntSeqs>...>; };
+template <class IntSeq, class TupIntSeq>
+using integer_sequence_concat_to_t = typename integer_sequence_concat_to<IntSeq, TupIntSeq>::type;
+
+// integer_sequence_combination, integer_sequence_combination_t
+template <class... IntSeq>
+struct integer_sequence_combination;
+template <class T, T... Ints>
+struct integer_sequence_combination<std::integer_sequence<T, Ints...>> { using type = std::tuple<std::integer_sequence<T, Ints>...>; };
+template <class T, T... Ints, class... Rest>
+struct integer_sequence_combination<std::integer_sequence<T, Ints...>, Rest...> {
+	using type = tuple_concat_t<integer_sequence_concat_to_t<std::integer_sequence<T, Ints>, typename integer_sequence_combination<Rest...>::type>...>;
+};
+template <class... IntSeq>
+using integer_sequence_combination_t = typename integer_sequence_combination<IntSeq...>::type;
 
 // Miscellaneous transformations
 // ---------------------------------------------------------
