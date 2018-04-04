@@ -30,7 +30,9 @@ using int_t = std::int64_t;
 using float_t  = double;
 using str = std::string;
 using seq = std::vector<node>;
-using map = std::unordered_map<node, node>;
+// TODO
+//using map = std::unordered_map<node, node>;
+using map = std::unordered_map<std::string, node>;
 
 // TODO additional types: binary, omap, set
 
@@ -52,30 +54,24 @@ using node_base = any_variant<null_t, bool_t, int_t, float_t, str, seq, map>;
 
 class node: public node_base {
 public:
-	constexpr node() = default;
+	using node_base::node_base;
 
-	using any_variant::any_variant;
+	using node_base::operator=;
 
-	using any_variant::operator=;
+	// workaound for gcc
+	node(const node& other): node_base(static_cast<const node_base&>(other)) {}
+	node(node&& other): node_base(static_cast<node_base&&>(std::move(other))) {}
+	node& operator=(const node& other) {
+		this->node_base::operator=(static_cast<const node_base&>(other));
+		return *this;
+	}
+	node& operator=(node&& other) {
+		this->node_base::operator=(static_cast<node_base&&>(std::move(other)));
+		return *this;
+	}
 
-	// Enforce const char* deduce to std::string
 	// TODO universal type deduction guide
-
-	template <class T, class = std::enable_if_t<!std::is_convertible_v<T&&, const char*>>>
-	node(T&& v): any_variant(std::forward<T>(v)) {}
-
-	node(const char* s): any_variant(std::in_place_index<str_index>, s) {}
-
-	template <class T, class = std::enable_if_t<!std::is_convertible_v<T&&, const char*>>>
-	node& operator=(T&& v) {
-		static_cast<any_variant*>(this)->operator=(std::forward<T>(v));
-		return *this;
-	}
-
-	node& operator=(const char* s) {
-		this->emplace<str_index>(s);
-		return *this;
-	}
+	// Enforce const char* deduce to std::string
 };
 
 } // namespace yaml
@@ -237,7 +233,7 @@ inline void parse_map(yaml_parser& parser, node& n) {
 	while (parser.parse(ev), ev.type != YAML_MAPPING_END_EVENT) {
 		node kn;
 		parse_node(parser, ev, kn);
-		auto it_st = m.insert_or_assign(std::move(kn), node{});
+		auto it_st = m.insert_or_assign(std::get<str>(std::move(kn)), node{});
 		parser.parse(ev);
 		parse_node(parser, ev, it_st.first->second);
 	}
@@ -363,7 +359,7 @@ public:
 	void operator()(const map& m) {
 		this->mapping_start();
 		for (auto& kn: m) {
-			this->node(kn.first);
+			this->scalar(kn.first);
 			this->node(kn.second);
 		}
 		this->mapping_end();

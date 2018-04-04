@@ -317,6 +317,28 @@ struct is_exactly_once: std::bool_constant<count_of_v<T, Ts...> == 1> {};
 template <class T, class... Ts>
 inline constexpr bool is_exactly_once_v = is_exactly_once<T, Ts...>::value;
 
+// template_all_of, template_all_of_v
+template <template <class> class Pred, class... Ts>
+struct template_all_of: std::true_type {};
+template <template <class> class Pred, class First, class... Rest>
+struct template_all_of<Pred, First, Rest...>: std::bool_constant<Pred<First>::value && template_all_of<Pred, Rest...>::value> {};
+template <template <class> class Pred, class... Ts>
+inline constexpr bool template_all_of_v = template_all_of<Pred, Ts...>::value;
+
+// template_any_of, template_any_of_v
+template <template <class> class Pred, class... Ts>
+struct template_any_of: std::false_type {};
+template <template <class> class Pred, class First, class... Rest>
+struct template_any_of<Pred, First, Rest...>: std::bool_constant<Pred<First>::value || template_any_of<Pred, Rest...>::value> {};
+template <template <class> class Pred, class... Ts>
+inline constexpr bool template_any_of_v = template_any_of<Pred, Ts...>::value;
+
+// template_none_of, template_none_of_v
+template <template <class> class Pred, class... Ts>
+struct template_none_of: std::bool_constant<!template_any_of<Pred, Ts...>::value> {};
+template <template <class> class Pred, class... Ts>
+inline constexpr bool template_none_of_v = template_none_of<Pred, Ts...>::value;
+
 namespace details {
 
 template <class... Ts>

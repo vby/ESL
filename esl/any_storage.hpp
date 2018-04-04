@@ -18,7 +18,7 @@ namespace esl {
 // * destruct: this (initialized) -> this (uninitialized)
 // * swap: this (initialized), other (initialized) -> this (initialized), other (initialized)
 
-template <std::size_t MaxSize = 4 * sizeof(void*), std::size_t MaxAlign = alignof(std::max_align_t)>
+template <std::size_t MaxSize = 4 * sizeof(void*), std::size_t MaxAlign = alignof(void*)>
 class any_storage {
 private:
 	union Storage {

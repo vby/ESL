@@ -48,17 +48,21 @@ private:
 	static constexpr void apply_alt(type& vt, std::index_sequence<Is...>) {
 		std::get<Is...>(vt) = F<std::tuple_element_t<Is, Tups>...>::value;
 	}
-	static constexpr void apply_alts(type& vt, std::tuple<>) {}
+	template <class... IntSeq>
+	struct Alts {
+		static constexpr void apply(type&) {}
+	};
 	template <class IntSeq, class... Rest>
-	static constexpr void apply_alts(type& vt, std::tuple<IntSeq, Rest...>) {
-		apply_alt(vt, IntSeq{});
-		apply_alts(vt, std::tuple<Rest...>{});
-	}
+	struct Alts<IntSeq, Rest...> {
+		static constexpr void apply(type& vt) {
+			apply_alt(vt, IntSeq{});
+			Alts<Rest...>::apply(vt);
+		}
+	};
 	template <class... IntSeq>
 	static constexpr type gen_vtable(std::tuple<IntSeq...>) {
 		type vt{};
-		apply_alts(vt, std::tuple<IntSeq...>{});
-		//(..., apply_alt(vt, IntSeq{}));
+		Alts<IntSeq...>::apply(vt);
 		return vt;
 	}
 public:
@@ -82,16 +86,21 @@ private:
 	static constexpr void apply_alt(type& vt, std::index_sequence<Is...>) {
 		std::get<Is...>(vt) = F<Is...>::value;
 	}
-	static constexpr void apply_alts(type& vt, std::tuple<>) {}
+	template <class... IntSeq>
+	struct Alts {
+		static constexpr void apply(type&) {}
+	};
 	template <class IntSeq, class... Rest>
-	static constexpr void apply_alts(type& vt, std::tuple<IntSeq, Rest...>) {
-		apply_alt(vt, IntSeq{});
-		apply_alts(vt, std::tuple<Rest...>{});
-	}
+	struct Alts<IntSeq, Rest...> {
+		static constexpr void apply(type& vt) {
+			apply_alt(vt, IntSeq{});
+			Alts<Rest...>::apply(vt);
+		}
+	};
 	template <class... IntSeq>
 	static constexpr type gen_vtable(std::tuple<IntSeq...>) {
 		type vt{};
-		apply_alts(vt, std::tuple<IntSeq...>{});
+		Alts<IntSeq...>::apply(vt);
 		return vt;
 	}
 public:

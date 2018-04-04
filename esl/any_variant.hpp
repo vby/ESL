@@ -38,18 +38,25 @@ struct variant_alternative<I, ::esl::any_variant<Ts...>>: ::esl::nth_type<I, Ts.
 namespace esl {
 
 namespace details {
-	struct any_variant_storage_access;
+	struct AnyVariantStorageAccess;
+
+	template <class Storage, class... Ts>
+	struct AnyVariantStorageCopy {
+		static constexpr auto vtable = make_tuple_vtable_v<Storage::template copy_function, std::tuple<Ts...>>;
+	};
+	template <class Storage, class... Ts>
+	struct AnyVariantStorageMove {
+		static constexpr auto vtable = make_tuple_vtable_v<Storage::template move_function, std::tuple<Ts...>>;
+	};
 }
 
 template <class... Ts>
 class any_variant {
 private:
-	friend struct details::any_variant_storage_access;
+	friend struct details::AnyVariantStorageAccess;
 
 	using Storage = any_storage<>;
 
-	static constexpr auto storage_copy_vtable = make_tuple_vtable_v<Storage::copy_function, std::tuple<Ts...>>;
-	static constexpr auto storage_move_vtable = make_tuple_vtable_v<Storage::move_function, std::tuple<Ts...>>;
 	static constexpr auto storage_destruct_vtable = make_tuple_vtable_v<Storage::destruct_function, std::tuple<Ts...>>;
 	static constexpr auto storage_swap_vtable = make_tuple_vtable_v<Storage::swap_function, std::tuple<Ts...>, std::tuple<Ts...>>;
 
@@ -91,17 +98,20 @@ protected:
 	}
 
 public:
+	//template <class T0 = nth_type_t<0, Ts...>, class = std::enable_if_t<std::is_default_constructible_v<T0>>>
 	constexpr any_variant() noexcept: storage_(std::in_place_type<nth_type_t<0, Ts...>>), index_(0) {}
 
+	//template <bool Dep = true, class = std::enable_if_t<Dep && template_all_of_v<std::is_copy_constructible, Ts...>>>
 	any_variant(const any_variant& other): index_(other.index_) {
 		if (index_ != std::variant_npos) {
-			storage_copy_vtable[index_](storage_, other.storage_);
+			details::AnyVariantStorageCopy<Storage, Ts...>::vtable[index_](storage_, other.storage_);
 		}
 	}
 
+	//template <bool Dep = true, class = std::enable_if_t<Dep && template_all_of_v<std::is_move_constructible, Ts...>>>
 	any_variant(any_variant&& other) noexcept: index_(other.index_) {
 		if (index_ != std::variant_npos) {
-			storage_move_vtable[index_](storage_, std::move(other.storage_));
+			details::AnyVariantStorageMove<Storage, Ts...>::vtable[index_](storage_, std::move(other.storage_));
 			other.index_ = std::variant_npos;
 		}
 	}
@@ -130,7 +140,7 @@ public:
 	any_variant& operator=(const any_variant& other) {
 		this->reset();
 		if (other.index_ != std::variant_npos) {
-			storage_copy_vtable[other.index_](storage_, other.storage_);
+			details::AnyVariantStorageCopy<Storage, Ts...>::vtable[other.index_](storage_, other.storage_);
 			index_ = other.index_;
 		}
 		return *this;
@@ -139,7 +149,7 @@ public:
 	any_variant& operator=(any_variant&& other) noexcept {
 		this->reset();
 		if (other.index_ != std::variant_npos) {
-			storage_move_vtable[other.index_](storage_, std::move(other.storage_));
+			details::AnyVariantStorageMove<Storage, Ts...>::vtable[other.index_](storage_, std::move(other.storage_));
 			index_ = other.index_;
 			other.index_ = std::variant_npos;
 		}
@@ -190,13 +200,13 @@ public:
 	void swap(any_variant& other) noexcept {
 		if (index_ == std::variant_npos) {
 			if (other.index_ != std::variant_npos) {
-				storage_move_vtable[other.index_](storage_, std::move(other.storage_));
+				details::AnyVariantStorageMove<Storage, Ts...>::vtable[other.index_](storage_, std::move(other.storage_));
 				index_ = other.index_;
 				other.index_ = std::variant_npos;
 			}
 		} else {
 			if (other.index_ == std::variant_npos) {
-				storage_move_vtable[index_](other.storage_, std::move(storage_));
+				details::AnyVariantStorageMove<Storage, Ts...>::vtable[index_](other.storage_, std::move(storage_));
 				other.index_ = index_;
 				index_ = std::variant_npos;
 			} else {
@@ -208,7 +218,7 @@ public:
 };
 
 namespace details {
-	struct any_variant_storage_access {
+	struct AnyVariantStorageAccess {
 		template <class... Ts>
 		static typename any_variant<Ts...>::Storage& get(any_variant<Ts...>& v) noexcept { return v.storage_; }
 
@@ -233,14 +243,14 @@ inline constexpr variant_alternative_t<I, ::esl::any_variant<Ts...>>& get(::esl:
 	if (v.index() != I) {
 		throw std::bad_variant_access{};
 	}
-	return ::esl::details::any_variant_storage_access::get(v).template get<variant_alternative_t<I, ::esl::any_variant<Ts...>>>();
+	return ::esl::details::AnyVariantStorageAccess::get(v).template get<variant_alternative_t<I, ::esl::any_variant<Ts...>>>();
 }
 template <size_t I, class... Ts>
 inline constexpr const variant_alternative_t<I, ::esl::any_variant<Ts...>>& get(const ::esl::any_variant<Ts...>& v) {
 	if (v.index() != I) {
 		throw std::bad_variant_access{};
 	}
-	return ::esl::details::any_variant_storage_access::get(v).template get<variant_alternative_t<I, ::esl::any_variant<Ts...>>>();
+	return ::esl::details::AnyVariantStorageAccess::get(v).template get<variant_alternative_t<I, ::esl::any_variant<Ts...>>>();
 }
 template <size_t I, class... Ts>
 inline constexpr variant_alternative_t<I, ::esl::any_variant<Ts...>>&& get(::esl::any_variant<Ts...>&& v) {
@@ -276,14 +286,14 @@ inline constexpr add_pointer_t<variant_alternative_t<I, ::esl::any_variant<Ts...
 	if (!vap || vap->index() != I) {
 		return nullptr;
 	}
-	return &::esl::details::any_variant_storage_access::get(*vap).template get<variant_alternative_t<I, ::esl::any_variant<Ts...>>>();
+	return &::esl::details::AnyVariantStorageAccess::get(*vap).template get<variant_alternative_t<I, ::esl::any_variant<Ts...>>>();
 }
 template <size_t I, class... Ts>
 inline constexpr add_pointer_t<const variant_alternative_t<I, ::esl::any_variant<Ts...>>> get_if(const ::esl::any_variant<Ts...>* vap) {
 	if (!vap || vap->index() != I) {
 		return nullptr;
 	}
-	return &::esl::details::any_variant_storage_access::get(*vap).template get<variant_alternative_t<I, ::esl::any_variant<Ts...>>>();
+	return &::esl::details::AnyVariantStorageAccess::get(*vap).template get<variant_alternative_t<I, ::esl::any_variant<Ts...>>>();
 }
 template <class T, class... Ts>
 inline constexpr add_pointer_t<T> get_if(::esl::any_variant<Ts...>* vap) {

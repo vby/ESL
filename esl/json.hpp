@@ -38,9 +38,9 @@ using value_base = any_variant<null_t, boolean, number, string, array, object>;
 
 class value: public value_base {
 public:
-    using any_variant::any_variant;
+    using value_base::value_base;
 
-    using any_variant::operator=;
+    using value_base::operator=;
 };
 
 } // namespace json
