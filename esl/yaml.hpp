@@ -54,6 +54,9 @@ using node_base = any_variant<null_t, bool_t, int_t, float_t, str, seq, map>;
 
 class node: public node_base {
 public:
+	// workaound for MSVC
+	constexpr node() = default;
+
 	using node_base::node_base;
 
 	using node_base::operator=;

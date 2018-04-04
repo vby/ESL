@@ -49,7 +49,7 @@ public:
 	}
 
 	void swap(any_type& other) noexcept {
-		storage_.swap(other.storage_);
+		storage_.swap<T>(other.storage_);
 	}
 
 	T& value() noexcept {

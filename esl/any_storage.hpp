@@ -247,7 +247,7 @@ public:
 
 	// swap
 
-	template <class T, class U>
+	template <class T, class U = T>
 	void swap(any_storage& other) noexcept {
 		Manager<std::decay_t<T>>::template swap<std::decay_t<U>>(storage_, other.storage_);
 	}
