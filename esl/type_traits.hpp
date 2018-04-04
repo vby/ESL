@@ -564,11 +564,6 @@ using index_sequence_combination_for = make_index_sequence_combination<std::tupl
 // Miscellaneous transformations
 // ---------------------------------------------------------
 
-// aligned_type_storage, aligned_type_storage_t
-template <class T>
-using aligned_type_storage = std::aligned_storage<sizeof(T), alignof(T)>;
-template <class T>
-using aligned_type_storage_t = typename aligned_type_storage<T>::type;
 
 // Function traits
 // ---------------------------------------------------------

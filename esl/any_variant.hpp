@@ -355,9 +355,15 @@ private:
 		}
 	};
 	static constexpr auto vtable = make_index_sequence_vtable_v<InvokeFunction, std::variant_size_v<std::remove_reference_t<Variants>>...>;
+	static constexpr std::size_t index(std::size_t index) noexcept(false) {
+		if (index == std::variant_npos) {
+			throw std::bad_variant_access{};
+		}
+		return index;
+	}
 public:
 	static constexpr ResultType invoke(Visitor vis, Variants... vars) {
-		return access(vtable, vars.index()...)(std::forward<Visitor>(vis), std::forward<Variants>(vars)...);
+		return access(vtable, index(vars.index())...)(std::forward<Visitor>(vis), std::forward<Variants>(vars)...);
 	}
 };
 

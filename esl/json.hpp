@@ -34,7 +34,9 @@ enum index {
     object_index,
 };
 
-class value: public any_variant<null_t, boolean, number, string, array, object> {
+using value_base = any_variant<null_t, boolean, number, string, array, object>;
+
+class value: public value_base {
 public:
     using any_variant::any_variant;
 
@@ -44,6 +46,26 @@ public:
 } // namespace json
 
 } // namespace esl
+
+namespace std {
+
+// std::variant_size
+template <>
+struct variant_size<::esl::json::value>: variant_size<::esl::json::value_base> {};
+
+// std::variant_alternative
+template <std::size_t I>
+struct variant_alternative<I, ::esl::json::value>: variant_alternative<I, ::esl::json::value_base> {};
+
+// std::hash
+template <>
+struct hash<::esl::json::value> {
+	size_t operator()(const ::esl::json::value& n) const {
+		return hash<::esl::json::value_base>{}(n);
+	}
+};
+
+} // namespace std
 
 #endif // ESL_JSON_HPP
 

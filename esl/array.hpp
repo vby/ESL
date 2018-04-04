@@ -59,7 +59,6 @@ inline constexpr std::size_t array_element_size_v = array_element_size<Rank, T>:
 
 namespace details {
 
-// array_access
 template <class T>
 inline constexpr decltype(auto) array_access(T& a) noexcept { return a; }
 template <class T, std::size_t N, class... Rest>
@@ -69,6 +68,17 @@ inline constexpr decltype(auto) array_access(std::array<T, N>& a, std::size_t fi
 template <class T, std::size_t N, class... Rest>
 inline constexpr decltype(auto) array_access(const std::array<T, N>& a, std::size_t first_pos, Rest... rest_pos) noexcept {
 	return array_access(a[first_pos], rest_pos...);
+}
+
+template <class T>
+inline constexpr decltype(auto) array_at(T& a) noexcept { return a; }
+template <class T, std::size_t N, class... Rest>
+inline constexpr decltype(auto) array_at(std::array<T, N>& a, std::size_t first_pos, Rest... rest_pos) noexcept {
+	return array_at(a.at(first_pos), rest_pos...);
+}
+template <class T, std::size_t N, class... Rest>
+inline constexpr decltype(auto) array_at(const std::array<T, N>& a, std::size_t first_pos, Rest... rest_pos) noexcept {
+	return array_at(a.at(first_pos), rest_pos...);
 }
 
 // array_get
@@ -119,6 +129,24 @@ inline constexpr array_element_t<sizeof...(Poss), std::array<T, N>>&& access(std
 template <class T, std::size_t N, class... Poss>
 inline constexpr const array_element_t<sizeof...(Poss), std::array<T, N>>&& access(const std::array<T, N>&& a, Poss... poss) noexcept {
 	return std::move(access(a, poss...));
+}
+
+// at
+template <class T, std::size_t N, class... Poss>
+inline constexpr array_element_t<sizeof...(Poss), std::array<T, N>>& at(std::array<T, N>& a, Poss... poss) noexcept {
+	return details::array_at(a, poss...);
+}
+template <class T, std::size_t N, class... Poss>
+inline constexpr const array_element_t<sizeof...(Poss), std::array<T, N>>& at(const std::array<T, N>& a, Poss... poss) noexcept {
+	return details::array_at(a, poss...);
+}
+template <class T, std::size_t N, class... Poss>
+inline constexpr array_element_t<sizeof...(Poss), std::array<T, N>>&& at(std::array<T, N>&& a, Poss... poss) noexcept {
+	return std::move(at(a, poss...));
+}
+template <class T, std::size_t N, class... Poss>
+inline constexpr const array_element_t<sizeof...(Poss), std::array<T, N>>&& at(const std::array<T, N>&& a, Poss... poss) noexcept {
+	return std::move(at(a, poss...));
 }
 
 } // namespace esl
