@@ -39,22 +39,24 @@ inline constexpr null_t null{};
 
 // zero-base type index
 enum index {
-    null_index = 0,
-    bool_index,
-    int_index,
-    float_index,
-    str_index,
-    seq_index,
-    map_index,
+	null_index = 0,
+	bool_index,
+	int_index,
+	float_index,
+	str_index,
+	seq_index,
+	map_index,
 };
 
 using node_base = any_variant<null_t, bool_t, int_t, float_t, str, seq, map>;
 
 class node: public node_base {
 public:
-    using any_variant::any_variant;
+	constexpr node() = default;
 
-    using any_variant::operator=;
+	using any_variant::any_variant;
+
+	using any_variant::operator=;
 
 	// Enforce const char* deduce to std::string
 	// TODO universal type deduction guide
@@ -235,9 +237,9 @@ inline void parse_map(yaml_parser& parser, node& n) {
 	while (parser.parse(ev), ev.type != YAML_MAPPING_END_EVENT) {
 		node kn;
 		parse_node(parser, ev, kn);
-		[[maybe_unused]] auto [it, _] = m.insert_or_assign(std::move(kn), node{});
+		auto it_st = m.insert_or_assign(std::move(kn), node{});
 		parser.parse(ev);
-		parse_node(parser, ev, it->second);
+		parse_node(parser, ev, it_st.first->second);
 	}
 }
 

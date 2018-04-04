@@ -67,7 +67,7 @@ TEST(AnyVariantTest, visit) {
 	index = esl::visit(f, v1, v2);
 	ASSERT_EQ(index, 1);
 
-	v2.emplace<float>(1.0);
+	v2.emplace<float>(1.0f);
 	index = esl::visit(f, v1, v2);
 	ASSERT_EQ(index, 0);
 }

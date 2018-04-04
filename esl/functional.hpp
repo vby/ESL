@@ -94,13 +94,13 @@ public:
 	template <class T>
 	constexpr hashval operator+(const T& value) const {
 		std::size_t h = h_;
-		hash_value_combine_(h, hash_value(value));
+		hash_value_combine_(h, ::esl::hash_value(value));
 		return h;
 	}
 
 	template <class T>
 	constexpr hashval& operator+=(const T& value) {
-		hash_value_combine_(h_, hash_value(value));
+		hash_value_combine_(h_, ::esl::hash_value(value));
 		return *this;
 	}
 };
@@ -114,7 +114,7 @@ inline constexpr std::size_t hash_value_combine(std::size_t h, std::size_t k) {
 // hash_combine
 template <class T>
 inline std::size_t hash_combine(std::size_t h, const T& value) {
-	return hash_value_combine(h, hash_value(value));
+	return hash_value_combine(h, ::esl::hash_value(value));
 }
 
 } // namespace esl

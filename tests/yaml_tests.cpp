@@ -88,7 +88,7 @@ k1: v1
 			yaml::load(y);
 		} catch (const yaml::load_error& e) {
 			ASSERT_TRUE(e.what()[0] != '\0');
-			ASSERT_GT(e.position(), 0);
+			ASSERT_GT(e.position(), 0u);
 			ASSERT_EQ(e.line(), 2);
 			ASSERT_EQ(e.column(), 0); // '-'
 		}
@@ -107,7 +107,7 @@ k3: v3
 			yaml::load(y);
 		} catch (const yaml::load_error& e) {
 			ASSERT_TRUE(e.what()[0] != '\0');
-			ASSERT_GT(e.position(), 0);
+			ASSERT_GT(e.position(), 0u);
 			ASSERT_EQ(e.line(), 4);
 			ASSERT_EQ(e.column(), 4); // '*'
 		}
