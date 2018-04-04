@@ -3,13 +3,13 @@
 #include <esl/flex_variant.hpp>
 #include <string>
 
-TEST(AnyVariantTest, default_construct) {
+TEST(FlexVariantTest, default_construct) {
 	esl::flex_variant<std::string, bool> v;
 	ASSERT_EQ(v.index(), 0);
 	ASSERT_FALSE(v.valueless_by_exception());
 }
 
-TEST(AnyVariantTest, construct) {
+TEST(FlexVariantTest, construct) {
 	{
 		esl::flex_variant<int, bool, std::string> va;
 		ASSERT_FALSE(va.valueless_by_exception());
@@ -37,14 +37,14 @@ TEST(AnyVariantTest, construct) {
 	}
 }
 
-TEST(AnyVariantTest, get) {
+TEST(FlexVariantTest, get) {
 	esl::flex_variant<int, bool, std::string> v(false);
 	ASSERT_THROW(std::get<int>(v), std::bad_variant_access);
 	bool&& rb = std::get<bool>(std::move(v));
 	ASSERT_EQ(rb, false);
 }
 
-TEST(AnyVariantTest, get_if) {
+TEST(FlexVariantTest, get_if) {
 	esl::flex_variant<int, bool, std::string> v(std::string("hello"));
 	int* ip = std::get_if<int>(&v);
 	ASSERT_EQ(ip, nullptr);
@@ -52,7 +52,7 @@ TEST(AnyVariantTest, get_if) {
 	ASSERT_NE(sp, nullptr);
 }
 
-TEST(AnyVariantTest, visit) {
+TEST(FlexVariantTest, visit) {
 	esl::flex_variant<int, bool, std::string> v1(false);
 	esl::flex_variant<float, std::string> v2(std::string("hello"));
 	auto f = [](auto&& arg, auto&& arg2) -> std::size_t {
@@ -72,7 +72,7 @@ TEST(AnyVariantTest, visit) {
 	ASSERT_EQ(index, 0);
 }
 
-TEST(AnyVariantTest, hash) {
+TEST(FlexVariantTest, hash) {
 	using va_type = esl::flex_variant<int, bool, int>;
 
 	va_type va(std::in_place_index<0>, 100);
@@ -94,7 +94,7 @@ TEST(AnyVariantTest, hash) {
 	ASSERT_EQ(h4, h2);
 }
 
-TEST(AnyVariantTest, comp) {
+TEST(FlexVariantTest, comp) {
 	esl::flex_variant<int, bool> va0;
 	esl::flex_variant<int, bool> va00;
 	esl::flex_variant<int, bool> va1(123);

@@ -38,14 +38,14 @@ struct variant_alternative<I, ::esl::flex_variant<Ts...>>: ::esl::nth_type<I, Ts
 namespace esl {
 
 namespace details {
-	struct AnyVariantStorageAccess;
+	struct FlexVariantStorageAccess;
 
 	template <class Storage, class... Ts>
-	struct AnyVariantStorageCopy {
+	struct FlexVariantStorageCopy {
 		static constexpr auto vtable = make_tuple_vtable_v<Storage::template copy_construct_function, std::tuple<Ts...>>;
 	};
 	template <class Storage, class... Ts>
-	struct AnyVariantStorageMove {
+	struct FlexVariantStorageMove {
 		static constexpr auto vtable = make_tuple_vtable_v<Storage::template move_construct_function, std::tuple<Ts...>>;
 	};
 }
@@ -53,7 +53,7 @@ namespace details {
 template <class... Ts>
 class flex_variant {
 private:
-	friend struct details::AnyVariantStorageAccess;
+	friend struct details::FlexVariantStorageAccess;
 
 	using Storage = flex_storage<>;
 
@@ -104,14 +104,14 @@ public:
 	//template <bool Dep = true, class = std::enable_if_t<Dep && template_all_of_v<std::is_construct_copyible, Ts...>>>
 	flex_variant(const flex_variant& other): index_(other.index_) {
 		if (index_ != std::variant_npos) {
-			details::AnyVariantStorageCopy<Storage, Ts...>::vtable[index_](storage_, other.storage_);
+			details::FlexVariantStorageCopy<Storage, Ts...>::vtable[index_](storage_, other.storage_);
 		}
 	}
 
 	//template <bool Dep = true, class = std::enable_if_t<Dep && template_all_of_v<std::is_move_constructible, Ts...>>>
 	flex_variant(flex_variant&& other) noexcept: index_(other.index_) {
 		if (index_ != std::variant_npos) {
-			details::AnyVariantStorageMove<Storage, Ts...>::vtable[index_](storage_, std::move(other.storage_));
+			details::FlexVariantStorageMove<Storage, Ts...>::vtable[index_](storage_, std::move(other.storage_));
 			other.index_ = std::variant_npos;
 		}
 	}
@@ -140,7 +140,7 @@ public:
 	flex_variant& operator=(const flex_variant& other) {
 		this->reset();
 		if (other.index_ != std::variant_npos) {
-			details::AnyVariantStorageCopy<Storage, Ts...>::vtable[other.index_](storage_, other.storage_);
+			details::FlexVariantStorageCopy<Storage, Ts...>::vtable[other.index_](storage_, other.storage_);
 			index_ = other.index_;
 		}
 		return *this;
@@ -149,7 +149,7 @@ public:
 	flex_variant& operator=(flex_variant&& other) noexcept {
 		this->reset();
 		if (other.index_ != std::variant_npos) {
-			details::AnyVariantStorageMove<Storage, Ts...>::vtable[other.index_](storage_, std::move(other.storage_));
+			details::FlexVariantStorageMove<Storage, Ts...>::vtable[other.index_](storage_, std::move(other.storage_));
 			index_ = other.index_;
 			other.index_ = std::variant_npos;
 		}
@@ -200,13 +200,13 @@ public:
 	void swap(flex_variant& other) noexcept {
 		if (index_ == std::variant_npos) {
 			if (other.index_ != std::variant_npos) {
-				details::AnyVariantStorageMove<Storage, Ts...>::vtable[other.index_](storage_, std::move(other.storage_));
+				details::FlexVariantStorageMove<Storage, Ts...>::vtable[other.index_](storage_, std::move(other.storage_));
 				index_ = other.index_;
 				other.index_ = std::variant_npos;
 			}
 		} else {
 			if (other.index_ == std::variant_npos) {
-				details::AnyVariantStorageMove<Storage, Ts...>::vtable[index_](other.storage_, std::move(storage_));
+				details::FlexVariantStorageMove<Storage, Ts...>::vtable[index_](other.storage_, std::move(storage_));
 				other.index_ = index_;
 				index_ = std::variant_npos;
 			} else {
@@ -218,7 +218,7 @@ public:
 };
 
 namespace details {
-	struct AnyVariantStorageAccess {
+	struct FlexVariantStorageAccess {
 		template <class... Ts>
 		static typename flex_variant<Ts...>::Storage& get(flex_variant<Ts...>& v) noexcept { return v.storage_; }
 
@@ -243,14 +243,14 @@ inline constexpr variant_alternative_t<I, ::esl::flex_variant<Ts...>>& get(::esl
 	if (v.index() != I) {
 		throw std::bad_variant_access{};
 	}
-	return ::esl::details::AnyVariantStorageAccess::get(v).template get<variant_alternative_t<I, ::esl::flex_variant<Ts...>>>();
+	return ::esl::details::FlexVariantStorageAccess::get(v).template get<variant_alternative_t<I, ::esl::flex_variant<Ts...>>>();
 }
 template <size_t I, class... Ts>
 inline constexpr const variant_alternative_t<I, ::esl::flex_variant<Ts...>>& get(const ::esl::flex_variant<Ts...>& v) {
 	if (v.index() != I) {
 		throw std::bad_variant_access{};
 	}
-	return ::esl::details::AnyVariantStorageAccess::get(v).template get<variant_alternative_t<I, ::esl::flex_variant<Ts...>>>();
+	return ::esl::details::FlexVariantStorageAccess::get(v).template get<variant_alternative_t<I, ::esl::flex_variant<Ts...>>>();
 }
 template <size_t I, class... Ts>
 inline constexpr variant_alternative_t<I, ::esl::flex_variant<Ts...>>&& get(::esl::flex_variant<Ts...>&& v) {
@@ -286,14 +286,14 @@ inline constexpr add_pointer_t<variant_alternative_t<I, ::esl::flex_variant<Ts..
 	if (!vap || vap->index() != I) {
 		return nullptr;
 	}
-	return &::esl::details::AnyVariantStorageAccess::get(*vap).template get<variant_alternative_t<I, ::esl::flex_variant<Ts...>>>();
+	return &::esl::details::FlexVariantStorageAccess::get(*vap).template get<variant_alternative_t<I, ::esl::flex_variant<Ts...>>>();
 }
 template <size_t I, class... Ts>
 inline constexpr add_pointer_t<const variant_alternative_t<I, ::esl::flex_variant<Ts...>>> get_if(const ::esl::flex_variant<Ts...>* vap) {
 	if (!vap || vap->index() != I) {
 		return nullptr;
 	}
-	return &::esl::details::AnyVariantStorageAccess::get(*vap).template get<variant_alternative_t<I, ::esl::flex_variant<Ts...>>>();
+	return &::esl::details::FlexVariantStorageAccess::get(*vap).template get<variant_alternative_t<I, ::esl::flex_variant<Ts...>>>();
 }
 template <class T, class... Ts>
 inline constexpr add_pointer_t<T> get_if(::esl::flex_variant<Ts...>* vap) {

@@ -62,7 +62,6 @@ public:
 	using node_base::operator=;
 
 	// workaound for gcc
-	/*
 	node(const node& other): node_base(static_cast<const node_base&>(other)) {}
 	node(node&& other): node_base(static_cast<node_base&&>(std::move(other))) {}
 	node& operator=(const node& other) {
@@ -72,7 +71,7 @@ public:
 	node& operator=(node&& other) {
 		this->node_base::operator=(static_cast<node_base&&>(std::move(other)));
 		return *this;
-	}*/
+	}
 
 	// TODO universal type deduction guide
 	// Enforce const char* deduce to std::string

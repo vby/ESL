@@ -61,9 +61,9 @@ public:
 
 	const T& operator*() const& { return this->value(); }
 
-	T&& operator*() && { return this->value(); }
+	T&& operator*() && { return std::move(this->value()); }
 
-	const T&& operator*() const&& { return this->value(); }
+	const T&& operator*() const&& { return std::move(this->value()); }
 };
 
 } // namespace esl
