@@ -1,7 +1,7 @@
 #ifndef ESL_JSON_HPP
 #define ESL_JSON_HPP
 
-#include "any_variant.hpp"
+#include "flex_variant.hpp"
 
 #include <string>
 #include <vector>
@@ -34,7 +34,7 @@ enum index {
     object_index,
 };
 
-using value_base = any_variant<null_t, boolean, number, string, array, object>;
+using value_base = flex_variant<null_t, boolean, number, string, array, object>;
 
 class value: public value_base {
 public:

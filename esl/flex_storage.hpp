@@ -1,11 +1,11 @@
-#ifndef ESL_ANY_STORAGE_HPP
-#define ESL_ANY_STORAGE_HPP
+#ifndef ESL_FLEX_STORAGE_HPP
+#define ESL_FLEX_STORAGE_HPP
 
 #include "type_traits.hpp"
 
 namespace esl {
 
-// any_storage
+// flex_storage
 // Use for any_* contianer
 // Typically no direct use due to it does know which type inside
 
@@ -20,7 +20,7 @@ namespace esl {
 // * swap: this (constructed), other (constructed) -> this (constructed), other (constructed)
 
 template <std::size_t MaxSize = 4 * sizeof(void*), std::size_t MaxAlign = alignof(void*)>
-class any_storage {
+class flex_storage {
 private:
 	union Storage {
 		constexpr Storage() noexcept = default;
@@ -167,41 +167,41 @@ private:
 	Storage storage_;
 
 public:
-	constexpr any_storage() noexcept = default;
+	constexpr flex_storage() noexcept = default;
 
-	any_storage(const any_storage&) = delete;
-	any_storage& operator=(const any_storage) = delete;
+	flex_storage(const flex_storage&) = delete;
+	flex_storage& operator=(const flex_storage) = delete;
 
 	// constructors
 
 	template <class T>
-	any_storage(const any_storage& other, std::in_place_type_t<T>) {
+	flex_storage(const flex_storage& other, std::in_place_type_t<T>) {
 		this->construct<T>(other);
 	}
 
 	template <class T>
-	any_storage(any_storage&& other, std::in_place_type_t<T>) noexcept {
+	flex_storage(flex_storage&& other, std::in_place_type_t<T>) noexcept {
 		this->construct<T>(std::move(other));
 	}
 
-	template <class Value, class = std::enable_if_t<!is_decay_to_v<Value, any_storage>>>
-	any_storage(Value&& value) {
+	template <class Value, class = std::enable_if_t<!is_decay_to_v<Value, flex_storage>>>
+	flex_storage(Value&& value) {
 		this->construct<Value>(std::forward<Value>(value));
 	}
 
 	template <class T, class... Args>
-	any_storage(std::in_place_type_t<T>, Args&&... args) {
+	flex_storage(std::in_place_type_t<T>, Args&&... args) {
 		this->construct<T>(std::forward<Args>(args)...);
 	}
 
 	template <class T, class U, class... Args>
-	any_storage(std::in_place_type_t<T>, std::initializer_list<U> il, Args&&... args) {
+	flex_storage(std::in_place_type_t<T>, std::initializer_list<U> il, Args&&... args) {
 		this->construct<T>(il, std::forward<Args>(args)...);
 	}
 
 	// construct
 
-	template <class T, class... Args, class = std::enable_if_t<!is_types_decay_to_v<any_storage, Args...>>>
+	template <class T, class... Args, class = std::enable_if_t<!is_types_decay_to_v<flex_storage, Args...>>>
 	std::decay_t<T>& construct(Args&&... args) {
 		return Manager<std::decay_t<T>>::construct(storage_, std::forward<Args>(args)...);
 	}
@@ -212,12 +212,12 @@ public:
 	}
 
 	template <class T>
-	std::decay_t<T>& construct(const any_storage& other) {
+	std::decay_t<T>& construct(const flex_storage& other) {
 		return Manager<std::decay_t<T>>::construct(storage_, other.storage_);
 	}
 
 	template <class T>
-	std::decay_t<T>& construct(any_storage&& other) noexcept {
+	std::decay_t<T>& construct(flex_storage&& other) noexcept {
 		return Manager<std::decay_t<T>>::construct(storage_, std::move(other.storage_));
 	}
 
@@ -230,25 +230,25 @@ public:
 
 	// assign
 
-	template <class T, class Value, class = std::enable_if_t<!is_decay_to_v<Value, any_storage>>>
+	template <class T, class Value, class = std::enable_if_t<!is_decay_to_v<Value, flex_storage>>>
 	std::decay_t<T>& assign(Value&& value) {
 		return Manager<std::decay_t<T>>::assign(storage_, std::forward<Value>(value));
 	}
 
 	template <class T>
-	std::decay_t<T>& assign(const any_storage& other) {
+	std::decay_t<T>& assign(const flex_storage& other) {
 		return Manager<std::decay_t<T>>::assign_copy_move(storage_, other.storage_);
 	}
 
 	template <class T>
-	std::decay_t<T>& assign(any_storage&& other) {
+	std::decay_t<T>& assign(flex_storage&& other) {
 		return Manager<std::decay_t<T>>::assign_copy_move(storage_, std::move(other.storage_));
 	}
 
 	// swap
 
 	template <class T, class U = T>
-	void swap(any_storage& other) noexcept {
+	void swap(flex_storage& other) noexcept {
 		Manager<std::decay_t<T>>::template swap<std::decay_t<U>>(storage_, other.storage_);
 	}
 
@@ -277,31 +277,31 @@ public:
 public:
 	template <class T>
 	struct copy_construct_function {
-		static void value(any_storage& to, const any_storage& other) { to.template construct<T>(other); }
+		static void value(flex_storage& to, const flex_storage& other) { to.template construct<T>(other); }
 	};
 	template <class T>
 	struct move_construct_function {
-		static void value(any_storage& to, any_storage&& other) { to.template construct<T>(std::move(other)); }
+		static void value(flex_storage& to, flex_storage&& other) { to.template construct<T>(std::move(other)); }
 	};
 	template <class T>
 	struct destruct_function {
-		static void value(any_storage& s) { s.template destruct<T>(); }
+		static void value(flex_storage& s) { s.template destruct<T>(); }
 	};
 	template <class T>
 	struct copy_assign_function {
-		static void value(any_storage& to, const any_storage& other) { to.template assign<T>(other); }
+		static void value(flex_storage& to, const flex_storage& other) { to.template assign<T>(other); }
 	};
 	template <class T>
 	struct move_assign_function {
-		static void value(any_storage& to, any_storage&& other) { to.template assign<T>(std::move(other)); }
+		static void value(flex_storage& to, flex_storage&& other) { to.template assign<T>(std::move(other)); }
 	};
 	template <class T, class U>
 	struct swap_function {
-		static void value(any_storage& s, any_storage& other) { s.template swap<T, U>(other); }
+		static void value(flex_storage& s, flex_storage& other) { s.template swap<T, U>(other); }
 	};
 };
 
 } // namespace esl
 
-#endif // ESL_ANY_STORAGE_HPP
+#endif // ESL_FLEX_STORAGE_HPP
 

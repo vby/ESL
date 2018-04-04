@@ -1,8 +1,8 @@
-#ifndef ESL_ANY_VARIANT_HPP
-#define ESL_ANY_VARIANT_HPP
+#ifndef ESL_FLEX_VARIANT_HPP
+#define ESL_FLEX_VARIANT_HPP
 
 #include "macros.hpp"
-#include "any_storage.hpp"
+#include "flex_storage.hpp"
 #include "type_traits.hpp"
 #include "utility.hpp"
 #include "array.hpp"
@@ -10,16 +10,16 @@
 
 #include <variant>
 
-// any_variant
+// flex_variant
 // * Use for create a variant with incomplete types
-// * any_variant satisfied with std::variant
+// * flex_variant satisfied with std::variant
 //  except:
 //    * Costructors are not constexpr except default
 
 namespace esl {
 
 template <class... Ts>
-class any_variant;
+class flex_variant;
 
 } // namespace esl
 
@@ -27,11 +27,11 @@ namespace std {
 
 // std::variant_size
 template <class... Ts>
-struct variant_size<::esl::any_variant<Ts...>>: integral_constant<size_t, sizeof...(Ts)> {};
+struct variant_size<::esl::flex_variant<Ts...>>: integral_constant<size_t, sizeof...(Ts)> {};
 
 // std::variant_alternative
 template <size_t I, class... Ts>
-struct variant_alternative<I, ::esl::any_variant<Ts...>>: ::esl::nth_type<I, Ts...> {};
+struct variant_alternative<I, ::esl::flex_variant<Ts...>>: ::esl::nth_type<I, Ts...> {};
 
 } // namespace std
 
@@ -51,11 +51,11 @@ namespace details {
 }
 
 template <class... Ts>
-class any_variant {
+class flex_variant {
 private:
 	friend struct details::AnyVariantStorageAccess;
 
-	using Storage = any_storage<>;
+	using Storage = flex_storage<>;
 
 	static constexpr auto storage_destruct_vtable = make_tuple_vtable_v<Storage::destruct_function, std::tuple<Ts...>>;
 	static constexpr auto storage_swap_vtable = make_tuple_vtable_v<Storage::swap_function, std::tuple<Ts...>, std::tuple<Ts...>>;
@@ -76,7 +76,7 @@ private:
 	template <class T>
 	struct SelectType<T, true>: SelectTypeEnableIf<T, overload_resolution_t<T, Ts...>> {};
 	// workaround for clang++
-	template <class T, bool = std::is_same_v<std::decay_t<T>, any_variant>>
+	template <class T, bool = std::is_same_v<std::decay_t<T>, flex_variant>>
 	struct AcceptedType {};
 	template <class T>
 	struct AcceptedType<T, false>: SelectType<T> {};
@@ -99,17 +99,17 @@ protected:
 
 public:
 	//template <class T0 = nth_type_t<0, Ts...>, class = std::enable_if_t<std::is_default_constructible_v<T0>>>
-	constexpr any_variant() noexcept: storage_(std::in_place_type<nth_type_t<0, Ts...>>), index_(0) {}
+	constexpr flex_variant() noexcept: storage_(std::in_place_type<nth_type_t<0, Ts...>>), index_(0) {}
 
 	//template <bool Dep = true, class = std::enable_if_t<Dep && template_all_of_v<std::is_construct_copyible, Ts...>>>
-	any_variant(const any_variant& other): index_(other.index_) {
+	flex_variant(const flex_variant& other): index_(other.index_) {
 		if (index_ != std::variant_npos) {
 			details::AnyVariantStorageCopy<Storage, Ts...>::vtable[index_](storage_, other.storage_);
 		}
 	}
 
 	//template <bool Dep = true, class = std::enable_if_t<Dep && template_all_of_v<std::is_move_constructible, Ts...>>>
-	any_variant(any_variant&& other) noexcept: index_(other.index_) {
+	flex_variant(flex_variant&& other) noexcept: index_(other.index_) {
 		if (index_ != std::variant_npos) {
 			details::AnyVariantStorageMove<Storage, Ts...>::vtable[index_](storage_, std::move(other.storage_));
 			other.index_ = std::variant_npos;
@@ -117,27 +117,27 @@ public:
 	}
 
 	template <class T, class AT = typename AcceptedType<T&&>::type>
-	any_variant(T&& value): any_variant(std::in_place_type<AT>, std::forward<T>(value)) {}
+	flex_variant(T&& value): flex_variant(std::in_place_type<AT>, std::forward<T>(value)) {}
 
 	template <class T, class... Args, class I = typename ExactlyOnceIndex<T>::type>
-	explicit any_variant(std::in_place_type_t<T>, Args&&... args):
+	explicit flex_variant(std::in_place_type_t<T>, Args&&... args):
 		storage_(std::in_place_type<T>, std::forward<Args>(args)...), index_(I::value) {}
 
 	template <class T, class U, class... Args, class I = typename ExactlyOnceIndex<T>::type>
-	explicit any_variant(std::in_place_type_t<T>, std::initializer_list<U> il, Args&&... args):
+	explicit flex_variant(std::in_place_type_t<T>, std::initializer_list<U> il, Args&&... args):
 		storage_(std::in_place_type<T>, il, std::forward<Args>(args)...), index_(I::value) {}
 
 	template <std::size_t I, class... Args>
-	explicit any_variant(std::in_place_index_t<I>, Args&&... args):
-		storage_(std::in_place_type<std::variant_alternative_t<I, any_variant>>, std::forward<Args>(args)...), index_(I) {}
+	explicit flex_variant(std::in_place_index_t<I>, Args&&... args):
+		storage_(std::in_place_type<std::variant_alternative_t<I, flex_variant>>, std::forward<Args>(args)...), index_(I) {}
 
 	template <std::size_t I, class U, class... Args>
-	explicit any_variant(std::in_place_index_t<I>, std::initializer_list<U> il, Args&&... args):
-		storage_(std::in_place_type<std::variant_alternative_t<I, any_variant>>, il, std::forward<Args>(args)...), index_(I) {}
+	explicit flex_variant(std::in_place_index_t<I>, std::initializer_list<U> il, Args&&... args):
+		storage_(std::in_place_type<std::variant_alternative_t<I, flex_variant>>, il, std::forward<Args>(args)...), index_(I) {}
 
 	// TODO constructor with allocator_tag_t
 
-	any_variant& operator=(const any_variant& other) {
+	flex_variant& operator=(const flex_variant& other) {
 		this->reset();
 		if (other.index_ != std::variant_npos) {
 			details::AnyVariantStorageCopy<Storage, Ts...>::vtable[other.index_](storage_, other.storage_);
@@ -146,7 +146,7 @@ public:
 		return *this;
 	}
 
-	any_variant& operator=(any_variant&& other) noexcept {
+	flex_variant& operator=(flex_variant&& other) noexcept {
 		this->reset();
 		if (other.index_ != std::variant_npos) {
 			details::AnyVariantStorageMove<Storage, Ts...>::vtable[other.index_](storage_, std::move(other.storage_));
@@ -157,12 +157,12 @@ public:
 	}
 
 	template <class T, class AT = typename AcceptedType<T&&>::type>
-	any_variant& operator=(T&& value) {
+	flex_variant& operator=(T&& value) {
 		this->emplace<AT>(std::forward<T>(value));
 		return *this;
 	}
 
-	~any_variant() {
+	~flex_variant() {
 		if (index_ != std::variant_npos) {
 			storage_destruct_vtable[index_](storage_);
 		}
@@ -188,16 +188,16 @@ public:
 	}
 
 	template <std::size_t I, class... Args>
-	std::variant_alternative_t<I, any_variant>& emplace(Args&&... args) {
-		return this->do_emplace<std::variant_alternative_t<I, any_variant>, I>(std::forward<Args>(args)...);
+	std::variant_alternative_t<I, flex_variant>& emplace(Args&&... args) {
+		return this->do_emplace<std::variant_alternative_t<I, flex_variant>, I>(std::forward<Args>(args)...);
 	}
 
 	template <std::size_t I, class U, class... Args>
-	std::variant_alternative_t<I, any_variant>& emplace(std::initializer_list<U> il, Args&&... args) {
-		return this->do_emplace<std::variant_alternative_t<I, any_variant>, I>(il, std::forward<Args>(args)...);
+	std::variant_alternative_t<I, flex_variant>& emplace(std::initializer_list<U> il, Args&&... args) {
+		return this->do_emplace<std::variant_alternative_t<I, flex_variant>, I>(il, std::forward<Args>(args)...);
 	}
 
-	void swap(any_variant& other) noexcept {
+	void swap(flex_variant& other) noexcept {
 		if (index_ == std::variant_npos) {
 			if (other.index_ != std::variant_npos) {
 				details::AnyVariantStorageMove<Storage, Ts...>::vtable[other.index_](storage_, std::move(other.storage_));
@@ -220,10 +220,10 @@ public:
 namespace details {
 	struct AnyVariantStorageAccess {
 		template <class... Ts>
-		static typename any_variant<Ts...>::Storage& get(any_variant<Ts...>& v) noexcept { return v.storage_; }
+		static typename flex_variant<Ts...>::Storage& get(flex_variant<Ts...>& v) noexcept { return v.storage_; }
 
 		template <class... Ts>
-		static const typename any_variant<Ts...>::Storage& get(const any_variant<Ts...>& v) noexcept { return v.storage_; }
+		static const typename flex_variant<Ts...>::Storage& get(const flex_variant<Ts...>& v) noexcept { return v.storage_; }
 	};
 }
 
@@ -233,100 +233,100 @@ namespace std {
 
 // std::holds_alternative
 template <class T, class... Ts>
-inline constexpr bool holds_alternative(const ::esl::any_variant<Ts...>& v) noexcept {
+inline constexpr bool holds_alternative(const ::esl::flex_variant<Ts...>& v) noexcept {
 	return v.index() == ::esl::index_of_v<T, Ts...>;
 }
 
 // std::get<I>
 template <size_t I, class... Ts>
-inline constexpr variant_alternative_t<I, ::esl::any_variant<Ts...>>& get(::esl::any_variant<Ts...>& v) {
+inline constexpr variant_alternative_t<I, ::esl::flex_variant<Ts...>>& get(::esl::flex_variant<Ts...>& v) {
 	if (v.index() != I) {
 		throw std::bad_variant_access{};
 	}
-	return ::esl::details::AnyVariantStorageAccess::get(v).template get<variant_alternative_t<I, ::esl::any_variant<Ts...>>>();
+	return ::esl::details::AnyVariantStorageAccess::get(v).template get<variant_alternative_t<I, ::esl::flex_variant<Ts...>>>();
 }
 template <size_t I, class... Ts>
-inline constexpr const variant_alternative_t<I, ::esl::any_variant<Ts...>>& get(const ::esl::any_variant<Ts...>& v) {
+inline constexpr const variant_alternative_t<I, ::esl::flex_variant<Ts...>>& get(const ::esl::flex_variant<Ts...>& v) {
 	if (v.index() != I) {
 		throw std::bad_variant_access{};
 	}
-	return ::esl::details::AnyVariantStorageAccess::get(v).template get<variant_alternative_t<I, ::esl::any_variant<Ts...>>>();
+	return ::esl::details::AnyVariantStorageAccess::get(v).template get<variant_alternative_t<I, ::esl::flex_variant<Ts...>>>();
 }
 template <size_t I, class... Ts>
-inline constexpr variant_alternative_t<I, ::esl::any_variant<Ts...>>&& get(::esl::any_variant<Ts...>&& v) {
+inline constexpr variant_alternative_t<I, ::esl::flex_variant<Ts...>>&& get(::esl::flex_variant<Ts...>&& v) {
 	return std::move(std::get<I>(v));
 }
 template <size_t I, class... Ts>
-inline constexpr variant_alternative_t<I, ::esl::any_variant<Ts...>> const&& get(const ::esl::any_variant<Ts...>&& v) {
+inline constexpr variant_alternative_t<I, ::esl::flex_variant<Ts...>> const&& get(const ::esl::flex_variant<Ts...>&& v) {
 	return std::move(std::get<I>(v));
 }
 // std::get<T>
 template <class T, class... Ts>
-inline constexpr T& get(::esl::any_variant<Ts...>& v) {
+inline constexpr T& get(::esl::flex_variant<Ts...>& v) {
 	static_assert(::esl::is_exactly_once_v<T, Ts...>, "T should occur for exactly once in alternatives");
 	return get<::esl::index_of_v<T, Ts...>>(v);
 }
 template <class T, class... Ts>
-inline constexpr const T& get(const ::esl::any_variant<Ts...>& v) {
+inline constexpr const T& get(const ::esl::flex_variant<Ts...>& v) {
 	static_assert(::esl::is_exactly_once_v<T, Ts...>, "T should occur for exactly once in alternatives");
 	return get<::esl::index_of_v<T, Ts...>>(v);
 }
 template <class T, class... Ts>
-inline constexpr T&& get(::esl::any_variant<Ts...>&& v) {
+inline constexpr T&& get(::esl::flex_variant<Ts...>&& v) {
 	return move(get<T>(v));
 }
 template <class T, class... Ts>
-inline constexpr const T&& get(const ::esl::any_variant<Ts...>&& v) {
+inline constexpr const T&& get(const ::esl::flex_variant<Ts...>&& v) {
 	return move(get<T>(v));
 }
 
 // std::get_if
 template <size_t I, class... Ts>
-inline constexpr add_pointer_t<variant_alternative_t<I, ::esl::any_variant<Ts...>>> get_if(::esl::any_variant<Ts...>* vap) {
+inline constexpr add_pointer_t<variant_alternative_t<I, ::esl::flex_variant<Ts...>>> get_if(::esl::flex_variant<Ts...>* vap) {
 	if (!vap || vap->index() != I) {
 		return nullptr;
 	}
-	return &::esl::details::AnyVariantStorageAccess::get(*vap).template get<variant_alternative_t<I, ::esl::any_variant<Ts...>>>();
+	return &::esl::details::AnyVariantStorageAccess::get(*vap).template get<variant_alternative_t<I, ::esl::flex_variant<Ts...>>>();
 }
 template <size_t I, class... Ts>
-inline constexpr add_pointer_t<const variant_alternative_t<I, ::esl::any_variant<Ts...>>> get_if(const ::esl::any_variant<Ts...>* vap) {
+inline constexpr add_pointer_t<const variant_alternative_t<I, ::esl::flex_variant<Ts...>>> get_if(const ::esl::flex_variant<Ts...>* vap) {
 	if (!vap || vap->index() != I) {
 		return nullptr;
 	}
-	return &::esl::details::AnyVariantStorageAccess::get(*vap).template get<variant_alternative_t<I, ::esl::any_variant<Ts...>>>();
+	return &::esl::details::AnyVariantStorageAccess::get(*vap).template get<variant_alternative_t<I, ::esl::flex_variant<Ts...>>>();
 }
 template <class T, class... Ts>
-inline constexpr add_pointer_t<T> get_if(::esl::any_variant<Ts...>* vap) {
+inline constexpr add_pointer_t<T> get_if(::esl::flex_variant<Ts...>* vap) {
 	static_assert(::esl::is_exactly_once_v<T, Ts...>, "T should occur for exactly once in alternatives");
 	return get_if<::esl::index_of_v<T, Ts...>>(vap);
 }
 template <class T, class... Ts>
-inline constexpr add_pointer_t<const T> get_if(const ::esl::any_variant<Ts...>* vap) {
+inline constexpr add_pointer_t<const T> get_if(const ::esl::flex_variant<Ts...>* vap) {
 	static_assert(::esl::is_exactly_once_v<T, Ts...>, "T should occur for exactly once in alternatives");
 	return get_if<::esl::index_of_v<T, Ts...>>(vap);
 }
 
 // std::swap
 template <class... Ts>
-inline void swap(::esl::any_variant<Ts...>& lhs, ::esl::any_variant<Ts...>& rhs) noexcept(noexcept(lhs.swap(rhs))) {
+inline void swap(::esl::flex_variant<Ts...>& lhs, ::esl::flex_variant<Ts...>& rhs) noexcept(noexcept(lhs.swap(rhs))) {
 	lhs.swap(rhs);
 }
 
 // std::hash
 template <class... Ts>
-struct hash<::esl::any_variant<Ts...>> {
+struct hash<::esl::flex_variant<Ts...>> {
 private:
 	using hasher_type = tuple<hash<decay_t<Ts>>...>;
 	hasher_type hasher_;
 
 	template <size_t I> struct HashFunction {
-		static size_t value(const hasher_type& hasher, const ::esl::any_variant<Ts...>& v) {
+		static size_t value(const hasher_type& hasher, const ::esl::flex_variant<Ts...>& v) {
 			return ::esl::hash_combine(get<I>(hasher)(std::get<I>(v)), I);
 		}
 	};
 	static constexpr auto vtable = ::esl::make_index_sequence_vtable_v<HashFunction, sizeof...(Ts)>;
 public:
-	size_t operator()(const ::esl::any_variant<Ts...>& v) const { return vtable[v.index()](hasher_, v); }
+	size_t operator()(const ::esl::flex_variant<Ts...>& v) const { return vtable[v.index()](hasher_, v); }
 };
 
 } // namespace std
@@ -347,13 +347,13 @@ template <template <class> class Comp, class... Ts>
 struct VariantComp {
 private:
 	template <std::size_t I> struct CompFunction {
-		static bool value(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) {
+		static bool value(const flex_variant<Ts...>& lhs, const flex_variant<Ts...>& rhs) {
 			return Comp<nth_type_t<I, Ts...>>{}(std::get<I>(lhs), std::get<I>(rhs));
 		}
 	};
 	static constexpr auto vtable = make_index_sequence_vtable_v<CompFunction, sizeof...(Ts)>;
 public:
-	constexpr bool operator()(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) const { return vtable[lhs.index()](lhs, rhs); }
+	constexpr bool operator()(const flex_variant<Ts...>& lhs, const flex_variant<Ts...>& rhs) const { return vtable[lhs.index()](lhs, rhs); }
 };
 
 template <class ResultType, class Visitor, class... Variants>
@@ -389,15 +389,15 @@ inline constexpr decltype(auto) visit(Visitor&& vis, Variants&&... vars) {
 
 // operators
 template <class... Ts>
-inline constexpr bool operator==(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) {
+inline constexpr bool operator==(const flex_variant<Ts...>& lhs, const flex_variant<Ts...>& rhs) {
 	return lhs.index() == rhs.index() && (lhs.valueless_by_exception() || details::VariantComp<std::equal_to, Ts...>{}(lhs, rhs));
 }
 template <class... Ts>
-inline constexpr bool operator!=(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) {
+inline constexpr bool operator!=(const flex_variant<Ts...>& lhs, const flex_variant<Ts...>& rhs) {
 	return lhs.index() != rhs.index() || (!lhs.valueless_by_exception() && details::VariantComp<std::not_equal_to, Ts...>{}(lhs, rhs));
 }
 template <class... Ts>
-inline constexpr bool operator<(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) {
+inline constexpr bool operator<(const flex_variant<Ts...>& lhs, const flex_variant<Ts...>& rhs) {
 	if (rhs.valueless_by_exception()) {
 		return false;
 	}
@@ -407,7 +407,7 @@ inline constexpr bool operator<(const any_variant<Ts...>& lhs, const any_variant
 	return lhs.index() < rhs.index() || (lhs.index() == rhs.index() && details::VariantComp<std::less, Ts...>{}(lhs, rhs));
 }
 template <class... Ts>
-inline constexpr bool operator>(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) {
+inline constexpr bool operator>(const flex_variant<Ts...>& lhs, const flex_variant<Ts...>& rhs) {
 	if (lhs.valueless_by_exception()) {
 		return false;
 	}
@@ -417,7 +417,7 @@ inline constexpr bool operator>(const any_variant<Ts...>& lhs, const any_variant
 	return lhs.index() > rhs.index() || (lhs.index() == rhs.index() && details::VariantComp<std::greater, Ts...>{}(lhs, rhs));
 }
 template <class... Ts>
-inline constexpr bool operator<=(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) {
+inline constexpr bool operator<=(const flex_variant<Ts...>& lhs, const flex_variant<Ts...>& rhs) {
 	if (lhs.valueless_by_exception()) {
 		return true;
 	}
@@ -427,7 +427,7 @@ inline constexpr bool operator<=(const any_variant<Ts...>& lhs, const any_varian
 	return lhs.index() < rhs.index() || (lhs.index() == rhs.index() && details::VariantComp<std::less_equal, Ts...>{}(lhs, rhs));
 }
 template <class... Ts>
-inline constexpr bool operator>=(const any_variant<Ts...>& lhs, const any_variant<Ts...>& rhs) {
+inline constexpr bool operator>=(const flex_variant<Ts...>& lhs, const flex_variant<Ts...>& rhs) {
 	if (rhs.valueless_by_exception()) {
 		return true;
 	}
@@ -439,5 +439,5 @@ inline constexpr bool operator>=(const any_variant<Ts...>& lhs, const any_varian
 
 } // namespace esl
 
-#endif // ESL_ANY_VARIANT_HPP
+#endif // ESL_FLEX_VARIANT_HPP
 

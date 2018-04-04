@@ -1,22 +1,22 @@
 
 #include <gtest/gtest.h>
-#include <esl/any_variant.hpp>
+#include <esl/flex_variant.hpp>
 #include <string>
 
 TEST(AnyVariantTest, default_construct) {
-	esl::any_variant<std::string, bool> v;
+	esl::flex_variant<std::string, bool> v;
 	ASSERT_EQ(v.index(), 0);
 	ASSERT_FALSE(v.valueless_by_exception());
 }
 
 TEST(AnyVariantTest, construct) {
 	{
-		esl::any_variant<int, bool, std::string> va;
+		esl::flex_variant<int, bool, std::string> va;
 		ASSERT_FALSE(va.valueless_by_exception());
 		ASSERT_EQ(va.index(), 0);
 	}
 	{
-		esl::any_variant<int, bool, std::string> va(123);
+		esl::flex_variant<int, bool, std::string> va(123);
 		ASSERT_EQ(va.index(), 0);
 		va = false;
 		ASSERT_EQ(va.index(), 1);
@@ -29,7 +29,7 @@ TEST(AnyVariantTest, construct) {
 		ASSERT_EQ(va.index(), 1);
 	}
 	{
-		esl::any_variant<int, int> v;
+		esl::flex_variant<int, int> v;
 		ASSERT_EQ(v.index(), 0);
 		v.emplace<1>(10);
 		ASSERT_EQ(v.index(), 1);
@@ -38,14 +38,14 @@ TEST(AnyVariantTest, construct) {
 }
 
 TEST(AnyVariantTest, get) {
-	esl::any_variant<int, bool, std::string> v(false);
+	esl::flex_variant<int, bool, std::string> v(false);
 	ASSERT_THROW(std::get<int>(v), std::bad_variant_access);
 	bool&& rb = std::get<bool>(std::move(v));
 	ASSERT_EQ(rb, false);
 }
 
 TEST(AnyVariantTest, get_if) {
-	esl::any_variant<int, bool, std::string> v(std::string("hello"));
+	esl::flex_variant<int, bool, std::string> v(std::string("hello"));
 	int* ip = std::get_if<int>(&v);
 	ASSERT_EQ(ip, nullptr);
 	std::string* sp = std::get_if<std::string>(&v);
@@ -53,8 +53,8 @@ TEST(AnyVariantTest, get_if) {
 }
 
 TEST(AnyVariantTest, visit) {
-	esl::any_variant<int, bool, std::string> v1(false);
-	esl::any_variant<float, std::string> v2(std::string("hello"));
+	esl::flex_variant<int, bool, std::string> v1(false);
+	esl::flex_variant<float, std::string> v2(std::string("hello"));
 	auto f = [](auto&& arg, auto&& arg2) -> std::size_t {
 			return esl::index_of_v<std::remove_reference_t<decltype(arg)>, int, bool, std::string>
 				+ esl::index_of_v<std::remove_reference_t<decltype(arg2)>, float, std::string>;
@@ -73,7 +73,7 @@ TEST(AnyVariantTest, visit) {
 }
 
 TEST(AnyVariantTest, hash) {
-	using va_type = esl::any_variant<int, bool, int>;
+	using va_type = esl::flex_variant<int, bool, int>;
 
 	va_type va(std::in_place_index<0>, 100);
 	auto h1 = esl::hash_value(va);
@@ -95,12 +95,12 @@ TEST(AnyVariantTest, hash) {
 }
 
 TEST(AnyVariantTest, comp) {
-	esl::any_variant<int, bool> va0;
-	esl::any_variant<int, bool> va00;
-	esl::any_variant<int, bool> va1(123);
-	esl::any_variant<int, bool> va2(123);
-	esl::any_variant<int, bool> va3(456);
-	esl::any_variant<int, bool> va4(true);
+	esl::flex_variant<int, bool> va0;
+	esl::flex_variant<int, bool> va00;
+	esl::flex_variant<int, bool> va1(123);
+	esl::flex_variant<int, bool> va2(123);
+	esl::flex_variant<int, bool> va3(456);
+	esl::flex_variant<int, bool> va4(true);
 	ASSERT_EQ(va0, va0);
 	ASSERT_EQ(va0, va00);
 	ASSERT_FALSE(va0 != va00);

@@ -3,7 +3,7 @@
 
 #include <yaml.h>
 
-#include "any_variant.hpp"
+#include "flex_variant.hpp"
 #include "functional.hpp"
 
 #include <cassert>
@@ -50,7 +50,7 @@ enum index {
 	map_index,
 };
 
-using node_base = any_variant<null_t, bool_t, int_t, float_t, str, seq, map>;
+using node_base = flex_variant<null_t, bool_t, int_t, float_t, str, seq, map>;
 
 class node: public node_base {
 public:
@@ -62,6 +62,7 @@ public:
 	using node_base::operator=;
 
 	// workaound for gcc
+	/*
 	node(const node& other): node_base(static_cast<const node_base&>(other)) {}
 	node(node&& other): node_base(static_cast<node_base&&>(std::move(other))) {}
 	node& operator=(const node& other) {
@@ -71,7 +72,7 @@ public:
 	node& operator=(node&& other) {
 		this->node_base::operator=(static_cast<node_base&&>(std::move(other)));
 		return *this;
-	}
+	}*/
 
 	// TODO universal type deduction guide
 	// Enforce const char* deduce to std::string
@@ -324,7 +325,7 @@ public:
 	}
 	void scalar(std::string_view sv) {
 		yaml_char_t* value = const_cast<yaml_char_t*>(reinterpret_cast<const yaml_char_t*>(sv.data()));
-		if (!yaml_scalar_event_initialize(&ev_, nullptr, nullptr, value, sv.size(), 1, 1, YAML_ANY_SCALAR_STYLE)) {
+		if (!yaml_scalar_event_initialize(&ev_, nullptr, nullptr, value, static_cast<int>(sv.size()), 1, 1, YAML_ANY_SCALAR_STYLE)) {
 			throw std::bad_alloc{};
 		}
 		this->emit();

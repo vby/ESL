@@ -1,11 +1,11 @@
 
 #include <gtest/gtest.h>
-#include <esl/any_type.hpp>
+#include <esl/flex.hpp>
 #include <cstdint>
 
 struct TypeA;
 
-using AnyTypeA = esl::any_type<TypeA>;
+using AnyTypeA = esl::flex<TypeA>;
 using TypeAPair = std::pair<AnyTypeA, bool>;
 
 TypeAPair a_pair;
