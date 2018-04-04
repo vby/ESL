@@ -16,26 +16,36 @@ private:
 	Storage storage_;
 
 public:
-	any_type(): storage_(std::in_place_type<T>) {}
+	// constructors
+	constexpr any_type(): storage_(std::in_place_type<T>) {}
+
+	template <class... Args, class = std::enable_if_t<!is_types_decay_to_v<any_type, Args...>>>
+	any_type(Args&&... args): storage_(std::in_place_type<T>, std::forward<Args>(args)...) {}
 
 	any_type(const any_type& other): storage_(other.storage_, std::in_place_type<T>) {}
 
 	any_type(any_type&& other): storage_(std::move(other.storage_), std::in_place_type<T>) {}
 
+	// operator=
+	template <class Value, class = std::enable_if_t<!is_decay_to_v<Value, any_storage>>>
+	any_type& assign(Value&& value) {
+		storage_.assign<T>(std::forward<Value>(value));
+		return *this;
+	}
+
 	any_type& operator=(const any_type& other) {
-		storage_.destruct<T>();
-		storage_.construct<T>(other.storage_);
+		storage_.assign<T>(other.storage_);
 		return *this;
 	}
 
 	any_type& operator=(any_type&& other) {
-		storage_.destruct<T>();
 		storage_.construct<T>(std::move(other.storage_));
+		other.storage_.template construct<T>();
 		return *this;
 	}
 
 	~any_type() {
-		storage_.destruct<T> {};
+		storage_.destruct<T>();
 	}
 
 	void swap(any_type& other) noexcept {

@@ -140,6 +140,12 @@ struct is_one_of<T, U, Us...>: std::bool_constant<std::is_same_v<T, U> || is_one
 template <class T, class... Us>
 inline constexpr bool is_one_of_v = is_one_of<T, Us...>::value;
 
+// is_decay_to, is_decay_to_v
+template <class From, class To>
+struct is_decay_to: std::is_same<std::decay_t<From>, To> {};
+template <class From, class To>
+inline constexpr bool is_decay_to_v = is_decay_to<From, To>::value;
+
 namespace details {
 
 // is_base_of_template_test
@@ -316,6 +322,14 @@ template <class T, class... Ts>
 struct is_exactly_once: std::bool_constant<count_of_v<T, Ts...> == 1> {};
 template <class T, class... Ts>
 inline constexpr bool is_exactly_once_v = is_exactly_once<T, Ts...>::value;
+
+// is_types_decay_to, is_types_decay_to_v
+template <class T, class... Ts>
+struct is_types_decay_to: std::false_type {};
+template <class T, class First>
+struct is_types_decay_to<T, First>: is_decay_to<First, T> {};
+template <class T, class... Ts>
+inline constexpr bool is_types_decay_to_v = is_types_decay_to<T, Ts...>::value;
 
 // template_all_of, template_all_of_v
 template <template <class> class Pred, class... Ts>

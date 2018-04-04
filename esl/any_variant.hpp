@@ -42,11 +42,11 @@ namespace details {
 
 	template <class Storage, class... Ts>
 	struct AnyVariantStorageCopy {
-		static constexpr auto vtable = make_tuple_vtable_v<Storage::template copy_function, std::tuple<Ts...>>;
+		static constexpr auto vtable = make_tuple_vtable_v<Storage::template copy_construct_function, std::tuple<Ts...>>;
 	};
 	template <class Storage, class... Ts>
 	struct AnyVariantStorageMove {
-		static constexpr auto vtable = make_tuple_vtable_v<Storage::template move_function, std::tuple<Ts...>>;
+		static constexpr auto vtable = make_tuple_vtable_v<Storage::template move_construct_function, std::tuple<Ts...>>;
 	};
 }
 
@@ -101,7 +101,7 @@ public:
 	//template <class T0 = nth_type_t<0, Ts...>, class = std::enable_if_t<std::is_default_constructible_v<T0>>>
 	constexpr any_variant() noexcept: storage_(std::in_place_type<nth_type_t<0, Ts...>>), index_(0) {}
 
-	//template <bool Dep = true, class = std::enable_if_t<Dep && template_all_of_v<std::is_copy_constructible, Ts...>>>
+	//template <bool Dep = true, class = std::enable_if_t<Dep && template_all_of_v<std::is_construct_copyible, Ts...>>>
 	any_variant(const any_variant& other): index_(other.index_) {
 		if (index_ != std::variant_npos) {
 			details::AnyVariantStorageCopy<Storage, Ts...>::vtable[index_](storage_, other.storage_);
