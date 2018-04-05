@@ -33,18 +33,17 @@ public:
 
 	template <class Value, class = std::enable_if_t<!is_decay_to_v<Value, flex>>>
 	flex& operator=(Value&& value) {
-		storage_.assign<T>(std::forward<Value>(value));
+		storage_.get<T>() = std::forward<Value>(value);
 		return *this;
 	}
 
 	flex& operator=(const flex& other) {
-		storage_.assign<T>(other.storage_);
+		storage_.get<T>() = other.storage_.template get<T>();
 		return *this;
 	}
 
 	flex& operator=(flex&& other) noexcept {
-		storage_.construct<T>(std::move(other.storage_));
-		other.storage_.template construct<T>();
+		storage_.get<T>() = std::move(other.storage_.template get<T>());
 		return *this;
 	}
 

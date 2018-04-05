@@ -13,9 +13,6 @@ namespace esl {
 // * construct: this (unconstructed) -> this (constructed)
 // * construct(copy): this (unconstructed), other (constructed) -> this (constructed), other (constructed)
 // * construct(move): this (unconstructed), other (constructed) -> this (constructed), other (unconstructed)
-// * assign: this (constructed) -> this (constructed)
-// * assign_copy_move(copy): this (constructed), other (constructed) -> this (constructed), other (constructed)
-// * assign_copy_move(move): this (constructed), other (constructed) -> this (constructed), other (unconstructed)
 // * destruct: this (constructed) -> this (unconstructed)
 // * swap: this (constructed), other (constructed) -> this (constructed), other (constructed)
 
@@ -36,6 +33,7 @@ private:
 	using InPlace = std::bool_constant<(sizeof(T) <= sizeof(Storage) && alignof(T) <= alignof(Storage)
 			&& std::is_nothrow_move_constructible_v<T>) && std::is_nothrow_move_assignable_v<T>>;
 
+public:
 	template <class T, bool = InPlace<T>::value>
 	struct Manager {
 		// construct
@@ -60,24 +58,6 @@ private:
 			reinterpret_cast<T*>(&s)->~T();
 		}
 
-		// assign
-		template <class Value>
-		static T& assign(Storage& s, Value&& value) {
-			T& val = reinterpret_cast<T&>(s);
-			val = std::forward<Value>(value);
-			return val;
-		}
-		static T& assign_copy_move(Storage& s, const Storage& other) {
-			T& val = reinterpret_cast<T&>(s);
-			val = reinterpret_cast<std::add_const_t<T>&>(other);
-			return val;
-		}
-		static T& assign_copy_move(Storage& s, Storage&& other) noexcept {
-			T& val = reinterpret_cast<T&>(s);
-			val = std::move(reinterpret_cast<T&>(other));
-			return val;
-		}
-
 		// swap
 		template <class U>
 		static void swap(Storage& s, Storage& other) noexcept {
@@ -91,10 +71,10 @@ private:
 		}
 
 		// get
-		static T& get(Storage& s) noexcept {
+		static constexpr T& get(Storage& s) noexcept {
 			return reinterpret_cast<T&>(s);
 		}
-		static const T& get(const Storage& s) noexcept {
+		static constexpr const T& get(const Storage& s) noexcept {
 			return reinterpret_cast<const T&>(s);
 		}
 	};
@@ -125,24 +105,6 @@ private:
 			delete static_cast<T*>(s.ptr);
 		}
 
-		// assign
-		template <class Value>
-		static T& assign(Storage& s, Value&& value) {
-			T& val = *static_cast<T*>(s.ptr);
-			val = std::forward<Value>(value);
-			return val;
-		}
-		static T& assign_copy_move(Storage& s, const Storage& other) {
-			T& val = *static_cast<T*>(s.ptr);
-			val = *static_cast<std::add_const_t<T>*>(other.ptr);
-			return val;
-		}
-		static T& assign_copy_move(Storage& s, Storage&& other) noexcept {
-			static_cast<T*>(s.ptr)->~T();
-			s.ptr = other.ptr;
-			return *static_cast<T*>(s.ptr);
-		}
-
 		// swap
 		template <class U>
 		static void swap(Storage& s, Storage& other) noexcept {
@@ -156,10 +118,10 @@ private:
 		}
 
 		// get
-		static T& get(Storage& s) noexcept {
+		static constexpr T& get(Storage& s) noexcept {
 			return *static_cast<T*>(s.ptr);
 		}
-		static const T& get(const Storage& s) noexcept {
+		static constexpr const T& get(const Storage& s) noexcept {
 			return *static_cast<const T*>(s.ptr);
 		}
 	};
@@ -167,12 +129,12 @@ private:
 	Storage storage_;
 
 public:
+	// Constructors
+
 	constexpr flex_storage() noexcept = default;
 
 	flex_storage(const flex_storage&) = delete;
 	flex_storage& operator=(const flex_storage) = delete;
-
-	// constructors
 
 	template <class T>
 	flex_storage(const flex_storage& other, std::in_place_type_t<T>) {
@@ -228,23 +190,6 @@ public:
 		Manager<std::decay_t<T>>::destruct(storage_);
 	}
 
-	// assign
-
-	template <class T, class Value, class = std::enable_if_t<!is_decay_to_v<Value, flex_storage>>>
-	std::decay_t<T>& assign(Value&& value) {
-		return Manager<std::decay_t<T>>::assign(storage_, std::forward<Value>(value));
-	}
-
-	template <class T>
-	std::decay_t<T>& assign(const flex_storage& other) {
-		return Manager<std::decay_t<T>>::assign_copy_move(storage_, other.storage_);
-	}
-
-	template <class T>
-	std::decay_t<T>& assign(flex_storage&& other) {
-		return Manager<std::decay_t<T>>::assign_copy_move(storage_, std::move(other.storage_));
-	}
-
 	// swap
 
 	template <class T, class U = T>
@@ -286,14 +231,6 @@ public:
 	template <class T>
 	struct destruct_function {
 		static void value(flex_storage& s) { s.template destruct<T>(); }
-	};
-	template <class T>
-	struct copy_assign_function {
-		static void value(flex_storage& to, const flex_storage& other) { to.template assign<T>(other); }
-	};
-	template <class T>
-	struct move_assign_function {
-		static void value(flex_storage& to, flex_storage&& other) { to.template assign<T>(std::move(other)); }
 	};
 	template <class T, class U>
 	struct swap_function {

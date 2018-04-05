@@ -218,14 +218,16 @@ public:
 };
 
 namespace details {
-	struct FlexVariantStorageAccess {
-		template <class... Ts>
-		static typename flex_variant<Ts...>::Storage& get(flex_variant<Ts...>& v) noexcept { return v.storage_; }
 
-		template <class... Ts>
-		static const typename flex_variant<Ts...>::Storage& get(const flex_variant<Ts...>& v) noexcept { return v.storage_; }
-	};
-}
+struct FlexVariantStorageAccess {
+	template <class... Ts>
+	static typename flex_variant<Ts...>::Storage& get(flex_variant<Ts...>& v) noexcept { return v.storage_; }
+
+	template <class... Ts>
+	static const typename flex_variant<Ts...>::Storage& get(const flex_variant<Ts...>& v) noexcept { return v.storage_; }
+};
+
+} // namespace details
 
 } // namespace esl
 
