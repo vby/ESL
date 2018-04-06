@@ -31,7 +31,7 @@ public:
 
 	// operator=
 
-	template <class Value, class = std::enable_if_t<!is_decay_to_v<Value, flex>>>
+	template <class Value = T, class = std::enable_if_t<!is_decay_to_v<Value, flex>>>
 	flex& operator=(Value&& value) {
 		storage_.get<T>() = std::forward<Value>(value);
 		return *this;

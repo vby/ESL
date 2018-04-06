@@ -101,7 +101,7 @@ public:
 	//template <class T0 = nth_type_t<0, Ts...>, class = std::enable_if_t<std::is_default_constructible_v<T0>>>
 	constexpr flex_variant() noexcept: storage_(std::in_place_type<nth_type_t<0, Ts...>>), index_(0) {}
 
-	//template <bool Dep = true, class = std::enable_if_t<Dep && template_all_of_v<std::is_construct_copyible, Ts...>>>
+	//template <bool Dep = true, class = std::enable_if_t<Dep && template_all_of_v<std::is_copy_constructible, Ts...>>>
 	flex_variant(const flex_variant& other): index_(other.index_) {
 		if (index_ != std::variant_npos) {
 			details::FlexVariantStorageCopy<Storage, Ts...>::vtable[index_](storage_, other.storage_);

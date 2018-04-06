@@ -54,24 +54,7 @@ using node_base = flex_variant<null_t, bool_t, int_t, float_t, str, seq, map>;
 
 class node: public node_base {
 public:
-	// workaound for MSVC
-	constexpr node() = default;
-
 	using node_base::node_base;
-
-	using node_base::operator=;
-
-	// workaound for gcc
-	node(const node& other): node_base(static_cast<const node_base&>(other)) {}
-	node(node&& other): node_base(static_cast<node_base&&>(std::move(other))) {}
-	node& operator=(const node& other) {
-		this->node_base::operator=(static_cast<const node_base&>(other));
-		return *this;
-	}
-	node& operator=(node&& other) {
-		this->node_base::operator=(static_cast<node_base&&>(std::move(other)));
-		return *this;
-	}
 
 	// TODO universal type deduction guide
 	// Enforce const char* deduce to std::string

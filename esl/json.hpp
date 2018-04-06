@@ -39,8 +39,6 @@ using value_base = flex_variant<null_t, boolean, number, string, array, object>;
 class value: public value_base {
 public:
     using value_base::value_base;
-
-    using value_base::operator=;
 };
 
 } // namespace json
