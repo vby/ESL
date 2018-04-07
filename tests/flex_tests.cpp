@@ -14,6 +14,7 @@ struct TypeA {
 	int a;
 	bool b;
 	TypeA(): a(0), b(false) {}
+	TypeA(int a): a(a), b(false) {}
 	TypeA(int a, bool b): a(a), b(b) {}
 
 	TypeA& operator=(int a) {
@@ -27,11 +28,14 @@ TEST(FlexTypeTest, small) {
 	a_pair.first.value().a = 100;
 	ASSERT_EQ(a_pair.first.value().a, 100);
 
-	a_pair = TypeAPair{FlexTypeA{10, true}, false};
+	a_pair = TypeAPair{FlexTypeA{std::in_place, 10, true}, false};
 	ASSERT_EQ(a_pair.first.value().a, 10);
 	ASSERT_EQ(a_pair.first.value().b, true);
 
 	a_pair.first.value() = 50;
 	ASSERT_EQ(a_pair.first.value().a, 50);
+
+	FlexTypeA a(std::in_place, 10);
+	ASSERT_EQ(a->a, 10);
 }
 

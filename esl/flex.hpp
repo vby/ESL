@@ -20,8 +20,12 @@ public:
 
 	constexpr flex(): storage_(std::in_place_type<T>) {}
 
-	template <class... Args, class = std::enable_if_t<!is_types_decay_to_v<flex, Args...>>>
-	flex(Args&&... args): storage_(std::in_place_type<T>, std::forward<Args>(args)...) {}
+	//template <class... Args, class = std::enable_if_t<!is_types_decay_to_v<flex, Args...> && std::is_constructible_v<T, Args&&...>>>
+	template <class... Args>
+	flex(std::in_place_t, Args&&... args): storage_(std::in_place_type<T>, std::forward<Args>(args)...) {}
+
+	template <class U, class... Args>
+	flex(std::in_place_t, std::initializer_list<U> il, Args&&... args): storage_(std::in_place_type<T>, il, std::forward<Args>(args)...) {}
 
 	flex(const flex& other): storage_(other.storage_, std::in_place_type<T>) {}
 

@@ -92,7 +92,7 @@ protected:
 	template <class T, std::size_t I, class... Args>
 	ESL_ATTR_FORCEINLINE T& do_emplace(Args&&... args) {
 		this->reset();
-		auto& val = storage_.construct<T>(std::forward<Args>(args)...);
+		auto& val = storage_.construct<T>(std::in_place, std::forward<Args>(args)...);
 		index_ = I;
 		return val;
 	}

@@ -37,8 +37,8 @@ public:
 	template <class T, bool = InPlace<T>::value>
 	struct Manager {
 		// construct
-		template <class... Args, class = std::enable_if_t<!is_types_decay_to_v<Storage, Args...>>>
-		static T& construct(Storage& s, Args&&... args) {
+		template <class... Args>
+		static T& construct(Storage& s, std::in_place_t, Args&&... args) {
 			return *(new(&s) T(std::forward<Args>(args)...));
 		}
 
@@ -83,7 +83,7 @@ public:
 	struct Manager<T, false> {
 		// construct
 		template <class... Args>
-		static T& construct(Storage& s, Args&&... args) {
+		static T& construct(Storage& s, std::in_place_t, Args&&... args) {
 			T* val = new T(std::forward<Args>(args)...);
 			s.ptr = val;
 			return *val;
@@ -137,12 +137,12 @@ public:
 	flex_storage& operator=(const flex_storage) = delete;
 
 	template <class T>
-	flex_storage(const flex_storage& other, std::in_place_type_t<T>) {
+	explicit flex_storage(const flex_storage& other, std::in_place_type_t<T>) {
 		this->construct<T>(other);
 	}
 
 	template <class T>
-	flex_storage(flex_storage&& other, std::in_place_type_t<T>) noexcept {
+	explicit flex_storage(flex_storage&& other, std::in_place_type_t<T>) noexcept {
 		this->construct<T>(std::move(other));
 	}
 
@@ -152,25 +152,25 @@ public:
 	}
 
 	template <class T, class... Args>
-	flex_storage(std::in_place_type_t<T>, Args&&... args) {
-		this->construct<T>(std::forward<Args>(args)...);
+	explicit flex_storage(std::in_place_type_t<T>, Args&&... args) {
+		this->construct<T>(std::in_place, std::forward<Args>(args)...);
 	}
 
 	template <class T, class U, class... Args>
-	flex_storage(std::in_place_type_t<T>, std::initializer_list<U> il, Args&&... args) {
-		this->construct<T>(il, std::forward<Args>(args)...);
+	explicit flex_storage(std::in_place_type_t<T>, std::initializer_list<U> il, Args&&... args) {
+		this->construct<T>(std::in_place, il, std::forward<Args>(args)...);
 	}
 
 	// construct
 
-	template <class T, class... Args, class = std::enable_if_t<!is_types_decay_to_v<flex_storage, Args...>>>
-	std::decay_t<T>& construct(Args&&... args) {
-		return Manager<std::decay_t<T>>::construct(storage_, std::forward<Args>(args)...);
+	template <class T, class... Args>
+	std::decay_t<T>& construct(std::in_place_t, Args&&... args) {
+		return Manager<std::decay_t<T>>::construct(storage_, std::in_place, std::forward<Args>(args)...);
 	}
 
 	template <class T, class U, class... Args>
-	std::decay_t<T>& construct(std::initializer_list<U> il, Args&&... args) {
-		return Manager<std::decay_t<T>>::construct(storage_, il, std::forward<Args>(args)...);
+	std::decay_t<T>& construct(std::in_place_t, std::initializer_list<U> il, Args&&... args) {
+		return Manager<std::decay_t<T>>::construct(storage_, std::in_place, il, std::forward<Args>(args)...);
 	}
 
 	template <class T>
