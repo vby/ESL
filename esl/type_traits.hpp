@@ -355,52 +355,55 @@ inline constexpr bool template_none_of_v = template_none_of<Pred, Ts...>::value;
 
 namespace details {
 
+// c++14
 template <class... Ts>
-struct overloaded {};
+struct Overload {};
 template <class T, class... Rest>
-struct overloaded<T, Rest...>: T, overloaded<Rest...> {
+struct Overload<T, Rest...>: T, Overload<Rest...> {
 	using T::operator();
-	using overloaded<Rest...>::operator();
+	using Overload<Rest...>::operator();
 };
 template <class T>
-struct overloaded<T>: T { using T::operator(); };
+struct Overload<T>: T { using T::operator(); };
 
-template <class T>
-struct overload_resolution_candidate { T operator()(T); };
-template <class... Ts>
-struct overload_resolution_overloaded: overloaded<overload_resolution_candidate<Ts>...> {};
-template <class T, class... Ts>
-using overload_resolution_type = decltype(overload_resolution_overloaded<Ts...>{}(std::declval<T>()));
+template <class T, std::size_t I>
+struct OverloadResolutionCandidate { std::integral_constant<std::size_t, I> operator()(T); };
+template <class Tup, class Seq>
+struct OverloadResolutionOverload;
+template <class... Ts, std::size_t... Is>
+struct OverloadResolutionOverload<std::tuple<Ts...>, std::index_sequence<Is...>>: Overload<OverloadResolutionCandidate<Ts, Is>...> {};
+template <class T, class Tup>
+using OverloadResolutionIndex = decltype(OverloadResolutionOverload<Tup, std::make_index_sequence<std::tuple_size_v<Tup>>>{}(std::declval<T>()));
 
-template <class T, class Tuple, class = void>
-struct overload_resolution {};
-template <class T, class... Ts>
-struct overload_resolution<T, std::tuple<Ts...>, std::void_t<overload_resolution_type<T, Ts...>>> {
-    using type = overload_resolution_type<T, Ts...>;
+template <class T, class Tup, class = void>
+struct OverloadResolution;
+template <class T, class Tup>
+struct OverloadResolution<T, Tup, std::void_t<OverloadResolutionIndex<T, Tup>>> {
+    using type = std::tuple_element_t<OverloadResolutionIndex<T, Tup>::value, Tup>;
 };
 
-template <class T, class Tuple, class = void>
-struct is_overload_resolvable: std::false_type {};
-template <class T, class... Ts>
-struct is_overload_resolvable<T, std::tuple<Ts...>, std::void_t<overload_resolution_type<T, Ts...>>>: std::true_type {};
+template <class T, class Tup, class = void>
+struct IsOverloadResolvable: std::false_type {};
+template <class T, class Tup>
+struct IsOverloadResolvable<T, Tup, std::void_t<OverloadResolutionIndex<T, Tup>>>: std::true_type {};
 
 } // namespace details
 
 // overload, overload_t
 template <class... Ts>
-struct overload { using type = details::overloaded<Ts...>; };
+struct overload { using type = details::Overload<Ts...>; };
 template <class... Ts>
 using overload_t = typename overload<Ts...>::type;
 
 // overload_resolution, overload_resolution_t
 template <class T, class... Ts>
-struct overload_resolution: details::overload_resolution<T, std::tuple<Ts...>> {};
+struct overload_resolution: details::OverloadResolution<T, std::tuple<Ts...>> {};
 template <class T, class... Ts>
 using overload_resolution_t = typename overload_resolution<T, Ts...>::type;
 
 // is_overload_resolvable, is_overload_resolvable_v
 template <class T, class... Ts>
-struct is_overload_resolvable: details::is_overload_resolvable<T, std::tuple<Ts...>> {};
+struct is_overload_resolvable: details::IsOverloadResolvable<T, std::tuple<Ts...>> {};
 template <class T, class... Ts>
 inline constexpr bool is_overload_resolvable_v = is_overload_resolvable<T, Ts...>::value;
 
