@@ -1,10 +1,10 @@
 #ifndef ESL_YAML_HPP
 #define ESL_YAML_HPP
 
-#include <yaml.h>
-
 #include "flex_variant.hpp"
 #include "functional.hpp"
+
+#include <yaml.h>
 
 #include <cassert>
 #include <cstdint>

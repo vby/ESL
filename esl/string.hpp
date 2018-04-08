@@ -352,7 +352,7 @@ constexpr std::pair<bool, const CharT*> format_find_colon_or_close_brace(const C
 	return {false, first};
 }
 
-ESL_IMPL_STRING_LITERAL_CONSTANT(format_spec_regex_string, R"(^(?:(.?)([<>=^]))?([+\- ]?)(#?)(0?)([0-9]*)([_,]?)(\.[0-9]*)?([bcdeEfFgGnosxX%]?))")
+ESL_IMPL_STRING_LITERAL_CONSTANT(format_spec_regex_string, R"(^(?:(.?)([<>=^]))?([+\- ]?)(#?)(0?)([0-9]*)([_,]?)(\.[0-9]*)?([bcdeEfFhHgGnosxX%]?))")
 
 // NOTE: global regex instance not working on MSVC, unknown bug, use static
 // template <class CharT>
@@ -453,6 +453,10 @@ const CharT* format_spec(const std::basic_string_view<CharT, Traits>& v, std::ba
 			os.setf(std::ios_base::scientific);
 		} else if (Traits::eq(c, ascii_constant_v<CharT, 'E'>)) {
 			os.setf(std::ios_base::scientific | std::ios_base::uppercase);
+		} else if (Traits::eq(c, ascii_constant_v<CharT, 'h'>)) { // hexfloat
+			os.setf(std::ios_base::fixed | std::ios_base::scientific);
+		} else if (Traits::eq(c, ascii_constant_v<CharT, 'H'>)) { // HEXFLOAT
+			os.setf(std::ios_base::fixed | std::ios_base::scientific | std::ios_base::uppercase);
 		} else if (Traits::eq(c, ascii_constant_v<CharT, 'G'>)) {
 			os.setf(std::ios_base::uppercase);
 		} else if (Traits::eq(c, ascii_constant_v<CharT, 'n'>)) {

@@ -71,10 +71,10 @@ private:
 
 	template <class T, class RT>
 	using SelectTypeEnableIf = std::enable_if<is_exactly_once_v<RT, Ts...> && std::is_constructible_v<RT, T>, RT>;
-	template <class T, bool = is_overload_resolvable_v<T, Ts...>>
+	template <class T, class = void>
 	struct SelectType {};
 	template <class T>
-	struct SelectType<T, true>: SelectTypeEnableIf<T, overload_resolution_t<T, Ts...>> {};
+	struct SelectType<T, std::void_t<overload_resolution_t<T, Ts...>>>: SelectTypeEnableIf<T, overload_resolution_t<T, Ts...>> {};
 	// workaround for clang++
 	template <class T, bool = std::is_same_v<std::decay_t<T>, flex_variant>>
 	struct AcceptedType {};

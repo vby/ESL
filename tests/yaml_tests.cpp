@@ -56,6 +56,13 @@ void test_yaml1_test(std::vector<yaml::node>& docs) {
 	ASSERT_EQ(ass, ss);
 }
 
+TEST(YamlTest, node) {
+	yaml::node n;
+	yaml::map m{{{"k1", yaml::str("v1")}, {"k2", yaml::int_t(123)}, {"k3", yaml::bool_t(false)}}};
+	n.emplace<yaml::map>(std::move(m));
+	ASSERT_EQ(std::get<yaml::int_t>(std::get<yaml::map>(n)["k2"]), 123);
+}
+
 TEST(YamlTest, load) {
 	auto docs = yaml::load(test_yaml_empty);
 	ASSERT_EQ(docs.size(), 0);

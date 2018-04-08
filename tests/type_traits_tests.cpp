@@ -32,19 +32,44 @@ TEST(TypeTraitsTest, member_function) {
 	EXPECT_FALSE(esl::has_non_overloaded_operator_parentheses_v<TypeTraitsTestMemberFunctionC>);
 }
 
+int function_test_fun0(int, std::string&);
+int function_test_fun1(bool) noexcept;
+
+class FuncTestClass {
+public:
+	bool func0(int) const;
+	bool func1(int) &;
+	bool func2(int) && noexcept;
+};
+
 TEST(TypeTraitsTest, function_traits) {
 	{
 		using traits = esl::function_traits<int(bool, char)>;
 		EXPECT_TRUE((std::is_same_v<traits::function_type, int(bool, char)>));
 		EXPECT_TRUE((std::is_same_v<traits::result_type, int>));
-		EXPECT_TRUE((std::is_same_v<traits::args_type, std::tuple<bool, char>>));
+		EXPECT_TRUE((std::is_same_v<traits::args_tuple, std::tuple<bool, char>>));
 		EXPECT_FALSE(traits::is_noexcept::value);
 	}
 	{
 		using traits = esl::function_traits<void(bool, char) noexcept>;
 		EXPECT_TRUE((std::is_same_v<traits::function_type, void(bool, char) noexcept>));
 		EXPECT_TRUE((std::is_same_v<traits::result_type, void>));
-		EXPECT_TRUE((std::is_same_v<traits::args_type, std::tuple<bool, char>>));
+		EXPECT_TRUE((std::is_same_v<traits::args_tuple, std::tuple<bool, char>>));
 		EXPECT_TRUE(traits::is_noexcept::value);
+	}
+	{
+		using traits = esl::function_traits<decltype(function_test_fun0)>;
+		static_assert(!std::is_const_v<traits::specifier>);
+		static_assert(!esl::is_noexcept_v<decltype(function_test_fun0)>);
+		static_assert(esl::is_noexcept_v<decltype(function_test_fun1)>);
+	}
+	{
+		using traits = esl::function_traits<decltype(&FuncTestClass::func0)>;
+		static_assert(std::is_const_v<traits::specifier>);
+		static_assert(!std::is_const_v<esl::function_traits<decltype(&FuncTestClass::func1)>::specifier>);
+		static_assert(std::is_lvalue_reference_v<esl::function_traits<decltype(&FuncTestClass::func1)>::specifier>);
+		static_assert(!esl::is_noexcept_v<decltype(&FuncTestClass::func0)>);
+		static_assert(!esl::is_noexcept_v<decltype(&FuncTestClass::func1)>);
+		static_assert(esl::is_noexcept_v<decltype(&FuncTestClass::func2)>);
 	}
 }
