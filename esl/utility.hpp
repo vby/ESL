@@ -40,6 +40,13 @@ inline constexpr To bit_cast(const From& v) noexcept {
 
 } // inline namespace casts
 
+// make_overloaded
+template <class... Ts>
+inline overloaded<std::decay_t<Ts>...> make_overloaded(Ts&&... f) {
+	return overloaded<std::decay_t<Ts>...>(std::forward<Ts>(f)...);
+}
+
+// make_tuple_vtable, make_tuple_vtable_t, make_tuple_vtable_v
 template <template <class...> class F, class... Tups>
 struct make_tuple_vtable {
 	using type = multi_array_t<decltype(&F<std::tuple_element_t<0, Tups>...>::value), std::tuple_size_v<Tups>...>;
@@ -111,9 +118,8 @@ using make_index_sequence_vtable_t = typename make_index_sequence_vtable<F, Dime
 template <template <std::size_t...> class F, std::size_t... Dimensions>
 inline constexpr auto make_index_sequence_vtable_v = make_index_sequence_vtable<F, Dimensions...>::value;
 
-
 // transpose_integer_array
-template <class T, std::size_t Size, std::size_t N, class U>
+template <std::size_t N, class T, std::size_t Size, class U>
 constexpr std::array<T, Size> transpose_integer_array(U* arr, std::initializer_list<std::pair<U, T>> kvs) {
 	static_assert(N <= std::numeric_limits<T>::max(), "target type is too small");
 	std::array<T, Size> t_arr{};
@@ -137,11 +143,11 @@ constexpr std::array<T, Size> transpose_integer_array(U* arr, std::initializer_l
 }
 template <class T, std::size_t Size, class U, std::size_t N>
 constexpr std::array<T, Size> transpose_integer_array(U (&arr)[N], std::initializer_list<std::pair<U, T>> kvs) {
-	return transpose_integer_array<T, Size, N>(arr, kvs);
+	return transpose_integer_array<N, T, Size>(arr, kvs);
 }
 template <class T, std::size_t Size, class U, std::size_t N>
 constexpr std::array<T, Size> transpose_integer_array(const std::array<T, N>& arr, std::initializer_list<std::pair<U, T>> kvs) {
-	return transpose_integer_array<T, Size, N>(arr, kvs);
+	return transpose_integer_array<N, T, Size>(arr, kvs);
 }
 
 // add_emplace

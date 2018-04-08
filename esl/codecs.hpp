@@ -14,7 +14,7 @@ public:
 
 	static constexpr char pad = '=';
 
-	static constexpr auto decode_codes = transpose_integer_array<unsigned char, 256>(encode_chars, {{'=', 64}});
+	static constexpr auto decode_codes = transpose_integer_array<64, unsigned char, 256>(encode_chars, {{'=', 64}});
 
 	static constexpr std::size_t encode_size(std::size_t size, bool padding=true) noexcept {
 		if (padding) {

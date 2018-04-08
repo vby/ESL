@@ -74,7 +74,7 @@ private:
 	template <class T, class = void>
 	struct SelectType {};
 	template <class T>
-	struct SelectType<T, std::void_t<overload_resolution_t<T, Ts...>>>: SelectTypeEnableIf<T, overload_resolution_t<T, Ts...>> {};
+	struct SelectType<T, std::void_t<overloaded_resolution_t<T, Ts...>>>: SelectTypeEnableIf<T, overloaded_resolution_t<T, Ts...>> {};
 	// workaround for clang++
 	template <class T, bool = std::is_same_v<std::decay_t<T>, flex_variant>>
 	struct AcceptedType {};

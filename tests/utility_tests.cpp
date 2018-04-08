@@ -39,3 +39,13 @@ TEST(UtilityTest, casts) {
 	}
 }
 
+TEST(UtilityTest, make_overloaded) {
+	auto f = esl::make_overloaded(
+		[](int) { return 1; },
+		[](bool) { return 2; },
+		[](const std::string&) { return 3; }
+	);
+	ASSERT_EQ(f(0), 1);
+	ASSERT_EQ(f(true), 2);
+	ASSERT_EQ(f(std::string("hello")), 3);
+}
