@@ -1,22 +1,47 @@
-#ifndef ESL_CODECS_HPP
-#define ESL_CODECS_HPP
+#ifndef ESL_BASE64_HPP
+#define ESL_BASE64_HPP
 
 #include "utility.hpp"
+#include "array.hpp"
+#include "literal.hpp"
 
 #include <string_view>
 //#include <immintrin.h>
 
 namespace esl {
 
-class base64 {
+// basic_base64_alphabet
+template <class CharT>
+using basic_base64_alphabet = earray<CharT, 64>;
+
+using base64_alphabet = basic_base64_alphabet<char>;
+using wbase64_alphabet = basic_base64_alphabet<wchar_t>;
+using u16base64_alphabet = basic_base64_alphabet<char16_t>;
+using u32base64_alphabet = basic_base64_alphabet<char32_t>;
+
+namespace details {
+
+ESL_IMPL_STRING_LITERAL_CONSTANT(base64_alphabet_std_constant, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
+ESL_IMPL_STRING_LITERAL_CONSTANT(base64_alphabet_url_constant, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
+
+} // namespace details
+
+// basic_base64_alphabet_(std|url)
+template <class CharT>
+inline constexpr basic_base64_alphabet<CharT> basic_base64_alphabet_std = details::base64_alphabet_std_constant_v<CharT>;
+template <class CharT>
+inline constexpr basic_base64_alphabet<CharT> basic_base64_alphabet_url = details::base64_alphabet_url_constant_v<CharT>;
+template <class CharT>
+inline constexpr CharT basic_base64_pad = ascii_constant_v<CharT, '='>;
+
+// basic_base64
+template <class CharT, const basic_base64_alphabet<CharT>& alphabet = basic_base64_alphabet_std<CharT>, CharT pad = basic_base64_pad<CharT>>
+class basic_base64 {
+private:
+	static constexpr auto alphabet_invert = invert_integer_array<unsigned char, 256, 64>(alphabet.data(), {{pad, 64}});
+
 public:
-	static constexpr char encode_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-	static constexpr char pad = '=';
-
-	static constexpr auto decode_codes = transpose_integer_array<64, unsigned char, 256>(encode_chars, {{'=', 64}});
-
-	static constexpr std::size_t encode_size(std::size_t size, bool padding=true) noexcept {
+	static constexpr std::size_t encode_size(std::size_t size, bool padding = true) noexcept {
 		if (padding) {
 			return (size + 2) / 3 * 4;
 		} else {
@@ -26,29 +51,29 @@ public:
 	}
 
 	// without '\0'
-	static std::size_t encode(const void* in, std::size_t size, char* out, bool padding=true) noexcept {
+	static std::size_t encode(const void* in, std::size_t size, char* out, bool padding = true) noexcept {
 		const unsigned char* in_b = static_cast<const unsigned char*>(in);
 		char* const out_base = out;
 		while (size > 2) {
 			// [aaaaaabb][bbbbcccc][ccdddddd] -> [00aaaaaa][00bbbbbb][00cccccc][00dddddd]
-			*out++ = encode_chars[in_b[0] >> 2];
-			*out++ = encode_chars[((in_b[0] & 0x3) << 4) | (in_b[1] >> 4)];
-			*out++ = encode_chars[((in_b[1] & 0xF) << 2) | (in_b[2] >> 6)];
-			*out++ = encode_chars[in_b[2] & 0x3F];
+			*out++ = alphabet[in_b[0] >> 2];
+			*out++ = alphabet[((in_b[0] & 0x3) << 4) | (in_b[1] >> 4)];
+			*out++ = alphabet[((in_b[1] & 0xF) << 2) | (in_b[2] >> 6)];
+			*out++ = alphabet[in_b[2] & 0x3F];
 			in_b += 3;
 			size -= 3;
 		}
 		if (size != 0) {
-			*out++ = encode_chars[in_b[0] >> 2];
+			*out++ = alphabet[in_b[0] >> 2];
 			if (size == 1) {
-				*out++ = encode_chars[(in_b[0] & 0x3) << 4];
+				*out++ = alphabet[(in_b[0] & 0x3) << 4];
 				if (padding) {
 					*out++ = pad;
 					*out++ = pad;
 				}
 			} else {
-				*out++ = encode_chars[((in_b[0] & 0x3) << 4) | (in_b[1] >> 4)];
-				*out++ = encode_chars[((in_b[1] & 0xF) << 2)];
+				*out++ = alphabet[((in_b[0] & 0x3) << 4) | (in_b[1] >> 4)];
+				*out++ = alphabet[((in_b[1] & 0xF) << 2)];
 				if (padding) {
 					*out++ = pad;
 				}
@@ -82,10 +107,10 @@ public:
 		const unsigned char* const in_c_end = in_c_base + size;
 		while (in_c + 1 < in_c_end) {
 			// [00aaaaaa][00bbbbbb][00cccccc][00dddddd] -> [aaaaaabb][bbbbcccc][ccdddddd]
-			const auto a = decode_codes[*in_c++];
+			const auto a = alphabet_invert[*in_c++];
 			ESL_BASE64_DECODE_CHECK_AB_(in_c, a); // break if X---
 
-			const auto b = decode_codes[*in_c++];
+			const auto b = alphabet_invert[*in_c++];
 			ESL_BASE64_DECODE_CHECK_AB_(in_c, b); // break if aX--
 
 			*out_b++ = (a << 2) | (b >> 4);
@@ -93,7 +118,7 @@ public:
 				ESL_BASE64_DECODE_CHECK_AB_B_(in_c, b);
 				break; //Succ
 			}
-			const auto c = decode_codes[*in_c++];
+			const auto c = alphabet_invert[*in_c++];
 			if (c > 0x40) { // abX-
 				ESL_BASE64_DECODE_ERROR_BREAK_(in_c);
 			}
@@ -106,7 +131,7 @@ public:
 				}
 				break; //Succ
 			}
-			const auto d = decode_codes[*in_c++];
+			const auto d = alphabet_invert[*in_c++];
 			if (c < 0x40) {
 				*out_b++ = (b << 4) | (c >> 2);
 				if (d < 0x40) { // abcd
@@ -145,7 +170,12 @@ public:
 	}
 };
 
+using base64 = basic_base64<char>;
+using wbase64 = basic_base64<wchar_t>;
+using u16base64 = basic_base64<char16_t>;
+using u32base64 = basic_base64<char32_t>;
+
 } // namespace esl
 
-#endif //ESL_CODECS_HPP
+#endif //ESL_BASE64_HPP
 

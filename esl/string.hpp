@@ -19,11 +19,12 @@
 
 namespace esl {
 
-// constexpr_strlen, constexpr_wcslen
 template <class CharT>
 inline constexpr std::size_t constexpr_strlen_(const CharT* s, std::size_t len = 0) {
 	return *s == CharT(0) ? len : constexpr_strlen_(s + 1, len + 1);
 }
+
+// constexpr_strlen, constexpr_wcslen
 inline constexpr std::size_t constexpr_strlen(const char* s) {
 #ifdef ESL_COMPILER_GNU
 	return __builtin_strlen(s);
@@ -35,13 +36,18 @@ inline constexpr std::size_t constexpr_wcslen(const wchar_t* s) {
 	return constexpr_strlen_(s);
 }
 
-#define ESL_CONSTEXPR_STRCMP_OR_(l, r) (*l == '\0' || *l != *r) ? static_cast<int>(*l - *r)
-
-// constexpr_strcmp, constexpr_wcscmp
+#define ESL_CONSTEXPR_STRCMP_OR_(l, r) (*l == CharT(0) || *l != *r) ? static_cast<int>(*l - *r)
 template <class CharT>
 inline constexpr int constexpr_strcmp_(const CharT* l, const CharT* r) {
 	return ESL_CONSTEXPR_STRCMP_OR_(l, r) : constexpr_strcmp_(l + 1, r + 1);
 }
+template <class CharT>
+inline constexpr int constexpr_strncmp_(const CharT* l, const CharT* r, std::size_t count) {
+	return count == 0 ? 0 : (ESL_CONSTEXPR_STRCMP_OR_(l, r) : constexpr_strncmp_(l + 1, r + 1, count - 1));
+}
+#undef ESL_CONSTEXPR_STRCMP_OR_
+
+// constexpr_strcmp, constexpr_wcscmp
 inline constexpr int constexpr_strcmp(const char* l, const char* r) {
 #ifdef ESL_COMPILER_GNU
 	return __builtin_strcmp(l, r);
@@ -52,11 +58,8 @@ inline constexpr int constexpr_strcmp(const char* l, const char* r) {
 inline constexpr int constexpr_wcscmp(const wchar_t* l, const wchar_t* r) {
 	return constexpr_strcmp_(l, r);
 }
+
 // constexpr_strncmp, constexpr_wcsncmp
-template <class CharT>
-inline constexpr int constexpr_strncmp_(const CharT* l, const CharT* r, std::size_t count) {
-	return count == 0 ? 0 : (ESL_CONSTEXPR_STRCMP_OR_(l, r) : constexpr_strncmp_(l + 1, r + 1, count - 1));
-}
 inline constexpr int constexpr_strncmp(const char* l, const char* r, std::size_t count) {
 #ifdef ESL_COMPILER_GNU
 	return __builtin_strncmp(l, r, count);
@@ -271,7 +274,6 @@ std::basic_string<CharT> join(CharT d, InputIt first, InputIt last) {
 // NOTE: This implemention is locale aware
 
 // bad_format
-
 class bad_format: std::runtime_error {
 public:
 	using size_type = typename std::string::size_type;
@@ -359,7 +361,8 @@ ESL_IMPL_STRING_LITERAL_CONSTANT(format_spec_regex_string, R"(^(?:(.?)([<>=^]))?
 // inline const std::basic_regex<CharT> format_spec_regex(format_spec_regex_string_v<CharT>, std::regex_constants::ECMAScript | std::regex_constants::optimize);
 template <class CharT>
 inline const std::basic_regex<CharT>& format_spec_regex() noexcept {
-	static const std::basic_regex<CharT> r(format_spec_regex_string_v<CharT>, std::regex_constants::ECMAScript | std::regex_constants::optimize);
+	const auto& rs = format_spec_regex_string_v<CharT>;
+	static const std::basic_regex<CharT> r(rs.data(), rs.size() - 1, std::regex_constants::ECMAScript | std::regex_constants::optimize);
 	return r;
 }
 
@@ -472,17 +475,16 @@ const CharT* format_spec(const std::basic_string_view<CharT, Traits>& v, std::ba
 
 } // namespace details
 
-template <class T, class... Args, class STraits = string_traits<T>>
-typename STraits::string_type format(const T& fmt, Args&&... args) {
-	using char_type = typename STraits::value_type;
-	using traits_type = typename STraits::traits_type;
+// format
+template <class CharT, class Traits, class T, class... Args, class STraits = string_traits<T>,
+		 class = std::enable_if_t<std::is_same_v<std::basic_string_view<CharT, Traits>, typename STraits::string_view_type>>>
+std::basic_ostream<CharT, Traits>& format(std::basic_ostream<CharT, Traits>& os, const T& fmt, Args&&... args) {
 	using allocator_type = typename STraits::allocator_type;
 	using string_view_type = typename STraits::string_view_type;
 
 	string_view_type fmt_v(fmt);
-	details::format_argument<char_type, traits_type> fargs[sizeof...(Args)] = {details::format_argument<char_type, traits_type>(args)...};
+	details::format_argument<CharT, Traits> fargs[sizeof...(Args)] = {details::format_argument<CharT, Traits>(args)...};
 
-	std::basic_ostringstream<char_type, traits_type, allocator_type> os;
 	std::size_t next_index = 0;
 	const auto first = fmt_v.data();
 	const auto last = first + fmt_v.size();
@@ -493,17 +495,17 @@ typename STraits::string_type format(const T& fmt, Args&&... args) {
 		auto lit = it;
 		while (lit != last) {
 			const auto ch = *lit;
-			if (traits_type::eq(ch, ascii_constant_v<char_type, '{'>)) {
-				if (lit != last - 1 && traits_type::eq(lit[1], ascii_constant_v<char_type, '{'>)) {
-					os << string_view_type(it , lit + 1 - it);
+			if (Traits::eq(ch, ascii_constant_v<CharT, '{'>)) {
+				if (lit != last - 1 && Traits::eq(lit[1], ascii_constant_v<CharT, '{'>)) {
+					os.write(it , lit + 1 - it);
 					lit += 2;
 					it = lit;
 					continue;
 				}
 				break;
-			} else if (traits_type::eq(ch, ascii_constant_v<char_type, '}'>)) {
-				if (lit != last - 1 && traits_type::eq(lit[1], ascii_constant_v<char_type, '}'>)) {
-					os << string_view_type(it , lit + 1 - it);
+			} else if (Traits::eq(ch, ascii_constant_v<CharT, '}'>)) {
+				if (lit != last - 1 && Traits::eq(lit[1], ascii_constant_v<CharT, '}'>)) {
+					os.write(it , lit + 1 - it);
 					lit += 2;
 					it = lit;
 					continue;
@@ -513,15 +515,15 @@ typename STraits::string_type format(const T& fmt, Args&&... args) {
 			++lit;
 		}
 		if (lit == last) {
-			os << string_view_type(it, last - it);
+			os.write(it, last - it);
 			break;
 		}
 		if (lit != it) {
-			os << string_view_type(it, lit - it);
+			os.write(it, lit - it);
 		}
 		it = lit + 1;
 		// field}<suffix> -> field + <suffix>
-		auto [cfound, rit] = details::format_find_colon_or_close_brace<traits_type>(it, last);
+		auto [cfound, rit] = details::format_find_colon_or_close_brace<Traits>(it, last);
 		if (rit == last) {
 			throw bad_format("esl::format: missing '}'", lit - first);
 		}
@@ -543,11 +545,11 @@ typename STraits::string_type format(const T& fmt, Args&&... args) {
 		// reset ostream
 		os.unsetf(os.flags());
 		os.setf(std::ios_base::boolalpha);
-		os.fill(ascii_constant_v<char_type, ' '>);
+		os.fill(ascii_constant_v<CharT, ' '>);
 		os.precision(6);
 		if (cfound) {
 			it = rit + 1;
-			auto pos = string_view_type(it, last - it).find(ascii_constant_v<char_type, '}'>);
+			auto pos = string_view_type(it, last - it).find(ascii_constant_v<CharT, '}'>);
 			if (pos == string_view_type::npos) {
 				throw bad_format("esl::format: missing '}'", lit - first);
 			}
@@ -562,6 +564,13 @@ typename STraits::string_type format(const T& fmt, Args&&... args) {
 		os << farg;
 		it = rit + 1;
 	}
+	return os;
+}
+
+template <class T, class... Args, class STraits = string_traits<T>>
+typename STraits::string_type format(const T& fmt, Args&&... args) {
+	std::basic_ostringstream<typename STraits::value_type, typename STraits::traits_type, typename STraits::allocator_type> os;
+	format(os, fmt, std::forward<Args>(args)...);
 	return os.str();
 }
 

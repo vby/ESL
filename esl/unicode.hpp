@@ -6,7 +6,9 @@ namespace esl {
 
 // https://en.wikipedia.org/wiki/Unicode_block
 
-inline constexpr char32_t no_code_point = 0xFFFFFFFF;
+using code_point = char32_t;
+
+inline constexpr code_point no_code_point = 0xFFFFFFFF;
 
 enum class unicode_plane {
 	basic_multilingual = 0, // BMP, 0000..FFFF
@@ -354,25 +356,25 @@ inline constexpr char32_t unicode_block_max_code_points_[] = {
 
 // plane_at
 // code point to plane
-inline constexpr unicode_plane plane_at(char32_t ch) noexcept {
-	if (ch >= 0x30000 && ch <= 0xDFFFF) {
+inline constexpr unicode_plane plane_at(code_point cp) noexcept {
+	if (cp >= 0x30000 && cp <= 0xDFFFF) {
 		return unicode_plane::unassigned;
-	} else if (ch > 0x10FFFF) {
+	} else if (cp > 0x10FFFF) {
 		return unicode_plane::no_plane;
 	}
-	return static_cast<unicode_plane>(ch >> 16);
+	return static_cast<unicode_plane>(cp >> 16);
 }
 
 // block_at
 // code point to block
-inline constexpr unicode_block block_at(char32_t ch) noexcept {
+inline constexpr unicode_block block_at(code_point cp) noexcept {
 	const char32_t* first = unicode_block_max_code_points_;
 	std::size_t count = std::size(unicode_block_max_code_points_);
 	const char32_t* it = nullptr;
 	while (count > 0) {
 		std::size_t step = count / 2;
 		it = first + step;
-		if (*it < ch) {
+		if (*it < cp) {
 			first = it + 1;
 			count -= step + 1;
 		} else {
@@ -380,7 +382,7 @@ inline constexpr unicode_block block_at(char32_t ch) noexcept {
 		}
 	}
 	auto idx = first - unicode_block_max_code_points_;
-	if (ch < unicode_block_min_code_points_[idx]) {
+	if (cp < unicode_block_min_code_points_[idx]) {
 		return unicode_block::no_block;
 	}
 	return static_cast<unicode_block>(idx);
@@ -404,9 +406,46 @@ inline constexpr char32_t max_code_point(unicode_block blk) noexcept {
 
 // plane_at
 // block to plane
-inline constexpr unicode_plane plane_at(unicode_block blk) noexcept {
+inline constexpr unicode_plane plane_at(unicode_block blk) {
 	return plane_at(min_code_point(blk));
 }
+
+// utf8
+// 1	7	U+0000	U+007F		0xxxxxxx
+// 2	11	U+0080	U+07FF		110xxxxx	10xxxxxx
+// 3	16	U+0800	U+FFFF		1110xxxx	10xxxxxx	10xxxxxx
+// 4	21	U+10000	U+10FFFF	11110xxx	10xxxxxx	10xxxxxx	10xxxxxx
+
+inline constexpr std::size_t utf8_encode_size(code_point cp) {
+	return cp <= 0x7F ? 1 : (cp <= 0x7FF ? 2 : (cp <= 0xFFFF ? 3 : (cp <= 0x10FFFF ? 4 : 0)));
+}
+
+inline constexpr std::size_t utf8_encode(code_point cp, char* u8s) {
+	if (cp <= 0x7F) {
+		u8s[0] = static_cast<char>(cp);
+		return 1;
+	} else if (cp <= 0x7FF) {
+		u8s[1] = static_cast<char>(0x80 | (0x3F & cp));
+		u8s[0] = static_cast<char>(0xC0 | (cp >> 6));
+		return 2;
+	} else if (cp <= 0xFFFF) {
+		u8s[2] = static_cast<char>(0x80 | (0x3F & cp));
+		u8s[1] = static_cast<char>(0x80 | (0x3F & (cp >> 6)));
+		u8s[0] = static_cast<char>(0xE0 | (cp >> 12));
+		return 3;
+	} else if (cp <= 0x10FFFF) {
+		u8s[3] = static_cast<char>(0x80 | (0x3F & cp));
+		u8s[2] = static_cast<char>(0x80 | (0x3F & (cp >> 6)));
+		u8s[1] = static_cast<char>(0x80 | (0x3F & (cp >> 12)));
+		u8s[0] = static_cast<char>(0xF0 | (cp >> 18));
+		return 4;
+	}
+	return 0;
+}
+
+// TODO
+//inline constexpr std::size_t utf8_decode(const char* u8, std::size_t size, code_point& cp) {
+//}
 
 } // namespace esl
 

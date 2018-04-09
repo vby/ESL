@@ -1,8 +1,8 @@
 
 #include <gtest/gtest.h>
-#include <esl/codecs.hpp>
+#include <esl/base64.hpp>
 
-TEST(CodecsBase64Test, encode) {
+TEST(Base64Test, encode) {
 	// no pads
 	{
 		auto sp = esl::base64::encode("012345678", 9);
@@ -31,7 +31,7 @@ TEST(CodecsBase64Test, encode) {
 	}
 }
 
-TEST(CodecsBase64Test, decode) {
+TEST(Base64Test, decode) {
 	// no pads
 	{
 		std::string_view sv("MDEyMzQ1Njc4");

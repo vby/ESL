@@ -372,7 +372,7 @@ struct overloaded<T>: T {
 	template <class U>
 	constexpr overloaded(U&& f): T(std::forward<U>(f)) {}
 
-	using T::operator(); 
+	using T::operator();
 };
 
 namespace details {
@@ -386,7 +386,7 @@ struct overloaded_resolution_overloaded<std::tuple<Ts...>, std::index_sequence<I
 	using type = overloaded<overloaded_resolution_function<Ts, Is>...>;
 };
 template <class Tup>
-using make_overloaded_resolution_overloaded = 
+using make_overloaded_resolution_overloaded =
 	typename overloaded_resolution_overloaded<Tup, std::make_index_sequence<std::tuple_size_v<Tup>>>::type;
 template <class T, class Tup>
 using overloaded_resolution_index = decltype(std::declval<make_overloaded_resolution_overloaded<Tup>>()(std::declval<T>()));
