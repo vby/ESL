@@ -24,25 +24,25 @@
 	template <class CharT> struct name; \
 	inline constexpr char name##_char[] = s; \
 	template <> struct name<char> { \
-		using type = earray<char, array_size_v<decltype(name##_char)>>; \
-		static constexpr type value = name##_char; \
+		using type = std::array<char, array_size_v<decltype(name##_char)>>; \
+		static constexpr type value = make_array(name##_char); \
 	}; \
 	inline constexpr wchar_t name##_wchar[] = L##s; \
 	template <> struct name<wchar_t> { \
-		using type = earray<wchar_t, array_size_v<decltype(name##_wchar)>>; \
-		static constexpr type value = name##_wchar; \
+		using type = std::array<wchar_t, array_size_v<decltype(name##_wchar)>>; \
+		static constexpr type value = make_array(name##_wchar); \
 	}; \
 	inline constexpr char16_t name##_char16[] = u##s; \
 	template <> struct name<char16_t> { \
-		using type = earray<char16_t, array_size_v<decltype(name##_char16)>>; \
-		static constexpr type value = name##_char16; \
+		using type = std::array<char16_t, array_size_v<decltype(name##_char16)>>; \
+		static constexpr type value = make_array(name##_char16); \
 	}; \
 	inline constexpr char32_t name##_char32[] = U##s; \
 	template <> struct name<char32_t> { \
-		using type = earray<char32_t, array_size_v<decltype(name##_char32)>>; \
-		static constexpr type value = name##_char32; \
+		using type = std::array<char32_t, array_size_v<decltype(name##_char32)>>; \
+		static constexpr type value = make_array(name##_char32); \
 	}; \
-	template <class CharT> inline constexpr auto name##_v = name<CharT>::value;
+	template <class CharT> inline constexpr typename name<CharT>::type name##_v = name<CharT>::value;
 
 namespace esl {
 

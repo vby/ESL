@@ -8,30 +8,23 @@
 
 namespace esl {
 
-// earray
+// make_array
+template <class T, std::size_t N, std::size_t... Is>
+constexpr std::array<T, N> make_array_internal_(const T* arr, std::index_sequence<Is...>) {
+	return std::array<T, N>{{arr[Is]...}};
+}
+template <std::size_t N, class T>
+constexpr std::array<T, N> make_array(const T* arr) {
+	return make_array_internal_<T, N>(arr, std::make_index_sequence<N>{});
+}
 template <class T, std::size_t N>
-class earray: public std::array<T, N> {
-public:
-    using std::array<T, N>::array;
-
-    template <std::size_t M>
-    constexpr earray(std::integral_constant<std::size_t, M>, const T* arr): earray(arr, std::make_index_sequence<N>{}) {
-        static_assert(M >= N);
-    }
-
-    template <std::size_t M>
-    constexpr earray(const T (&arr)[M]): earray(std::integral_constant<std::size_t, N>{}, arr) {}
-
-    template <std::size_t M>
-	constexpr earray(const std::array<T, M>& arr): earray(std::integral_constant<std::size_t, N>{}, arr.data()) {}
-
-	//constexpr earray& operator=(const earray&) = default;
-	//constexpr earray& operator=(earray&&) = default;
-
-private:
-    template <std::size_t... Is>
-    constexpr earray(const T* arr, std::index_sequence<Is...>): std::array<T, N>{{arr[Is]...}} {}
-};
+constexpr std::array<T, N> make_array(const T (&arr)[N]) {
+	return make_array<N>(arr);
+}
+template <class T, std::size_t N>
+constexpr std::array<T, N> make_array(const std::array<T, N>& arr) {
+	return make_array<N>(arr.data());
+}
 
 // array_size, array_size_v
 template <class T>
@@ -46,8 +39,6 @@ template <class T, std::size_t N>
 struct array_size<const volatile T[N]>: std::integral_constant<std::size_t, N> {};
 template <class T, std::size_t N>
 struct array_size<std::array<T, N>>: std::integral_constant<std::size_t, N> {};
-template <class T, std::size_t N>
-struct array_size<earray<T, N>>: std::integral_constant<std::size_t, N> {};
 template <class T>
 struct array_size<const T>: array_size<T> {};
 template <class T>
@@ -62,8 +53,6 @@ template <class T>
 struct array_rank: std::integral_constant<std::size_t, 0> {};
 template <class T, std::size_t N>
 struct array_rank<std::array<T, N>>: std::integral_constant<std::size_t, array_rank<T>::value + 1> {};
-template <class T, std::size_t N>
-struct array_rank<earray<T, N>>: array_rank<std::array<T, N>> {};
 template <class T>
 struct array_rank<const T>: array_rank<T> {};
 template <class T>
@@ -78,8 +67,6 @@ template <std::size_t Rank, class T>
 struct array_element { using type = T; };
 template <std::size_t Rank, class T, std::size_t N>
 struct array_element<Rank, std::array<T, N>>: array_element<Rank - 1, typename std::array<T, N>::value_type> {};
-template <std::size_t Rank, class T, std::size_t N>
-struct array_element<Rank, earray<T, N>>: array_element<Rank, std::array<T, N>> {};
 template <std::size_t Rank, class T>
 struct array_element<Rank, const T>: array_element<Rank, T> {};
 template <std::size_t Rank, class T>

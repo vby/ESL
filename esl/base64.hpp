@@ -10,15 +10,6 @@
 
 namespace esl {
 
-// basic_base64_alphabet
-template <class CharT>
-using basic_base64_alphabet = earray<CharT, 64>;
-
-using base64_alphabet = basic_base64_alphabet<char>;
-using wbase64_alphabet = basic_base64_alphabet<wchar_t>;
-using u16base64_alphabet = basic_base64_alphabet<char16_t>;
-using u32base64_alphabet = basic_base64_alphabet<char32_t>;
-
 namespace details {
 
 ESL_IMPL_STRING_LITERAL_CONSTANT(base64_alphabet_std_constant, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
@@ -28,14 +19,16 @@ ESL_IMPL_STRING_LITERAL_CONSTANT(base64_alphabet_url_constant, "ABCDEFGHIJKLMNOP
 
 // basic_base64_alphabet_(std|url)
 template <class CharT>
-inline constexpr basic_base64_alphabet<CharT> basic_base64_alphabet_std = details::base64_alphabet_std_constant_v<CharT>;
+inline constexpr std::array<CharT, 64> basic_base64_alphabet_std = 
+		make_array<64>(details::base64_alphabet_std_constant_v<CharT>.data());
 template <class CharT>
-inline constexpr basic_base64_alphabet<CharT> basic_base64_alphabet_url = details::base64_alphabet_url_constant_v<CharT>;
+inline constexpr std::array<CharT, 64> basic_base64_alphabet_url = 
+		make_array<64>(details::base64_alphabet_url_constant_v<CharT>.data());
 template <class CharT>
 inline constexpr CharT basic_base64_pad = ascii_constant_v<CharT, '='>;
 
 // basic_base64
-template <class CharT, const basic_base64_alphabet<CharT>& alphabet = basic_base64_alphabet_std<CharT>, CharT pad = basic_base64_pad<CharT>>
+template <class CharT, const std::array<CharT, 64>& alphabet = basic_base64_alphabet_std<CharT>, CharT pad = basic_base64_pad<CharT>>
 class basic_base64 {
 private:
 	static constexpr auto alphabet_invert = invert_integer_array<unsigned char, 256, 64>(alphabet.data(), {{pad, 64}});
