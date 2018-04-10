@@ -180,7 +180,7 @@ constexpr std::pair<from_string_errc, std::size_t> from_string(const S& s, T& va
 	auto begin = it;
 	[[maybe_unused]] bool neg = false;
 	if constexpr (std::is_signed_v<T>) {
-		if (traits_type::eq(*it, ascii_constant_v<char_type, '-'>)) {
+		if (traits_type::eq(*it, char_constant_v<char_type, '-'>)) {
 			neg = true;
 			++begin;
 			++it;
@@ -192,12 +192,12 @@ constexpr std::pair<from_string_errc, std::size_t> from_string(const S& s, T& va
 	while (it != last) {
 		const auto ch = *it;
 		int chval = 0;
-		if (!traits_type::lt(ch, ascii_constant_v<char_type, '0'>) && !traits_type::lt(ascii_constant_v<char_type, '9'>, ch)) {
-			chval = ch - ascii_constant_v<char_type, '0'>;
-		} else if (!traits_type::lt(ch, ascii_constant_v<char_type, 'a'>) && !traits_type::lt(ascii_constant_v<char_type, 'z'>, ch)) {
-			chval = ch - ascii_constant_v<char_type, 'a'> + 10;
-		} else if (!traits_type::lt(ch, ascii_constant_v<char_type, 'A'>) && !traits_type::lt(ascii_constant_v<char_type, 'Z'>, ch)) {
-			chval = ch - ascii_constant_v<char_type, 'A'> + 10;
+		if (!traits_type::lt(ch, char_constant_v<char_type, '0'>) && !traits_type::lt(char_constant_v<char_type, '9'>, ch)) {
+			chval = ch - char_constant_v<char_type, '0'>;
+		} else if (!traits_type::lt(ch, char_constant_v<char_type, 'a'>) && !traits_type::lt(char_constant_v<char_type, 'z'>, ch)) {
+			chval = ch - char_constant_v<char_type, 'a'> + 10;
+		} else if (!traits_type::lt(ch, char_constant_v<char_type, 'A'>) && !traits_type::lt(char_constant_v<char_type, 'Z'>, ch)) {
+			chval = ch - char_constant_v<char_type, 'A'> + 10;
 		} else {
 			break;
 		}
@@ -344,9 +344,9 @@ template <class Traits, class CharT>
 constexpr std::pair<bool, const CharT*> format_find_colon_or_close_brace(const CharT* first, const CharT* last) {
 	while (first != last) {
 		const auto ch = *first;
-		if (Traits::eq(ch, ascii_constant_v<CharT, ':'>)) {
+		if (Traits::eq(ch, char_constant_v<CharT, ':'>)) {
 			return {true, first};
-		} else if (Traits::eq(ch, ascii_constant_v<CharT, '}'>)) {
+		} else if (Traits::eq(ch, char_constant_v<CharT, '}'>)) {
 			break;
 		}
 		++first;
@@ -386,13 +386,13 @@ const CharT* format_spec(const std::basic_string_view<CharT, Traits>& v, std::ba
 	auto& align = m[2];
 	if (align.first != align.second) {
 		const auto c = *align.first;
-		if (Traits::eq(c, ascii_constant_v<CharT, '<'>)) {
+		if (Traits::eq(c, char_constant_v<CharT, '<'>)) {
 			os.setf(std::ios_base::left);
-		} else if (Traits::eq(c, ascii_constant_v<CharT, '>'>)) {
+		} else if (Traits::eq(c, char_constant_v<CharT, '>'>)) {
 			os.setf(std::ios_base::right);
-		} else if (Traits::eq(c, ascii_constant_v<CharT, '='>)) {
+		} else if (Traits::eq(c, char_constant_v<CharT, '='>)) {
 			os.setf(std::ios_base::internal);
-		} else if (Traits::eq(c, ascii_constant_v<CharT, '^'>)) {
+		} else if (Traits::eq(c, char_constant_v<CharT, '^'>)) {
 			xflags |= format_xflags::center;
 		} else {
 			return align.first;
@@ -402,9 +402,9 @@ const CharT* format_spec(const std::basic_string_view<CharT, Traits>& v, std::ba
 	if (sign.first != sign.second) {
 		// default '-'
 		const auto c = *sign.first;
-		if (Traits::eq(c, ascii_constant_v<CharT, '+'>)) {
+		if (Traits::eq(c, char_constant_v<CharT, '+'>)) {
 			os.setf(std::ios_base::showpos);
-		} else if (Traits::eq(c, ascii_constant_v<CharT, ' '>)) {
+		} else if (Traits::eq(c, char_constant_v<CharT, ' '>)) {
 			xflags |= format_xflags::space_sign;
 		} else {
 			return sign.first;
@@ -414,7 +414,7 @@ const CharT* format_spec(const std::basic_string_view<CharT, Traits>& v, std::ba
 		os.setf(std::ios_base::showbase);
 	}
 	if (m.length(5)) { // 0, override m[1]
-		os.fill(ascii_constant_v<CharT, '0'>);
+		os.fill(char_constant_v<CharT, '0'>);
 	}
 	auto& width = m[6];
 	if (width.first != width.second) {
@@ -436,35 +436,35 @@ const CharT* format_spec(const std::basic_string_view<CharT, Traits>& v, std::ba
 		// default string 's', integer 'd', float 'g'
 		const auto c = *type.first;
 		os.unsetf(std::ios_base::boolalpha);
-		if (Traits::eq(c, ascii_constant_v<CharT, 'b'>)) {
+		if (Traits::eq(c, char_constant_v<CharT, 'b'>)) {
 			xflags |= format_xflags::binary;
-		} else if (Traits::eq(c, ascii_constant_v<CharT, 'c'>)) {
+		} else if (Traits::eq(c, char_constant_v<CharT, 'c'>)) {
 			xflags |= format_xflags::character;
-		} else if (Traits::eq(c, ascii_constant_v<CharT, 'd'>)) {
+		} else if (Traits::eq(c, char_constant_v<CharT, 'd'>)) {
 			os.setf(std::ios_base::dec);
-		} else if (Traits::eq(c, ascii_constant_v<CharT, 'o'>)) {
+		} else if (Traits::eq(c, char_constant_v<CharT, 'o'>)) {
 			os.setf(std::ios_base::oct);
-		} else if (Traits::eq(c, ascii_constant_v<CharT, 'x'>)) {
+		} else if (Traits::eq(c, char_constant_v<CharT, 'x'>)) {
 			os.setf(std::ios_base::hex);
-		} else if (Traits::eq(c, ascii_constant_v<CharT, 'X'>)) {
+		} else if (Traits::eq(c, char_constant_v<CharT, 'X'>)) {
 			os.setf(std::ios_base::hex | std::ios_base::uppercase);
-		} else if (Traits::eq(c, ascii_constant_v<CharT, 'f'>)) {
+		} else if (Traits::eq(c, char_constant_v<CharT, 'f'>)) {
 			os.setf(std::ios_base::fixed | std::ios_base::showpoint);
-		} else if (Traits::eq(c, ascii_constant_v<CharT, 'F'>)) {
+		} else if (Traits::eq(c, char_constant_v<CharT, 'F'>)) {
 			os.setf(std::ios_base::fixed | std::ios_base::showpoint | std::ios_base::uppercase);
-		} else if (Traits::eq(c, ascii_constant_v<CharT, 'e'>)) {
+		} else if (Traits::eq(c, char_constant_v<CharT, 'e'>)) {
 			os.setf(std::ios_base::scientific);
-		} else if (Traits::eq(c, ascii_constant_v<CharT, 'E'>)) {
+		} else if (Traits::eq(c, char_constant_v<CharT, 'E'>)) {
 			os.setf(std::ios_base::scientific | std::ios_base::uppercase);
-		} else if (Traits::eq(c, ascii_constant_v<CharT, 'h'>)) { // hexfloat
+		} else if (Traits::eq(c, char_constant_v<CharT, 'h'>)) { // hexfloat
 			os.setf(std::ios_base::fixed | std::ios_base::scientific);
-		} else if (Traits::eq(c, ascii_constant_v<CharT, 'H'>)) { // HEXFLOAT
+		} else if (Traits::eq(c, char_constant_v<CharT, 'H'>)) { // HEXFLOAT
 			os.setf(std::ios_base::fixed | std::ios_base::scientific | std::ios_base::uppercase);
-		} else if (Traits::eq(c, ascii_constant_v<CharT, 'G'>)) {
+		} else if (Traits::eq(c, char_constant_v<CharT, 'G'>)) {
 			os.setf(std::ios_base::uppercase);
-		} else if (Traits::eq(c, ascii_constant_v<CharT, 'n'>)) {
+		} else if (Traits::eq(c, char_constant_v<CharT, 'n'>)) {
 			xflags |= format_xflags::number;
-		} else if (Traits::eq(c, ascii_constant_v<CharT, '%'>)) {
+		} else if (Traits::eq(c, char_constant_v<CharT, '%'>)) {
 			xflags |= format_xflags::percent;
 		} else {
 			return type.first;
@@ -495,16 +495,16 @@ std::basic_ostream<CharT, Traits>& format(std::basic_ostream<CharT, Traits>& os,
 		auto lit = it;
 		while (lit != last) {
 			const auto ch = *lit;
-			if (Traits::eq(ch, ascii_constant_v<CharT, '{'>)) {
-				if (lit != last - 1 && Traits::eq(lit[1], ascii_constant_v<CharT, '{'>)) {
+			if (Traits::eq(ch, char_constant_v<CharT, '{'>)) {
+				if (lit != last - 1 && Traits::eq(lit[1], char_constant_v<CharT, '{'>)) {
 					os.write(it , lit + 1 - it);
 					lit += 2;
 					it = lit;
 					continue;
 				}
 				break;
-			} else if (Traits::eq(ch, ascii_constant_v<CharT, '}'>)) {
-				if (lit != last - 1 && Traits::eq(lit[1], ascii_constant_v<CharT, '}'>)) {
+			} else if (Traits::eq(ch, char_constant_v<CharT, '}'>)) {
+				if (lit != last - 1 && Traits::eq(lit[1], char_constant_v<CharT, '}'>)) {
 					os.write(it , lit + 1 - it);
 					lit += 2;
 					it = lit;
@@ -545,11 +545,11 @@ std::basic_ostream<CharT, Traits>& format(std::basic_ostream<CharT, Traits>& os,
 		// reset ostream
 		os.unsetf(os.flags());
 		os.setf(std::ios_base::boolalpha);
-		os.fill(ascii_constant_v<CharT, ' '>);
+		os.fill(char_constant_v<CharT, ' '>);
 		os.precision(6);
 		if (cfound) {
 			it = rit + 1;
-			auto pos = string_view_type(it, last - it).find(ascii_constant_v<CharT, '}'>);
+			auto pos = string_view_type(it, last - it).find(char_constant_v<CharT, '}'>);
 			if (pos == string_view_type::npos) {
 				throw bad_format("esl::format: missing '}'", lit - first);
 			}

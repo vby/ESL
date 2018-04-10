@@ -5,74 +5,113 @@
 
 #include <array>
 #include <utility>
+#include <iterator>
 
 namespace esl {
 
+// md_array, md_array_t
+template <class T, std::size_t... Dimensions>
+struct md_array {
+	using type = T;
+};
+template <class T, std::size_t First, std::size_t... Rest>
+struct md_array<T, First, Rest...> {
+	using type = std::array<typename md_array<T, Rest...>::type, First>;
+};
+template <class T, std::size_t... Dimensions>
+using md_array_t = typename md_array<T, Dimensions...>::type;
+
+// md_carray, md_carray_t
+template <class T, std::size_t... Dimensions>
+struct md_carray {
+	using type = T;
+};
+template <class T, std::size_t First, std::size_t... Rest>
+struct md_carray<T, First, Rest...> {
+	using type = typename md_carray<T, Rest...>::type[First];
+};
+template <class T, std::size_t... Dimensions>
+using md_carray_t = typename md_carray<T, Dimensions...>::type;
+
+template <class T, std::size_t N, class U, std::size_t... Is>
+inline constexpr std::array<T, N> make_sized_array_internal_(U&& first, std::index_sequence<Is...>) {
+	return std::array<T, N>{{first[Is]...}};
+}
+// make_sized_array
+template <std::size_t N, class It, class T = remove_rcv_t<decltype(*std::declval<It>())>>
+inline constexpr std::array<T, N> make_sized_array(It&& first) {
+	return make_sized_array_internal_<T, N>(std::forward<It>(first), std::make_index_sequence<N>{});
+}
 // make_array
-template <class T, std::size_t N, std::size_t... Is>
-constexpr std::array<T, N> make_array_internal_(const T* arr, std::index_sequence<Is...>) {
-	return std::array<T, N>{{arr[Is]...}};
-}
-template <std::size_t N, class T>
-constexpr std::array<T, N> make_array(const T* arr) {
-	return make_array_internal_<T, N>(arr, std::make_index_sequence<N>{});
+template <class T, std::size_t N>
+inline constexpr std::array<std::remove_cv_t<T>, N> make_array(const T (&arr)[N]) {
+	return make_sized_array<N>(arr);
 }
 template <class T, std::size_t N>
-constexpr std::array<T, N> make_array(const T (&arr)[N]) {
-	return make_array<N>(arr);
+inline constexpr std::array<std::remove_cv_t<T>, N> make_array(T (&&arr)[N]) {
+	return make_sized_array<N>(std::make_move_iterator(arr));
 }
-template <class T, std::size_t N>
-constexpr std::array<T, N> make_array(const std::array<T, N>& arr) {
-	return make_array<N>(arr.data());
+// sub_array
+template <std::size_t Pos, std::size_t Cnt = npos, class T, std::size_t M, class N = sub_size<M, Pos, Cnt>>
+inline constexpr std::array<std::remove_cv_t<T>, N::value> sub_array(const std::array<T, M>& arr) {
+	return make_sized_array<N::value>(arr.begin() + Pos);
+}
+template <std::size_t Pos, std::size_t Cnt = npos, class T, std::size_t M, class N = sub_size<M, Pos, Cnt>>
+inline constexpr std::array<std::remove_cv_t<T>, N::value> sub_array(std::array<T, M>&& arr) {
+	return make_sized_array<N::value>(std::make_move_iterator(arr.begin() + Pos));
+}
+template <std::size_t Pos, std::size_t Cnt = npos, class T, std::size_t M, class N = sub_size<M, Pos, Cnt>>
+inline constexpr std::array<std::remove_cv_t<T>, N::value> sub_array(T (&arr)[M]) {
+	return make_sized_array<N::value>(arr + Pos);
+}
+template <std::size_t Pos, std::size_t Cnt = npos, class T, std::size_t M, class N = sub_size<M, Pos, Cnt>>
+inline constexpr std::array<std::remove_cv_t<T>, N::value> sub_array(T (&&arr)[M]) {
+	return make_sized_array<N::value>(std::make_move_iterator(arr + Pos));
 }
 
 // array_size, array_size_v
 template <class T>
-struct array_size;
+struct array_size_internal_;
 template <class T, std::size_t N>
-struct array_size<T[N]>: std::integral_constant<std::size_t, N> {};
+struct array_size_internal_<T[N]>: std::integral_constant<std::size_t, N> {};
 template <class T, std::size_t N>
-struct array_size<const T[N]>: std::integral_constant<std::size_t, N> {};
-template <class T, std::size_t N>
-struct array_size<volatile T[N]>: std::integral_constant<std::size_t, N> {};
-template <class T, std::size_t N>
-struct array_size<const volatile T[N]>: std::integral_constant<std::size_t, N> {};
-template <class T, std::size_t N>
-struct array_size<std::array<T, N>>: std::integral_constant<std::size_t, N> {};
+struct array_size_internal_<std::array<T, N>>: std::integral_constant<std::size_t, N> {};
 template <class T>
-struct array_size<const T>: array_size<T> {};
-template <class T>
-struct array_size<volatile T>: array_size<T> {};
-template <class T>
-struct array_size<const volatile T>: array_size<T> {};
+struct array_size: array_size_internal_<std::remove_cv_t<T>> {};
 template <class T>
 inline constexpr std::size_t array_size_v = array_size<T>::value;
 
 // array_rank, array_rank_v
 template <class T>
-struct array_rank: std::integral_constant<std::size_t, 0> {};
+struct array_rank;
+template <class T>
+struct array_rank_internal_: std::integral_constant<std::size_t, 0> {};
+template <class T>
+struct array_rank_internal_<T[]>: std::integral_constant<std::size_t, array_rank<T>::value + 1> {};
 template <class T, std::size_t N>
-struct array_rank<std::array<T, N>>: std::integral_constant<std::size_t, array_rank<T>::value + 1> {};
+struct array_rank_internal_<T[N]>: std::integral_constant<std::size_t, array_rank<T>::value + 1> {};
+template <class T, std::size_t N>
+struct array_rank_internal_<std::array<T, N>>: std::integral_constant<std::size_t, array_rank<T>::value + 1> {};
 template <class T>
-struct array_rank<const T>: array_rank<T> {};
-template <class T>
-struct array_rank<volatile T>: array_rank<T> {};
-template <class T>
-struct array_rank<const volatile T>: array_rank<T> {};
+struct array_rank: array_rank_internal_<std::remove_cv_t<T>> {};
 template <class T>
 inline constexpr std::size_t array_rank_v = array_rank<T>::value;
 
 // array_element, array_element_t
 template <std::size_t Rank, class T>
-struct array_element { using type = T; };
+struct array_element;
+template <std::size_t Rank, class T, class = void>
+struct array_element_internal_ {
+	using type = T;
+};
 template <std::size_t Rank, class T, std::size_t N>
-struct array_element<Rank, std::array<T, N>>: array_element<Rank - 1, typename std::array<T, N>::value_type> {};
+struct array_element_internal_<Rank, std::array<T, N>, std::enable_if_t<Rank != 0>>: array_element<Rank - 1, typename std::array<T, N>::value_type> {};
 template <std::size_t Rank, class T>
-struct array_element<Rank, const T>: array_element<Rank, T> {};
+struct array_element_internal_<Rank, T[], std::enable_if_t<Rank != 0>>: array_element<Rank - 1, T> {};
+template <std::size_t Rank, class T, std::size_t N>
+struct array_element_internal_<Rank, T[N], std::enable_if_t<Rank != 0>>: array_element<Rank - 1, T> {};
 template <std::size_t Rank, class T>
-struct array_element<Rank, volatile T>: array_element<Rank, T> {};
-template <std::size_t Rank, class T>
-struct array_element<Rank, const volatile T>: array_element<Rank, T> {};
+struct array_element: array_element_internal_<Rank, std::remove_cv_t<T>> {};
 template <std::size_t Rank, class T>
 using array_element_t = typename array_element<Rank, T>::type;
 
@@ -126,18 +165,6 @@ struct array_get<First, Rest...> {
 };
 
 } // namespace details
-
-// multi_array, multi_array_t
-template <class T, std::size_t... Dimensions>
-struct multi_array {
-	using type = T;
-};
-template <class T, std::size_t First, std::size_t... Rest>
-struct multi_array<T, First, Rest...> {
-	using type = std::array<typename multi_array<T, Rest...>::type, First>;
-};
-template <class T, std::size_t... Dimensions>
-using multi_array_t = typename multi_array<T, Dimensions...>::type;
 
 // access
 template <class T, std::size_t N, class... Poss>

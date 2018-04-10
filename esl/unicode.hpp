@@ -416,28 +416,26 @@ inline constexpr unicode_plane plane_at(unicode_block blk) {
 // 3	16	U+0800	U+FFFF		1110xxxx	10xxxxxx	10xxxxxx
 // 4	21	U+10000	U+10FFFF	11110xxx	10xxxxxx	10xxxxxx	10xxxxxx
 
-inline constexpr std::size_t utf8_encode_size(code_point cp) {
-	return cp <= 0x7F ? 1 : (cp <= 0x7FF ? 2 : (cp <= 0xFFFF ? 3 : (cp <= 0x10FFFF ? 4 : 0)));
-}
-
-inline constexpr std::size_t utf8_encode(code_point cp, char* u8s) {
+// utf8_encode
+// out: at least 4 bytes
+inline constexpr std::size_t utf8_encode(code_point cp, char* out) {
 	if (cp <= 0x7F) {
-		u8s[0] = static_cast<char>(cp);
+		out[0] = static_cast<char>(cp);
 		return 1;
 	} else if (cp <= 0x7FF) {
-		u8s[1] = static_cast<char>(0x80 | (0x3F & cp));
-		u8s[0] = static_cast<char>(0xC0 | (cp >> 6));
+		out[1] = static_cast<char>(0x80 | (0x3F & cp));
+		out[0] = static_cast<char>(0xC0 | (cp >> 6));
 		return 2;
 	} else if (cp <= 0xFFFF) {
-		u8s[2] = static_cast<char>(0x80 | (0x3F & cp));
-		u8s[1] = static_cast<char>(0x80 | (0x3F & (cp >> 6)));
-		u8s[0] = static_cast<char>(0xE0 | (cp >> 12));
+		out[2] = static_cast<char>(0x80 | (0x3F & cp));
+		out[1] = static_cast<char>(0x80 | (0x3F & (cp >> 6)));
+		out[0] = static_cast<char>(0xE0 | (cp >> 12));
 		return 3;
 	} else if (cp <= 0x10FFFF) {
-		u8s[3] = static_cast<char>(0x80 | (0x3F & cp));
-		u8s[2] = static_cast<char>(0x80 | (0x3F & (cp >> 6)));
-		u8s[1] = static_cast<char>(0x80 | (0x3F & (cp >> 12)));
-		u8s[0] = static_cast<char>(0xF0 | (cp >> 18));
+		out[3] = static_cast<char>(0x80 | (0x3F & cp));
+		out[2] = static_cast<char>(0x80 | (0x3F & (cp >> 6)));
+		out[1] = static_cast<char>(0x80 | (0x3F & (cp >> 12)));
+		out[0] = static_cast<char>(0xF0 | (cp >> 18));
 		return 4;
 	}
 	return 0;

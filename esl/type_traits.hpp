@@ -46,11 +46,11 @@ inline constexpr std::size_t npos = std::size_t(-1);
 // Type traits
 // ---------------------------------------------------------
 
-// remove_cvr, remove_cvr_t
+// remove_rcv, remove_rcv_t
 template <class T>
-using remove_cvr = std::remove_cv<std::remove_reference_t<T>>;
+using remove_rcv = std::remove_cv<std::remove_reference_t<T>>;
 template <class T>
-using remove_cvr_t = typename remove_cvr<T>::type;
+using remove_rcv_t = typename remove_rcv<T>::type;
 
 // remove_pcv, remove_pcv_t
 template <class T>
@@ -602,6 +602,13 @@ using index_sequence_combination_for = make_index_sequence_combination<std::tupl
 // Miscellaneous transformations
 // ---------------------------------------------------------
 
+// sub_size, sub_size_v
+template <std::size_t N, std::size_t Pos, std::size_t Cnt, bool = (Pos <= N)>
+struct sub_size;
+template <std::size_t N, std::size_t Pos, std::size_t Cnt>
+struct sub_size<N, Pos, Cnt, true>: std::integral_constant<std::size_t, std::min(N - Pos, Cnt)> {};
+template <std::size_t N, std::size_t Pos, std::size_t Cnt>
+inline constexpr std::size_t sub_size_v = sub_size<N, Pos, Cnt>::value;
 
 // Function traits
 // ---------------------------------------------------------

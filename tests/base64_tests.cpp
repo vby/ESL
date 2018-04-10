@@ -5,28 +5,28 @@
 TEST(Base64Test, encode) {
 	// no pads
 	{
-		auto sp = esl::base64::encode("012345678", 9);
+		auto sp = esl::base64_encode("012345678", 9);
 		ASSERT_EQ(sp, "MDEyMzQ1Njc4");
 
-		auto s = esl::base64::encode("012345678", 9, false);
+		auto s = esl::base64_encode("012345678", 9, esl::base64_std_npad);
 		ASSERT_EQ(s, "MDEyMzQ1Njc4");
 	}
 
 	// one pad
 	{
-		auto sp = esl::base64::encode("01234567", 8);
+		auto sp = esl::base64_encode("01234567", 8);
 		ASSERT_EQ(sp, "MDEyMzQ1Njc=");
 
-		auto s = esl::base64::encode("01234567", 8, false);
+		auto s = esl::base64_encode("01234567", 8, esl::base64_std_npad);
 		ASSERT_EQ(s, "MDEyMzQ1Njc");
 	}
 
 	// two pads
 	{
-		auto sp = esl::base64::encode("0123456789", 10);
+		auto sp = esl::base64_encode("0123456789", 10);
 		ASSERT_EQ(sp, "MDEyMzQ1Njc4OQ==");
 
-		auto s = esl::base64::encode("0123456789", 10, false);
+		auto s = esl::base64_encode("0123456789", 10, esl::base64_std_npad);
 		ASSERT_EQ(s, "MDEyMzQ1Njc4OQ");
 	}
 }
@@ -35,61 +35,55 @@ TEST(Base64Test, decode) {
 	// no pads
 	{
 		std::string_view sv("MDEyMzQ1Njc4");
-		const auto& [d, pos] = esl::base64::decode(sv);
+		auto d = esl::base64_decode(sv);
 		ASSERT_EQ(d, "012345678");
-		ASSERT_EQ(pos, sv.size());
 	}
 
 	// one pad
 	{
 		std::string_view svp("MDEyMzQ1Njc=");
-		const auto& [dp, posp] = esl::base64::decode(svp);
+		auto dp = esl::base64_decode(svp);
 		ASSERT_EQ(dp, "01234567");
-		ASSERT_EQ(posp, svp.size());
 
 		std::string_view sv("MDEyMzQ1Njc");
-		const auto& [d, pos] = esl::base64::decode(sv);
+		auto d = esl::base64_decode(sv);
 		ASSERT_EQ(d, "01234567");
-		ASSERT_EQ(pos, sv.size());
 	}
 
 	// two pads
 	{
 		std::string_view svp("MDEyMzQ1Njc4OQ==");
-		const auto& [dp, posp] = esl::base64::decode(svp);
+		auto dp = esl::base64_decode(svp);
 		ASSERT_EQ(dp, "0123456789");
-		ASSERT_EQ(posp, svp.size());
 
 		std::string_view sv("MDEyMzQ1Njc4OQ");
-		const auto& [d, pos] = esl::base64::decode(sv);
+		auto d = esl::base64_decode(sv);
 		ASSERT_EQ(d, "0123456789");
-		ASSERT_EQ(pos, sv.size());
 	}
 
 	// concated
 	{
 		std::string_view sv("MDEyMzQ1Njc4OQ==MDEyMzQ1Njc=MDEyMzQ1Njc4OQ");
-		const auto& [d, pos] = esl::base64::decode(sv);
+		auto d = esl::base64_decode(sv);
 		ASSERT_EQ(d, "0123456789012345670123456789");
-		ASSERT_EQ(pos, sv.size());
 	}
 
 	// error padding
 	{
 		std::string_view sv("MDEyMzQ1Njc4=");
-		const auto& [d, pos] = esl::base64::decode(sv);
+		const auto& [d, pos] = esl::base64_try_decode(sv);
 		ASSERT_EQ(d, "012345678");
 		ASSERT_EQ(pos, sv.size() - 1);
 	}
 	{
 		std::string_view sv("MDEyMzQ1Njc4OQ=");
-		const auto& [d, pos] = esl::base64::decode(sv);
+		const auto& [d, pos] = esl::base64_try_decode(sv);
 		ASSERT_EQ(d, "0123456789");
 		ASSERT_EQ(pos, sv.size());
 	}
 	{
 		std::string_view sv("MDEyMzQ1Njc4OQ===");
-		const auto& [d, pos] = esl::base64::decode(sv);
+		const auto& [d, pos] = esl::base64_try_decode(sv);
 		ASSERT_EQ(d, "0123456789");
 		ASSERT_EQ(pos, sv.size() - 1);
 	}
@@ -97,7 +91,7 @@ TEST(Base64Test, decode) {
 	// error chars - X---
 	{
 		std::string_view sv("MDEyMzQ1Njc4?aa");
-		const auto& [d, pos] = esl::base64::decode(sv);
+		const auto& [d, pos] = esl::base64_try_decode(sv);
 		ASSERT_EQ(d, "012345678");
 		ASSERT_EQ(pos, sv.size() - 3);
 	}
@@ -105,7 +99,7 @@ TEST(Base64Test, decode) {
 	// error chars - aX--
 	{
 		std::string_view sv("MDEyMzQ1Njc4b<cc");
-		const auto& [d, pos] = esl::base64::decode(sv);
+		const auto& [d, pos] = esl::base64_try_decode(sv);
 		ASSERT_EQ(d, "012345678");
 		ASSERT_EQ(pos, sv.size() - 3);
 	}
@@ -113,7 +107,7 @@ TEST(Base64Test, decode) {
 	// error chars - abX-
 	{
 		std::string_view sv("MDEyMzQ1Njc4OQ>ddd");
-		const auto& [d, pos] = esl::base64::decode(sv);
+		const auto& [d, pos] = esl::base64_try_decode(sv);
 		ASSERT_EQ(d, "0123456789");
 		ASSERT_EQ(pos, sv.size() - 4);
 	}
@@ -121,7 +115,7 @@ TEST(Base64Test, decode) {
 	// error chars - abcX
 	{
 		std::string_view sv("MDEyMzQ1Njc>e");
-		const auto& [d, pos] = esl::base64::decode(sv);
+		const auto& [d, pos] = esl::base64_try_decode(sv);
 		ASSERT_EQ(d, "01234567");
 		ASSERT_EQ(pos, sv.size() - 2);
 	}
@@ -129,17 +123,17 @@ TEST(Base64Test, decode) {
 	// error chars - ab=X
 	{
 		std::string_view sv("MDEyMzQ1Njc4OQ=ff");
-		const auto& [d, pos] = esl::base64::decode(sv);
+		const auto& [d, pos] = esl::base64_try_decode(sv);
 		ASSERT_EQ(d, "0123456789");
 		ASSERT_EQ(pos, sv.size() - 2);
 	}
 
-	// error chars sequence
+	// incomplete
 	{
 		std::string_view sv("MDEyMzQ1Njc4OR");
-		const auto& [d, pos] = esl::base64::decode(sv);
+		const auto& [d, pos] = esl::base64_try_decode(sv);
 		ASSERT_EQ(d, "0123456789");
-		ASSERT_EQ(pos, sv.size() - 1);
+		ASSERT_EQ(pos, sv.size() + 1);
 	}
 }
 

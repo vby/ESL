@@ -49,7 +49,7 @@ inline overloaded<std::decay_t<Ts>...> make_overloaded(Ts&&... f) {
 // make_tuple_vtable, make_tuple_vtable_t, make_tuple_vtable_v
 template <template <class...> class F, class... Tups>
 struct make_tuple_vtable {
-	using type = multi_array_t<decltype(&F<std::tuple_element_t<0, Tups>...>::value), std::tuple_size_v<Tups>...>;
+	using type = md_array_t<decltype(&F<std::tuple_element_t<0, Tups>...>::value), std::tuple_size_v<Tups>...>;
 private:
 	template <std::size_t... Is>
 	static constexpr void apply_alt(type& vt, std::index_sequence<Is...>) {
@@ -87,7 +87,7 @@ private:
 	template <std::size_t>
 	struct AlwaysZero { static constexpr std::size_t value = 0; };
 public:
-	using type = multi_array_t<decltype(&F<AlwaysZero<Dimensions>::value...>::value), Dimensions...>;
+	using type = md_array_t<decltype(&F<AlwaysZero<Dimensions>::value...>::value), Dimensions...>;
 private:
 	template <std::size_t... Is>
 	static constexpr void apply_alt(type& vt, std::index_sequence<Is...>) {
@@ -119,8 +119,8 @@ template <template <std::size_t...> class F, std::size_t... Dimensions>
 inline constexpr auto make_index_sequence_vtable_v = make_index_sequence_vtable<F, Dimensions...>::value;
 
 // invert_integer_array
-template <class T, std::size_t Size, std::size_t N, class U>
-constexpr std::array<T, Size> invert_integer_array(const U* arr, std::initializer_list<std::pair<U, T>> kvs) {
+template <class T, std::size_t Size, std::size_t N, class It, class U = remove_rcv_t<decltype(*std::declval<It>())>>
+constexpr std::array<T, Size> invert_integer_array(It&& first, std::initializer_list<std::pair<U, T>> kvs) {
 	static_assert(N <= std::numeric_limits<T>::max(), "target type is too small");
 	std::array<T, Size> t_arr{};
 	for (std::size_t i = 0; i < Size; ++i) {
@@ -128,7 +128,7 @@ constexpr std::array<T, Size> invert_integer_array(const U* arr, std::initialize
 	}
 	using UU = std::make_unsigned_t<U>;
 	for (std::size_t i = 0; i < N; ++i) {
-		t_arr[static_cast<UU>(arr[i])] = static_cast<T>(i);
+		t_arr[static_cast<UU>(first[i])] = static_cast<T>(i);
 	}
 	// Fail compile on MSVC - 19.13.26128
 	// for (auto& kv: kvs) {

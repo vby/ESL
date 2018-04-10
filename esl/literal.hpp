@@ -47,19 +47,19 @@
 namespace esl {
 
 //NOTE:
-// ascii_array_constant and ascii_constant use for convert char to CharT in compile time
+// char128_constant and char_constant use for convert char to CharT in compile time
 // The behavior is unspecified if the char is not printable.
 
-// ascii_array_constant, ascii_array_constant_v
-ESL_IMPL_STRING_LITERAL_CONSTANT(ascii_array_constant,
+// char128_constant, char128_constant_v
+ESL_IMPL_STRING_LITERAL_CONSTANT(char128_constant,
 		"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1A\x1B\x1C\x1D\x1E\x1F"
 		" !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\x7F")
 
-// ascii_constant, ascii_constant_v
+// char_constant, char_constant_v
 template <class CharT, char c>
-struct ascii_constant: std::integral_constant<CharT, ascii_array_constant_v<CharT>[static_cast<unsigned char>(c)]> {};
+struct char_constant: std::integral_constant<CharT, char128_constant_v<CharT>[static_cast<unsigned char>(c)]> {};
 template <class CharT, char c>
-inline constexpr CharT ascii_constant_v = ascii_constant<CharT, c>::value;
+inline constexpr CharT char_constant_v = char_constant<CharT, c>::value;
 
 } //namespace esl
 
