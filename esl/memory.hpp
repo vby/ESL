@@ -8,7 +8,22 @@
 #include <type_traits>
 #include <memory>
 
+#ifdef ESL_SOURCE_WIN32
+#include <malloc.h>
+#endif
+
 namespace esl {
+
+#ifdef ESL_SOURCE_WIN32
+
+//FIXME: Need _resetstkoflw in xp, see https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/alloca
+ESL_ATTR_FORCEINLINE void* alloca(std::size_t n) noexcept { return _alloca(n); }
+
+#elif defined ESL_COMPILER_GNU
+
+ESL_ATTR_FORCEINLINE void* alloca(std::size_t n) noexcept { return ::__builtin_alloca(n); }
+
+#endif
 
 // c_free_delete
 // A deleter that use std::free with no destructor called

@@ -14,10 +14,11 @@
 
 namespace esl {
 
+#ifdef ESL_HAS_DEMANGLE
+
 // demangle
 // Exceptions: std::bad_alloc
 inline c_unique_ptr<char> demangle(const char* mangled_name) {
-#ifdef ESL_HAS_DEMANGLE
 	int status;
 	c_unique_ptr<char> name(abi::__cxa_demangle(mangled_name, nullptr, nullptr, &status));
 	if (status == 0) {
@@ -28,10 +29,9 @@ inline c_unique_ptr<char> demangle(const char* mangled_name) {
 		name.reset();
 	}
 	return name;
-#else
-	std::terminate();
-#endif
 }
+
+#endif
 
 } // namespace esl
 

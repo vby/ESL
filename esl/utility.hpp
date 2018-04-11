@@ -7,12 +7,13 @@
 #include "array.hpp"
 
 #include <cstdint>
+#include <cstring>
 #include <limits>
 #include <array>
 #include <utility>
 #include <initializer_list>
 #include <type_traits>
-#include <cstring>
+#include <string>
 
 namespace esl {
 
@@ -120,7 +121,7 @@ inline constexpr auto make_index_sequence_vtable_v = make_index_sequence_vtable<
 
 // invert_integer_array
 template <class T, std::size_t Size, std::size_t N, class It, class U = remove_rcv_t<decltype(*std::declval<It>())>>
-constexpr std::array<T, Size> invert_integer_array(It&& first, std::initializer_list<std::pair<U, T>> kvs) {
+constexpr std::array<T, Size> invert_integer_array(It&& first, std::initializer_list<std::pair<U, T>> kvs = {}) {
 	static_assert(N <= std::numeric_limits<T>::max(), "target type is too small");
 	std::array<T, Size> t_arr{};
 	for (std::size_t i = 0; i < Size; ++i) {
@@ -152,6 +153,75 @@ inline decltype(auto) add_emplace(C& c, Args&&... args) {
 	} else {
 		return c.emplace_front(std::forward<Args>(args)...);
 	}
+}
+
+// hex_alphabet_(lowercase|uppercase)
+inline constexpr const char* hex_alphabet_lowercase = "0123456789abcdef";
+inline constexpr const char* hex_alphabet_uppercase = "0123456789ABCDEF";
+
+class hex_option {
+private:
+    std::array<char, 16> alphabet_;
+    std::array<unsigned char, 256> alphabet_invert_;
+
+public:
+    constexpr hex_option(const char* alphabet) noexcept: alphabet_(make_sized_array<16>(alphabet)),
+        alphabet_invert_(invert_integer_array<unsigned char, 256, 16>(alphabet)) {}
+
+    // b [0, 16)
+    constexpr char encode(unsigned char b) const noexcept { return alphabet_[b]; }
+
+    // c [0, 256)
+    constexpr unsigned char decode(char c) const noexcept { return alphabet_invert_[static_cast<unsigned char>(c)]; }
+};
+
+inline constexpr hex_option hex_lowercase{hex_alphabet_lowercase};
+inline constexpr hex_option hex_uppercase{hex_alphabet_uppercase};
+
+// hex_encode_size
+inline constexpr std::size_t hex_encode_size(std::size_t size) noexcept { return size * 2; }
+
+// hex_encode
+inline constexpr std::size_t hex_encode(const void* buf, std::size_t size, char* out,
+		const hex_option& option = hex_lowercase) noexcept {
+	const unsigned char* in = static_cast<const unsigned char*>(buf);
+	const unsigned char* const in_end = in + size;
+	while (in != in_end) {
+		const auto c = *in++;
+		*out++ = option.encode(c >> 4);
+		*out++ = option.encode(c & 0xF);
+	}
+	return hex_encode_size(size);
+}
+inline std::string hex_encode(const void* buf, std::size_t size, const hex_option& option = hex_lowercase) {
+	std::string s;
+	s.resize(hex_encode_size(size));
+	hex_encode(buf, size, s.data(), option);
+	return s;
+}
+
+template <class CharT, class Traits>
+inline std::basic_ostream<CharT, Traits>& hex_encode(std::basic_ostream<CharT, Traits>& os, const void* data, std::size_t size,
+		const hex_option& option = hex_lowercase) {
+	constexpr std::size_t chunk_size = 256;
+	char buf[chunk_size * 2];
+	const unsigned char* in = static_cast<const unsigned char*>(data);
+	const unsigned char* const in_end = in + size;
+	for (; in < in_end; in += chunk_size) {
+		const auto n = std::min(static_cast<std::size_t>(in_end - in), chunk_size);
+		os.write(buf, hex_encode(in, n, buf, option));
+	}
+	return os;
+}
+
+// TODO hex_decode
+
+template <class CharT, class Traits, std::size_t N>
+inline std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& os, const std::array<unsigned char, N>& byte_arr) {
+	if (os.flags() & std::ios_base::uppercase) {
+		return hex_encode(os, byte_arr.data(), byte_arr.size(), hex_uppercase);
+	}
+	return hex_encode(os, byte_arr.data(), byte_arr.size());
 }
 
 } // namespace esl

@@ -4,7 +4,6 @@
 #include "array.hpp"
 #include "utility.hpp"
 
-#include <string_view>
 //#include <immintrin.h>
 
 namespace esl {
@@ -31,7 +30,7 @@ public:
 
 	constexpr char pad() const noexcept { return pad_; }
 
-	// c [0, 128)
+	// c [0, 256)
 	constexpr unsigned char decode(char c) const noexcept { return alphabet_invert_[static_cast<unsigned char>(c)]; }
 };
 
@@ -97,7 +96,7 @@ template <class CharT, class Traits>
 inline std::basic_ostream<CharT, Traits>& base64_encode(std::basic_ostream<CharT, Traits>& os, const void* data, std::size_t size,
 		const base64_option& option = base64_std) {
 	const unsigned char* bytes = static_cast<const unsigned char*>(data);
-	constexpr std::size_t chunk_size = 3 * 256;
+	constexpr std::size_t chunk_size = 3 * 128;
 	char buf[base64_encode_size(chunk_size, true)];
 	for (std::size_t i = 0; i < size; i += chunk_size) {
 		os.write(buf, base64_encode(bytes + i, std::min(size - i, chunk_size), buf, option));
@@ -135,14 +134,16 @@ inline constexpr std::pair<std::size_t, std::size_t> base64_try_decode(const cha
 	unsigned char* out_b = out_b_base;
 	const char* const in_base = in;
 	const char* const in_end = in + size;
-	while (in + 1 < in_end) {
+	while (in < in_end) {
 		// [00aaaaaa][00bbbbbb][00cccccc][00dddddd] -> [aaaaaabb][bbbbcccc][ccdddddd]
 		const auto a = option.decode(*in++);
 		ESL_BASE64_DECODE_CHECK_AB_(a); // break if X---
-
+		if (in == in_end) { // a---
+			++in;
+			break;
+		}
 		const auto b = option.decode(*in++);
 		ESL_BASE64_DECODE_CHECK_AB_(b); // break if aX--
-
 		*out_b++ = (a << 2) | (b >> 4);
 		if (in == in_end) { // ab => ab==
 			ESL_BASE64_DECODE_CHECK_AB_B_(b);
@@ -194,10 +195,6 @@ inline std::pair<std::string, std::size_t> base64_try_decode(const char* in, std
 	s.resize(r.first);
 	return {std::move(s), r.second};
 }
-// return string from string_view
-inline std::pair<std::string, std::size_t> base64_try_decode(std::string_view sv, const base64_option& option = base64_std) {
-	return base64_try_decode(sv.data(), sv.size(), option);
-}
 
 // base64_decode
 inline constexpr std::size_t base64_decode(const char* in, std::size_t size, char* out, const base64_option& option = base64_std) {
@@ -214,21 +211,16 @@ inline std::string base64_decode(const char* in, std::size_t size, const base64_
 	s.resize(base64_decode(in, size, s.data(), option));
 	return s;
 }
-// return string from string_view
-inline std::string base64_decode(std::string_view sv, const base64_option& option = base64_std) {
-	return base64_decode(sv.data(), sv.size(), option);
-}
 // ostream
 template <class CharT, class Traits>
-inline std::basic_ostream<CharT, Traits>& base64_decode(std::basic_ostream<CharT, Traits>& os, std::string_view sv,
+inline std::basic_ostream<CharT, Traits>& base64_decode(std::basic_ostream<CharT, Traits>& os, const char* in, std::size_t size,
 		const base64_option& option = base64_std) {
-	constexpr std::size_t chunk_size = 4 * 256;
+	constexpr std::size_t chunk_size = 4 * 128;
 	char buf[base64_decode_max_size(chunk_size)];
-	const char* in = sv.data();
-	const char* const in_end = in + sv.size();
+	const char* const in_end = in + size;
 	for (; in < in_end; in += chunk_size) {
-		auto in_size = std::min(static_cast<std::size_t>(in_end - in), chunk_size);
-		os.write(buf, base64_decode(in, in_size, buf, option));
+		const auto n = std::min(static_cast<std::size_t>(in_end - in), chunk_size);
+		os.write(buf, base64_decode(in, n, buf, option));
 	}
 	return os;
 }
