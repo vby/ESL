@@ -17,15 +17,6 @@
 
 namespace esl {
 
-// hash_value
-template <class T>
-inline std::size_t hash_value(const T& value) noexcept(noexcept(std::declval<std::hash<T>>()(std::declval<const T&>()))) {
-	return std::hash<T>{}(value);
-}
-inline std::size_t hash_value(const void* p, std::size_t size) noexcept {
-	return std::hash<std::string_view>{}(std::string_view(static_cast<const char*>(p), size));
-}
-
 // Modified from boost/container_hash/hash.hpp
 /*
  * Boost Software License - Version 1.0,
@@ -56,7 +47,7 @@ inline std::size_t hash_value(const void* p, std::size_t size) noexcept {
 
 #if (ESL_SIZE_WIDTH == 64)
 
-inline constexpr void hash_value_combine_(std::size_t& h, std::size_t k) noexcept {
+inline constexpr void hash_combine_(std::size_t& h, std::size_t k) noexcept {
 	const std::size_t m = 0xc6a4a7935bd1e995U;
 
 	k *= m;
@@ -73,7 +64,7 @@ inline constexpr void hash_value_combine_(std::size_t& h, std::size_t k) noexcep
 
 #else
 
-inline constexpr void hash_value_combine_(std::size_t& h, std::size_t k) noexcept {
+inline constexpr void hash_combine_(std::size_t& h, std::size_t k) noexcept {
 	const std::size_t c1 = 0xcc9e2d51U;
 	const std::size_t c2 = 0x1b873593U;
 
@@ -88,57 +79,27 @@ inline constexpr void hash_value_combine_(std::size_t& h, std::size_t k) noexcep
 
 #endif
 
-// hashval
-// operator|: combine two hash value
-// operator+: combine hash value with a object
-class hashval {
-private:
-	std::size_t h_;
-
-public:
-	constexpr hashval(): h_(0) {}
-
-	constexpr hashval(std::size_t h): h_(h) {}
-
-	constexpr std::size_t value() const { return h_; }
-
-	constexpr operator std::size_t() const { return h_; }
-
-	constexpr hashval operator|(std::size_t k) const {
-		std::size_t h = h_;
-		hash_value_combine_(h, k);
-		return h;
-	}
-
-	constexpr hashval& operator|=(std::size_t k) {
-		hash_value_combine_(h_, k);
-		return *this;
-	}
-
-	template <class T>
-	constexpr hashval operator+(const T& value) const {
-		std::size_t h = h_;
-		hash_value_combine_(h, ::esl::hash_value(value));
-		return h;
-	}
-
-	template <class T>
-	constexpr hashval& operator+=(const T& value) {
-		hash_value_combine_(h_, ::esl::hash_value(value));
-		return *this;
-	}
-};
-
-// hash_value_combine
-inline constexpr std::size_t hash_value_combine(std::size_t h, std::size_t k) {
-	hash_value_combine_(h, k);
+// hash_combine
+inline constexpr std::size_t hash_combine(std::size_t h, std::size_t k) {
+	hash_combine_(h, k);
 	return h;
 }
 
-// hash_combine
+// hash_value
 template <class T>
-inline std::size_t hash_combine(std::size_t h, const T& value) {
-	return hash_value_combine(h, ::esl::hash_value(value));
+inline std::size_t hash_value(const T& value) noexcept(noexcept(std::declval<std::hash<T>>()(std::declval<const T&>()))) {
+	return std::hash<T>{}(value);
+}
+template <class T>
+inline std::size_t hash_value(const T& value, std::size_t h) noexcept(noexcept(std::declval<std::hash<T>>()(std::declval<const T&>()))) {
+	return hash_combine(h, hash_value(value));
+}
+// stdhash
+inline std::size_t stdhash(const void* buf, std::size_t size) noexcept {
+	return std::hash<std::string_view>{}(std::string_view(static_cast<const char*>(buf), size));
+}
+inline std::size_t stdhash(const void* buf, std::size_t size, std::size_t h) noexcept {
+	return hash_combine(h, stdhash(buf, size));
 }
 
 } // namespace esl
@@ -149,7 +110,7 @@ namespace std {
 template <class T1, class T2>
 struct hash<std::pair<T1, T2>> {
 	std::size_t operator()(const std::pair<T1, T2>& p) const {
-		return ::esl::hash_combine(::esl::hash_value(p.first), p.second);
+		return ::esl::hash_value(p.second, ::esl::hash_value(p.first));
 	}
 };
 
@@ -162,8 +123,9 @@ struct hash<std::tuple<Ts...>> {
 private:
 	template <std::size_t... I>
 	std::size_t hash_(const std::tuple<Ts...>& t, std::index_sequence<I...>) const {
-		::esl::hashval h;
-		return (h += ... += std::get<I>(t));
+		std::size_t h = 0;
+		(..., (h = ::esl::hash_value(std::get<I>(t), h)));
+		return h;
 	}
 };
 
@@ -171,9 +133,9 @@ private:
 template <class T, class Alloc>
 struct hash<std::vector<T, Alloc>> {
 	std::size_t operator()(const std::vector<T, Alloc>& vec) const {
-		::esl::hashval h;
+		std::size_t h = 0;
 		for (auto& v: vec) {
-			h += v;
+			h = ::esl::hash_value(v, h);
 		}
 		return h;
 	}
@@ -181,9 +143,9 @@ struct hash<std::vector<T, Alloc>> {
 template <class Key, class T, class Hash, class KeyEqual, class Alloc>
 struct hash<std::unordered_map<Key, T, Hash, KeyEqual, Alloc>> {
 	std::size_t operator()(const std::unordered_map<Key, T, Hash, KeyEqual, Alloc>& m) const {
-		::esl::hashval h;
+		std::size_t h = 0;
 		for (auto& v: m) {
-			h += v;
+			h = ::esl::hash_value(v, h);
 		}
 		return h;
 	}
@@ -434,11 +396,8 @@ inline void md5_state::update(const void* buf, std::size_t len) noexcept {
 }
 
 class md5val: public std::array<unsigned char, 16> {
-protected:
-	using Base = std::array<unsigned char, 16>;
-
 public:
-	using Base::Base;
+	md5val() noexcept = default;
 
 	md5val(const md5_state& state) noexcept: md5val(md5_state(state).finish()) {}
 

@@ -9,7 +9,7 @@ TEST(FuntionalTest, hash_value) {
 	}
 	{
 		int a[100];
-		ASSERT_NE(esl::hash_value(a, sizeof(a)), 0);
+		ASSERT_NE(esl::stdhash(a, sizeof(a)), 0);
 	}
 }
 
@@ -17,14 +17,14 @@ TEST(FuntionalTest, hash_combine) {
 	{
 		std::size_t h = 0;
 		std::size_t k = esl::hash_value(100);
-		h = esl::hash_value_combine(h, k);
+		h = esl::hash_combine(h, k);
 		ASSERT_NE(h, 0);
 		ASSERT_NE(h, k);
 
-		auto h1 = esl::hash_combine(h, std::string("hello"));
+		auto h1 = esl::hash_combine(h, esl::hash_value(std::string("hello")));
 		ASSERT_NE(h1, h);
 
-		auto h2 = esl::hash_combine(h, std::string("hello2"));
+		auto h2 = esl::hash_combine(h, esl::hash_value(std::string("hello2")));
 		ASSERT_NE(h2, h);
 		ASSERT_NE(h2, h1);
 	}
