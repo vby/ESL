@@ -136,6 +136,11 @@
 #define ESL_QUOTE(name) #name
 #define ESL_STRINGIFY(name) ESL_QUOTE(name)
 
+// ESL_DISABLE_COPY_AND_ASSIGN
+#define ESL_DISABLE_COPY_AND_ASSIGN(name) \
+	name(const name&) = delete; \
+	name& operator=(const name&) = delete;
+
 // ESL_WARNING_(PUSH, POP), ESL_WARNING
 #ifdef ESL_COMPILER_MSVC
 	#define ESL_WARNING_PUSH() __pragma(warning(push))
