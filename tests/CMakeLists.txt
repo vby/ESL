@@ -2,11 +2,16 @@ cmake_minimum_required(VERSION 2.8)
 
 project(ESL_tests CXX)
 
+# googletest
 set(BUILD_GTEST ON CACHE BOOL "")
 set(BUILD_GMOCK OFF CACHE BOOL "")
 set(INSTALL_GTEST OFF CACHE BOOL "")
 set(gtest_force_shared_crt ON CACHE BOOL "")
 add_subdirectory(googletest)
+
+# tests
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_MACOSX_RPATH TRUE)
 
 function(esl_add_executable target name)
     add_executable(${target} ${name}.cpp)
@@ -30,8 +35,6 @@ function(esl_add_test name)
 	esl_add_executable(${name} ${name})
 	add_test(NAME ${name} COMMAND ${name})
 endfunction()
-
-set(CMAKE_CXX_EXTENSIONS OFF)
 
 esl_add_test(utility_tests)
 esl_add_test(type_traits_tests)

@@ -88,7 +88,7 @@ public:
 	default_deleter_shared_ptr(std::nullptr_t, Deleter d, Alloc alloc) : base_type(nullptr, d, alloc) {}
 
 	template <class Y>
-	default_deleter_shared_ptr(const std::shared_ptr<Y>& r, element_type* ptr) noexcept : base_type(r, ptr) {}
+	default_deleter_shared_ptr(const std::shared_ptr<Y>& r, typename base_type::element_type* ptr) noexcept : base_type(r, ptr) {}
 
 	default_deleter_shared_ptr(const default_deleter_shared_ptr& r) noexcept = default;
 
@@ -110,9 +110,9 @@ public:
 	default_deleter_shared_ptr(std::unique_ptr<Y, Deleter>&& r) : base_type(std::move(r)) {}
 
 	// reset
-	template <class Y >
+	template <class Y>
 	void reset(Y* ptr) {
-		this->base_type::reset(ptr, Deleter{});
+		this->base_type::reset(ptr, DefaultDeleter{});
 	}
 	template <class Y, class Deleter>
 	void reset(Y* ptr, Deleter d) {
