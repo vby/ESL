@@ -4,7 +4,9 @@
 #include "flex_variant.hpp"
 #include "functional.hpp"
 
+#ifdef ESL_ENABLE_YAML
 #include <yaml.h>
+#endif // ESL_ENABLE_YAML
 
 #include <cassert>
 #include <cstdint>
@@ -85,8 +87,9 @@ struct hash<::esl::yaml::node> {
 } // namespace std
 
 namespace esl {
-
 namespace yaml {
+
+#ifdef ESL_ENABLE_YAML
 
 class load_error: public std::runtime_error {
 private:
@@ -387,8 +390,9 @@ inline std::string dump(const std::vector<node>& docs) {
 using details::load;
 using details::dump;
 
-} // namespace yaml
+#endif // ESL_ENABLE_YAML
 
+} // namespace yaml
 } // namespace esl
 
 #endif // ESL_YAML_HPP

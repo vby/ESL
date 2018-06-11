@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <iterator>
 #include <tuple>
+#include <algorithm>
 
 namespace esl {
 

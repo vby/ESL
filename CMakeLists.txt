@@ -3,25 +3,28 @@ cmake_minimum_required(VERSION 3.1)
 project(ESL CXX)
 
 option(ESL_BUILD_TESTING "Enable ESL testing" ON)
+option(ESL_ENABLE_YAML "Enable yaml" OFF)
 
-add_library(ESL INTERFACE)
-
-target_include_directories(ESL INTERFACE
-		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-		$<INSTALL_INTERFACE:include>
-	)
-
-target_compile_features(ESL INTERFACE cxx_std_17)
+file(GLOB_RECURSE sources "esl/*.cpp" "esl/*.hpp")
+add_library(ESL STATIC ${sources})
+target_compile_features(ESL PUBLIC cxx_std_17)
+target_include_directories(ESL PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:include>
+)
 
 # libyaml
-set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
-add_subdirectory(thirdparty/libyaml)
-target_link_libraries(ESL INTERFACE yaml)
-
-install(DIRECTORY esl DESTINATION include)
+if(ESL_ENABLE_YAML)
+    set(BUILD_TESTING OFF)
+    add_subdirectory(thirdparty/libyaml)
+    target_compile_definitions(ESL PUBLIC ESL_ENABLE_YAML)
+    target_link_libraries(ESL PUBLIC yaml)
+endif()
 
 if(ESL_BUILD_TESTING)
-	enable_testing()
-	add_subdirectory(tests)
+    enable_testing()
+    add_subdirectory(tests)
 endif()
+
+install(DIRECTORY esl DESTINATION include)
 

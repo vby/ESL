@@ -63,6 +63,8 @@ TEST(YamlTest, node) {
 	ASSERT_EQ(std::get<yaml::int_t>(std::get<yaml::map>(n)["k2"]), 123);
 }
 
+#ifdef ESL_ENABLE_YAML
+
 TEST(YamlTest, load) {
 	auto docs = yaml::load(test_yaml_empty);
 	ASSERT_EQ(docs.size(), 0);
@@ -120,4 +122,6 @@ k3: v3
 		}
 	}
 }
+
+#endif // ESL_ENABLE_YAML
 
