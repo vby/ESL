@@ -11,7 +11,7 @@
 #define ESL_CXX_VERSION_MAJOR (__cplusplus / 100)
 #define ESL_CXX_VERSION_MINOR (__cplusplus % 100)
 
-// ESL_COMPILER_(MSVC, GNU, CLANG, GNU_NOT_CLANG)
+// ESL_COMPILER_(MSVC, GNU, CLANG, GCC)
 // ESL_COMPILER_VERSION (nnnn)
 // ESL_COMPILER_VERSION_MAJOR, ESL_COMPILER_VERSION_MINOR, ESL_COMPILER_VERSION_PATCHLEVEL
 #if defined _MSC_VER
@@ -31,20 +31,20 @@
 	#define ESL_COMPILER_VERSION_PATCHLEVEL __clang_patchlevel__
 #elif defined __GNUC__
 	#define ESL_COMPILER_GNU
-	#define ESL_COMPILER_GNU_NOT_CLANG
+	#define ESL_COMPILER_GCC
 	#define ESL_COMPILER_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
 	#define ESL_COMPILER_VERSION_MAJOR __GNUC__
 	#define ESL_COMPILER_VERSION_MINOR __GNUC_MINOR__
 	#define ESL_COMPILER_VERSION_PATCHLEVEL __GNUC_PATCHLEVEL__
 #endif
 
-// ESL_SOURCE_(WIN32, WIN64, WIN32_NOT_WIN64, POSIX, GNU, BSD, APPLE)
+// ESL_SOURCE_(WIN32, WIN64, WIN32_32, POSIX, GNU, BSD, APPLE)
 #ifdef _WIN32
 	#define ESL_SOURCE_WIN32
 	#ifdef _WIN64
 		#define ESL_SOURCE_WIN64
 	#else
-		#define ESL_SOURCE_WIN32_NOT_WIN64
+		#define ESL_SOURCE_WIN32_32
 	#endif
 #endif
 #ifdef _POSIX_SOURCE
@@ -139,13 +139,16 @@
 // ESL_DISABLE_COPY_AND_ASSIGN
 #define ESL_DISABLE_COPY_AND_ASSIGN(name) \
 	name(const name&) = delete; \
-	name& operator=(const name&) = delete;
+	name& operator=(const name&) = delete
 
 // ESL_WARNING_(PUSH, POP), ESL_WARNING
 #ifdef ESL_COMPILER_MSVC
 	#define ESL_WARNING_PUSH() __pragma(warning(push))
 	#define ESL_WARNING_POP() __pragma(warning(pop))
-	#define ESL_WARNING(specifier, number) __pragma(warning(specifier: number))
+	#define ESL_WARNING_MSVC(specifier, number) __pragma(warning(specifier: number))
+	#define ESL_WARNING_GNU(specifier, number)
+	#define ESL_WARNING_CLANG(specifier, number)
+	#define ESL_WARNING_GCC(specifier, number)
 #elif defined ESL_COMPILER_GNU
 	#define ESL_WARNING_PUSH() _Pragma("GCC diagnostic push")
 	#define ESL_WARNING_POP() _Pragma("GCC diagnostic pop")
@@ -153,15 +156,29 @@
 	#define ESL_WARNING_disable_(name) ESL_WARNING_(ignored, name)
 	#define ESL_WARNING_error_(name) ESL_WARNING_(error, name)
 	#define ESL_WARNING_default_(name) ESL_WARNING_(warning, name)
-	#define ESL_WARNING(specifier, name) ESL_WARNING_##specifier##_(ESL_QUOTE(-W##name))
+	#define ESL_WARNING_MSVC(specifier, name)
+	#define ESL_WARNING_GNU(specifier, name) ESL_WARNING_##specifier##_(ESL_QUOTE(-##name))
+	#ifdef ESL_COMPILER_CLANG
+		#define ESL_WARNING_CLANG(specifier, name) ESL_WARNING_GNU(specifier, name)
+		#define ESL_WARNING_GCC(specifier, name)
+	#elif defined ESL_COMPILER_GCC
+		#define ESL_WARNING_CLANG(specifier, name)
+		#define ESL_WARNING_GCC(specifier, name) ESL_WARNING_GNU(specifier, name)
+	#else
+		#define ESL_WARNING_CLANG(specifier, name)
+		#define ESL_WARNING_GCC(specifier, name)
+	#endif
 #else
 	#define ESL_WARNING_PUSH()
 	#define ESL_WARNING_POP()
-	#define ESL_WARNING(specifier, x)
+	#define ESL_WARNING_MSVC(specifier, x)
+	#define ESL_WARNING_GNU(specifier, x)
+	#define ESL_WARNING_CLANG(specifier, x)
+	#define ESL_WARNING_GCC(specifier, x)
 #endif
 
 // ESL_ORDER_(LITTLE_ENDIAN, BIG_ENDIAN, PDP_ENDIAN)
-#if !defined(ESL_ORDER_BIG_ENDIAN) && !defined(ESL_ORDER_PDP_ENDIAN)
+#if !defined(ESL_ORDER_LITTLE_ENDIAN) && !defined(ESL_ORDER_BIG_ENDIAN) && !defined(ESL_ORDER_PDP_ENDIAN)
 	#ifdef ESL_COMPILER_GNU
 		#if (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 			#define ESL_ORDER_LITTLE_ENDIAN
