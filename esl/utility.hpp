@@ -14,6 +14,7 @@
 #include <initializer_list>
 #include <type_traits>
 #include <string>
+#include <ostream>
 
 namespace esl {
 

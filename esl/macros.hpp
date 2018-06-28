@@ -157,7 +157,7 @@
 	#define ESL_WARNING_error_(name) ESL_WARNING_(error, name)
 	#define ESL_WARNING_default_(name) ESL_WARNING_(warning, name)
 	#define ESL_WARNING_MSVC(specifier, name)
-	#define ESL_WARNING_GNU(specifier, name) ESL_WARNING_##specifier##_(ESL_QUOTE(-##name))
+	#define ESL_WARNING_GNU(specifier, name) ESL_WARNING_##specifier##_(name)
 	#ifdef ESL_COMPILER_CLANG
 		#define ESL_WARNING_CLANG(specifier, name) ESL_WARNING_GNU(specifier, name)
 		#define ESL_WARNING_GCC(specifier, name)
