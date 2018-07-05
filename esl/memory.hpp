@@ -40,6 +40,13 @@ struct c_unique_ptr_<T[]> { using type = std::unique_ptr<T[], c_free_delete>; };
 template <class T>
 using c_unique_ptr = typename c_unique_ptr_<T>::type;
 
+// noop_unique_ptr
+struct noop_deleter {
+    void operator()(void*) noexcept {}
+};
+template <class T>
+using noop_unique_ptr = std::unique_ptr<T, noop_deleter>;
+
 // c_allocator
 // A allocator that use std::malloc and std::free
 template <class T>

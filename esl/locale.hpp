@@ -9,7 +9,7 @@ namespace esl {
 
 namespace details {
 
-std::pair<std::locale, bool> make_locale(const char* name) {
+inline std::pair<std::locale, bool> make_locale(const char* name) {
 	try {
 		return {std::locale(name), true};
 	} catch (const std::runtime_error&) {
