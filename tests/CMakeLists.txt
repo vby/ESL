@@ -1,13 +1,25 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.11)
 
 project(ESL_tests CXX)
 
-# googletest
-set(BUILD_GTEST ON CACHE BOOL "")
-set(BUILD_GMOCK OFF CACHE BOOL "")
-set(INSTALL_GTEST OFF CACHE BOOL "")
-set(gtest_force_shared_crt ON CACHE BOOL "")
-add_subdirectory(googletest)
+include(FetchContent)
+set(FETCHCONTENT_QUIET OFF)
+set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
+FetchContent_Declare(
+        googletest
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG        release-1.8.1
+        GIT_PROGRESS TRUE
+    )
+FetchContent_GetProperties(googletest)
+if(NOT googletest_POPULATED)
+    FetchContent_Populate(googletest)
+    set(BUILD_GTEST ON CACHE BOOL "")
+    set(BUILD_GMOCK OFF CACHE BOOL "")
+    set(INSTALL_GTEST OFF CACHE BOOL "")
+    set(gtest_force_shared_crt ON CACHE BOOL "")
+    add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
+endif()
 
 # tests
 set(CMAKE_CXX_EXTENSIONS OFF)

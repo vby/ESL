@@ -1,6 +1,0 @@
-[submodule "googletest"]
-	path = tests/googletest
-	url = https://github.com/google/googletest.git
-[submodule "libyaml"]
-	path = thirdparty/libyaml
-	url = https://github.com/yaml/libyaml.git

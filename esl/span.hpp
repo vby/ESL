@@ -267,7 +267,7 @@ namespace std {
 
 ESL_WARNING_PUSH()
 #ifdef ESL_COMPILER_CLANG
-	ESL_WARNING(disable, mismatched-tags)
+	ESL_WARNING(disable, "-Wmismatched-tags")
 #endif
 
 // std::tuple_size
