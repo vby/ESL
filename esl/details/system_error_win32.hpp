@@ -11,7 +11,7 @@ namespace esl::details {
 namespace win32 {
 
 inline std::error_code last_error_code() noexcept {
-	return std::error_code(static_cast<int>(::GetLastError()), std::system_category());
+    return std::error_code(static_cast<int>(::GetLastError()), std::system_category());
 }
 
 } // namespace win32
@@ -19,4 +19,3 @@ inline std::error_code last_error_code() noexcept {
 } // namespace esl::details
 
 #endif //ESL_DETAILS_SYSTEM_ERROR_WIN32_HPP
-

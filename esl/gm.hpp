@@ -1,7 +1,7 @@
-#include <type_traits>
-#include <utility>
 #include <array>
 #include <ostream>
+#include <type_traits>
+#include <utility>
 
 namespace esl {
 namespace gm {
@@ -491,7 +491,6 @@ inline std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, T
 using Vec2 = VecT<float, 2>;
 using Vec3 = VecT<float, 3>;
 using Vec4 = VecT<float, 4>;
-
 
 template <class T, std::size_t N>
 struct MatT : details::VecBase<VecT<T, N>, N> {

@@ -4,8 +4,8 @@
 #include "flex_variant.hpp"
 
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 namespace esl {
 
@@ -36,7 +36,7 @@ enum index {
 
 using value_base = flex_variant<null_t, boolean, number, string, array, object>;
 
-class value: public value_base {
+class value : public value_base {
 public:
     using value_base::value_base;
 };
@@ -49,21 +49,20 @@ namespace std {
 
 // std::variant_size
 template <>
-struct variant_size<::esl::json::value>: variant_size<::esl::json::value_base> {};
+struct variant_size<::esl::json::value> : variant_size<::esl::json::value_base> {};
 
 // std::variant_alternative
 template <std::size_t I>
-struct variant_alternative<I, ::esl::json::value>: variant_alternative<I, ::esl::json::value_base> {};
+struct variant_alternative<I, ::esl::json::value> : variant_alternative<I, ::esl::json::value_base> {};
 
 // std::hash
 template <>
 struct hash<::esl::json::value> {
-	size_t operator()(const ::esl::json::value& n) const {
-		return hash<::esl::json::value_base>{}(n);
-	}
+    size_t operator()(const ::esl::json::value& n) const {
+        return hash<::esl::json::value_base>{}(n);
+    }
 };
 
 } // namespace std
 
 #endif // ESL_JSON_HPP
-

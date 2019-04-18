@@ -6,144 +6,161 @@
 
 #include "macros.hpp"
 
-#include <system_error>
-#include <stdexcept>
-#include <memory>
 #include <cassert>
+#include <memory>
+#include <stdexcept>
+#include <system_error>
 
 #ifdef ESL_SOURCE_WIN32
-	#include "details/shared_library_win32.hpp"
+#    include "details/shared_library_win32.hpp"
 #else
-	#include "details/shared_library_posix.hpp"
+#    include "details/shared_library_posix.hpp"
 #endif
 
 namespace esl {
 
 class shared_library {
 private:
-	using dl = details::shared_library;
+    using dl = details::shared_library;
 
 public:
-	using native_handle_type = typename dl::native_handle_type;
+    using native_handle_type = typename dl::native_handle_type;
 
 private:
-	native_handle_type handle_;
+    native_handle_type handle_;
 
 public:
-	shared_library() noexcept: handle_(dl::invalid_handle) {}
+    shared_library() noexcept : handle_(dl::invalid_handle) {}
 
-	// Exceptions: std::system_error
-	shared_library(const char* filename): shared_library() { this->open(filename); }
+    // Exceptions: std::system_error
+    shared_library(const char* filename) : shared_library() {
+        this->open(filename);
+    }
 
-	// Exceptions: std::system_error
-	shared_library(const std::string& filename): shared_library(filename.c_str()) {}
+    // Exceptions: std::system_error
+    shared_library(const std::string& filename) : shared_library(filename.c_str()) {}
 
-	shared_library(const shared_library&) = delete;
+    shared_library(const shared_library&) = delete;
 
-	shared_library(shared_library&& other) noexcept: handle_(other.handle_) {
-		other.handle_ = dl::invalid_handle;
-	}
+    shared_library(shared_library&& other) noexcept : handle_(other.handle_) {
+        other.handle_ = dl::invalid_handle;
+    }
 
-	~shared_library() noexcept {
-		if (dl::valid(handle_)) {
-			std::error_code ec;
-			[[maybe_unused]] bool r = dl::close(handle_, ec);
-			assert(r);
-		}
-	}
+    ~shared_library() noexcept {
+        if (dl::valid(handle_)) {
+            std::error_code ec;
+            [[maybe_unused]] bool r = dl::close(handle_, ec);
+            assert(r);
+        }
+    }
 
-	shared_library& operator=(const shared_library&) = delete;
+    shared_library& operator=(const shared_library&) = delete;
 
-	shared_library& operator=(shared_library&& other) noexcept {
-		handle_ = other.handle_;
-		other.handle_ = dl::invalid_handle;
-		return *this;
-	}
+    shared_library& operator=(shared_library&& other) noexcept {
+        handle_ = other.handle_;
+        other.handle_ = dl::invalid_handle;
+        return *this;
+    }
 
-	// Exceptions: std::system_error
-	void open(const char* filename);
+    // Exceptions: std::system_error
+    void open(const char* filename);
 
-	// Exceptions: std::system_error
-	void open(const std::string& filename) { this->open(filename.c_str()); }
+    // Exceptions: std::system_error
+    void open(const std::string& filename) {
+        this->open(filename.c_str());
+    }
 
-	// Exceptions: std::system_error
-	void close();
+    // Exceptions: std::system_error
+    void close();
 
-	bool is_open() const noexcept { return dl::valid(handle_); }
+    bool is_open() const noexcept {
+        return dl::valid(handle_);
+    }
 
-	operator bool() const noexcept { return this->is_open(); }
+    operator bool() const noexcept {
+        return this->is_open();
+    }
 
-	native_handle_type native_handle() const noexcept { return handle_; }
+    native_handle_type native_handle() const noexcept {
+        return handle_;
+    }
 
-	void swap(shared_library& other) noexcept { std::swap(*this, other); }
+    void swap(shared_library& other) noexcept {
+        std::swap(*this, other);
+    }
 
-	// has_symbol
-	bool has_symbol(const char* name) const noexcept { return dl::symbol(handle_, name); }
+    // has_symbol
+    bool has_symbol(const char* name) const noexcept {
+        return dl::symbol(handle_, name);
+    }
 
-	bool has_symbol(const std::string& name) const noexcept { return this->has_symbol(name.c_str()); }
+    bool has_symbol(const std::string& name) const noexcept {
+        return this->has_symbol(name.c_str());
+    }
 
-	// get_symbol, get_symbol<T>
+    // get_symbol, get_symbol<T>
 
-	// Exceptions: std::bad_alloc, std::system_error
-	template <class T = void*>
-	T get_symbol(const char* name) const {
-		std::error_code ec;
-		void* sym = dl::symbol(handle_, name, ec);
-		if (!sym) {
-			dl::throw_exceptions(ec);
-		}
-		return reinterpret_cast<T>(sym);
-	}
+    // Exceptions: std::bad_alloc, std::system_error
+    template <class T = void*>
+    T get_symbol(const char* name) const {
+        std::error_code ec;
+        void* sym = dl::symbol(handle_, name, ec);
+        if (!sym) {
+            dl::throw_exceptions(ec);
+        }
+        return reinterpret_cast<T>(sym);
+    }
 
-	// Exceptions: std::bad_alloc, std::system_error
-	template <class T = void*>
-	T get_symbol(const std::string& name) const { return this->get_symbol<T>(name.c_str()); }
+    // Exceptions: std::bad_alloc, std::system_error
+    template <class T = void*>
+    T get_symbol(const std::string& name) const {
+        return this->get_symbol<T>(name.c_str());
+    }
 
-	// Exceptions: std::bad_alloc
-	template <class T = void*>
-	T get_symbol(const char* name, std::string& err_msg) const {
-		void* sym = dl::symbol(handle_, name);
-		if (!sym) {
-			dl::error_message(err_msg);
-		}
-		return reinterpret_cast<T>(sym);
-	}
+    // Exceptions: std::bad_alloc
+    template <class T = void*>
+    T get_symbol(const char* name, std::string& err_msg) const {
+        void* sym = dl::symbol(handle_, name);
+        if (!sym) {
+            dl::error_message(err_msg);
+        }
+        return reinterpret_cast<T>(sym);
+    }
 
-	// Exceptions: std::bad_alloc
-	template <class T = void*>
-	T get_symbol(const std::string& name, std::string& err_msg) const {
-		return this->get_symbol<T>(name.c_str(), err_msg);
-	}
+    // Exceptions: std::bad_alloc
+    template <class T = void*>
+    T get_symbol(const std::string& name, std::string& err_msg) const {
+        return this->get_symbol<T>(name.c_str(), err_msg);
+    }
 };
 
 inline void shared_library::open(const char* filename) {
-	this->close();
+    this->close();
 
-	if (!filename || filename[0] == '\0') {
-		throw std::invalid_argument("shared_library::open: argument is null or empty");
-	}
+    if (!filename || filename[0] == '\0') {
+        throw std::invalid_argument("shared_library::open: argument is null or empty");
+    }
 
-	std::error_code ec;
-	handle_ = dl::open(filename, ec);
-	if (!dl::valid(handle_)) {
-		dl::throw_exceptions(ec);
-	}
+    std::error_code ec;
+    handle_ = dl::open(filename, ec);
+    if (!dl::valid(handle_)) {
+        dl::throw_exceptions(ec);
+    }
 }
 
 inline void shared_library::close() {
-	if (!dl::valid(handle_)) {
-		return;
-	}
+    if (!dl::valid(handle_)) {
+        return;
+    }
 
-	std::error_code ec;
-	if (dl::close(handle_, ec)) {
-		handle_ = dl::invalid_handle;
-	} else {
-		dl::throw_exceptions(ec);
-	}
+    std::error_code ec;
+    if (dl::close(handle_, ec)) {
+        handle_ = dl::invalid_handle;
+    } else {
+        dl::throw_exceptions(ec);
+    }
 }
 
 } // namespace esl
 
 #endif //ESL_SHARED_LIBRARY_HPP
-
