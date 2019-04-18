@@ -1,3 +1,4 @@
+#include "macros.hpp"
 #include <array>
 #include <ostream>
 #include <type_traits>
@@ -51,10 +52,15 @@ template <class T>
 struct VecT<T, 2> : details::VecBase<T, 2> {
     union {
         T data[2];
+        ESL_WARNING_PUSH()
+        ESL_WARNING_CLANG(disable, "-Wgnu-anonymous-struct")
+        ESL_WARNING_CLANG(disable, "-Wnested-anon-types")
+        ESL_WARNING_GCC(disable, "-Wpedantic")
         struct {
             T x;
             T y;
         };
+        ESL_WARNING_POP()
         SwizzleT<T, 0, 0> xx;
         SwizzleT<T, 0, 1> xy;
         SwizzleT<T, 1, 0> yx;
@@ -70,11 +76,16 @@ template <class T>
 struct VecT<T, 3> : details::VecBase<T, 3> {
     union {
         T data[3];
+        ESL_WARNING_PUSH()
+        ESL_WARNING_CLANG(disable, "-Wgnu-anonymous-struct")
+        ESL_WARNING_CLANG(disable, "-Wnested-anon-types")
+        ESL_WARNING_GCC(disable, "-Wpedantic")
         struct {
             T x;
             T y;
             T z;
         };
+        ESL_WARNING_POP()
         SwizzleT<T, 0, 0> xx;
         SwizzleT<T, 0, 1> xy;
         SwizzleT<T, 1, 0> yx;
@@ -123,12 +134,17 @@ template <class T>
 struct VecT<T, 4> : details::VecBase<T, 4> {
     union {
         T data[4];
+        ESL_WARNING_PUSH()
+        ESL_WARNING_CLANG(disable, "-Wgnu-anonymous-struct")
+        ESL_WARNING_CLANG(disable, "-Wnested-anon-types")
+        ESL_WARNING_GCC(disable, "-Wpedantic")
         struct {
             T x;
             T y;
             T z;
             T w;
         };
+        ESL_WARNING_POP()
         SwizzleT<T, 0, 0> xx;
         SwizzleT<T, 0, 1> xy;
         SwizzleT<T, 1, 0> yx;

@@ -2,7 +2,7 @@
 language: cpp
 
 os: linux
-dist: trusty
+dist: xenial
 sudo: false
 
 notifications:
@@ -14,46 +14,45 @@ git:
 matrix:
   include:
     # OSX Clang
-    #- env: COMPILER=clang++ BUILD_TYPE=Debug
-    #  os: osx
-    #  osx_image: xcode9.3beta
-    #  compiler: clang
-    #- env: COMPILER=clang++ BUILD_TYPE=Release
-    #  os: osx
-    #  osx_image: xcode9.3beta
-    #  compiler: clang
-
-    # OSX GCC 7 
-    - env: COMPILER=g++-7 BUILD_TYPE=Debug MATRIX_EVAL="brew cask uninstall oclint && brew install gcc@7"
+    - env: COMPILER=clang++ BUILD_TYPE=Debug
       os: osx
-      osx_image: xcode9.3beta
-    - env: COMPILER=g++-7 BUILD_TYPE=Release MATRIX_EVAL="brew cask uninstall oclint && brew install gcc@7"
+      osx_image: xcode10.2
+    - env: COMPILER=clang++ BUILD_TYPE=Release
       os: osx
-      osx_image: xcode9.3beta
+      osx_image: xcode10.2
 
-    # Linux Clang 5.0
-    - env: COMPILER=clang++-5.0 BUILD_TYPE=Debug
-      addons: &clang50
+    # OSX GCC 8 
+    - env: COMPILER=g++-8 BUILD_TYPE=Debug MATRIX_EVAL="brew install gcc@8"
+      os: osx
+      osx_image: xcode10.2
+    - env: COMPILER=g++-8 BUILD_TYPE=Release MATRIX_EVAL="brew install gcc@8"
+      os: osx
+      osx_image: xcode10.2
+
+    # Linux Clang 7
+    - env: COMPILER=clang++-7 BUILD_TYPE=Debug
+      addons: &clang7
         apt:
           packages:
-            - clang-5.0
-            - libstdc++-7-dev
+            - clang-7
+            - libstdc++-8-dev
           sources:
             - ubuntu-toolchain-r-test
-            - llvm-toolchain-trusty-5.0
-    - env: COMPILER=clang++-5.0 BUILD_TYPE=Release
-      addons: *clang50
+            - llvm-toolchain-xenial-7
 
-    # Linux GCC 7
-    - env: COMPILER=g++-7 BUILD_TYPE=Debug
-      addons: &gcc70
+    - env: COMPILER=clang++-7 BUILD_TYPE=Release
+      addons: *clang7
+
+    # Linux GCC 8
+    - env: COMPILER=g++-8 BUILD_TYPE=Debug
+      addons: &gcc8
         apt:
           packages:
-            - g++-7
+            - g++-8
           sources:
             - ubuntu-toolchain-r-test
-    - env: COMPILER=g++-7 BUILD_TYPE=Release
-      addons: *gcc70
+    - env: COMPILER=g++-8 BUILD_TYPE=Release
+      addons: *gcc8
 
 before_install:
   - eval ${MATRIX_EVAL}
