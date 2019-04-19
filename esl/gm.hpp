@@ -7,8 +7,13 @@
 namespace esl {
 namespace gm {
 
+/// VecT
 template <class T, std::size_t N>
 struct VecT;
+
+using Vec2 = VecT<float, 2>;
+using Vec3 = VecT<float, 3>;
+using Vec4 = VecT<float, 4>;
 
 template <class T, std::size_t N, std::size_t... Is>
 struct SwizzleT;
@@ -232,6 +237,7 @@ struct VecT<T, 3> : details::VecBase<T, 3> {
     constexpr VecT() noexcept = default;
     constexpr VecT(T x, T y, T z) noexcept : x(x), y(y), z(z) {}
     constexpr VecT(T x) noexcept : VecT(x, x, x) {}
+
     constexpr VecT(VecT<T, 2> xy, T z) noexcept : VecT(xy[0], xy[1], z) {}
     constexpr VecT(T x, VecT<T, 2> yz) noexcept : VecT(x, yz[0], yz[1]) {}
 };
@@ -568,6 +574,7 @@ struct VecT<T, 4> : details::VecBase<T, 4> {
     constexpr VecT() noexcept = default;
     constexpr VecT(T x, T y, T z, T w) noexcept : x(x), y(y), z(z), w(w) {}
     constexpr VecT(T x) noexcept : VecT(x, x, x, x) {}
+
     constexpr VecT(VecT<T, 2> xy, T z, T w) noexcept : VecT(xy[0], xy[1], z, w) {}
     constexpr VecT(T x, VecT<T, 2> yz, T w) noexcept : VecT(x, yz[0], yz[1], w) {}
     constexpr VecT(T x, T y, VecT<T, 2> zw) noexcept : VecT(x, y, zw[0], zw[1]) {}
@@ -576,18 +583,25 @@ struct VecT<T, 4> : details::VecBase<T, 4> {
     constexpr VecT(T x, VecT<T, 3> yzw) noexcept : VecT(x, yzw[0], yzw[1], yzw[2]) {}
 };
 
+static_assert(sizeof(gm::Vec2) == sizeof(float) * 2);
+static_assert(sizeof(gm::Vec3) == sizeof(float) * 3);
+static_assert(sizeof(gm::Vec4) == sizeof(float) * 4);
+
 /// Operators
 
+// Vec == Vec
 template <class T, std::size_t N>
 inline constexpr bool operator==(const VecT<T, N>& lhs, const VecT<T, N>& rhs) noexcept {
     return reinterpret_cast<const std::array<T, N>&>(lhs) == reinterpret_cast<const std::array<T, N>&>(rhs);
 }
 
+// Vec == Swizzle
 template <class T, std::size_t N, std::size_t... Is>
 inline constexpr bool operator==(const VecT<T, sizeof...(Is)>& v, const SwizzleT<T, N, Is...>& s) noexcept {
     return v == VecT<T, sizeof...(Is)>(s);
 }
 
+// Swizzle == Vec
 template <class T, std::size_t N, std::size_t... Is>
 inline constexpr bool operator==(const SwizzleT<T, N, Is...>& s, const VecT<T, sizeof...(Is)>& v) noexcept {
     return v == s;
@@ -915,35 +929,132 @@ inline std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, T
     return os << VecT<T, sizeof...(Is)>(v);
 }
 
-using Vec2 = VecT<float, 2>;
-using Vec3 = VecT<float, 3>;
-using Vec4 = VecT<float, 4>;
+/// MatT
+template <class T, std::size_t C, std::size_t R = C>
+struct MatT;
 
-template <class T, std::size_t N>
-struct MatT : details::VecBase<VecT<T, N>, N> {
+using Mat2 = MatT<float, 2>;
+using Mat3 = MatT<float, 3>;
+using Mat4 = MatT<float, 4>;
+
+template <class T>
+struct MatT<T, 2, 2> : details::VecBase<VecT<T, 2>, 2> {
     union {
-        VecT<T, N> data[N];
+        VecT<T, 2> data[2];
+        ESL_WARNING_PUSH()
+        ESL_WARNING_CLANG(disable, "-Wgnu-anonymous-struct")
+        ESL_WARNING_CLANG(disable, "-Wnested-anon-types")
+        ESL_WARNING_GCC(disable, "-Wpedantic")
+        struct {
+            VecT<T, 2> x;
+            VecT<T, 2> y;
+        };
+        ESL_WARNING_POP()
     };
+
+    constexpr MatT() noexcept = default;
+    constexpr MatT(T xx, T xy, T yx, T yy) noexcept : x(xx, xy), y(yx, yy) {}
+    constexpr MatT(T x) noexcept : MatT(x, 0, 0, x) {}
+
+    constexpr MatT(VecT<T, 2> x, VecT<T, 2> y) noexcept : x(x), y(y) {}
+    constexpr MatT(T xx, T xy, VecT<T, 2> y) noexcept : x(xx, xy), y(y) {}
+    constexpr MatT(VecT<T, 2> x, T yx, T yy) noexcept : x(x), y(yx, yy) {}
 };
 
-template <class CharT, class Traits, class T, std::size_t N>
-inline std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& os, const MatT<T, N>& m) {
+template <class T>
+struct MatT<T, 3, 3> : details::VecBase<VecT<T, 3>, 3> {
+    union {
+        VecT<T, 3> data[3];
+        ESL_WARNING_PUSH()
+        ESL_WARNING_CLANG(disable, "-Wgnu-anonymous-struct")
+        ESL_WARNING_CLANG(disable, "-Wnested-anon-types")
+        ESL_WARNING_GCC(disable, "-Wpedantic")
+        struct {
+            VecT<T, 3> x;
+            VecT<T, 3> y;
+            VecT<T, 3> z;
+        };
+        ESL_WARNING_POP()
+    };
+
+    constexpr MatT() noexcept = default;
+    constexpr MatT(T xx, T xy, T xz, T yx, T yy, T yz, T zx, T zy, T zz) noexcept : x(xx, xy, xz), y(yx, yy, yz), z(zx, zy, zz) {}
+    constexpr MatT(T x) noexcept : MatT(x, 0, 0, 0, x, 0, 0, 0, x) {}
+    constexpr MatT(MatT<T, 2> m2) noexcept : MatT(m2.x.x, m2.x.y, 0, m2.y.x, m2.y.y, 0, 0, 0, 1) {}
+
+    constexpr MatT(VecT<T, 3> x, VecT<T, 3> y, VecT<T, 3> z) noexcept : x(x), y(y), z(z) {}
+    constexpr MatT(T xx, T xy, T xz, VecT<T, 3> y, VecT<T, 3> z) noexcept : x(xx, xy, xz), y(y), z(z) {}
+    constexpr MatT(VecT<T, 3> x, T yx, T yy, T yz, VecT<T, 3> z) noexcept : x(x), y(yx, yy, yz), z(z) {}
+    constexpr MatT(VecT<T, 3> x, VecT<T, 3> y, T zx, T zy, T zz) noexcept : x(x), y(y), z(zx, zy, zz) {}
+    constexpr MatT(T xx, T xy, T xz, T yx, T yy, T yz, VecT<T, 3> z) noexcept : x(xx, xy, xz), y(yx, yy, yz), z(z) {}
+    constexpr MatT(T xx, T xy, T xz, VecT<T, 3> y, T zx, T zy, T zz) noexcept : x(xx, xy, xz), y(y), z(zx, zy, zz) {}
+    constexpr MatT(VecT<T, 3> x, T yx, T yy, T yz, T zx, T zy, T zz) noexcept : x(x), y(yx, yy, yz), z(zx, zy, zz) {}
+};
+
+template <class T>
+struct MatT<T, 4, 4> : details::VecBase<VecT<T, 4>, 4> {
+    union {
+        VecT<T, 4> data[4];
+        ESL_WARNING_PUSH()
+        ESL_WARNING_CLANG(disable, "-Wgnu-anonymous-struct")
+        ESL_WARNING_CLANG(disable, "-Wnested-anon-types")
+        ESL_WARNING_GCC(disable, "-Wpedantic")
+        struct {
+            VecT<T, 4> x;
+            VecT<T, 4> y;
+            VecT<T, 4> z;
+            VecT<T, 4> w;
+        };
+        ESL_WARNING_POP()
+    };
+
+    constexpr MatT() noexcept = default;
+    constexpr MatT(T xx, T xy, T xz, T xw, T yx, T yy, T yz, T yw, T zx, T zy, T zz, T zw, T wx, T wy, T wz, T ww) noexcept
+        : x(xx, xy, xz, xw), y(yx, yy, yz, yw), z(zx, zy, zz, zw), w(wx, wy, wz, ww) {}
+    constexpr MatT(T x) noexcept : MatT(x, 0, 0, 0, 0, x, 0, 0, 0, 0, x, 0, 0, 0, 0, x) {}
+    constexpr MatT(MatT<T, 2> m2) noexcept : MatT(m2.x.x, m2.x.y, 0, 0, m2.y.x, m2.y.y, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) {}
+    constexpr MatT(MatT<T, 3> m3) noexcept : MatT(m3.x.x, m3.x.y, m3.x.z, 0, m3.y.x, m3.y.y, m3.y.z, 0, m3.z.x, m3.z.y, m3.z.z, 0, 0, 0, 0, 1) {}
+
+    constexpr MatT(VecT<T, 4> x, VecT<T, 4> y, VecT<T, 4> z, VecT<T, 4> w) noexcept : x(x), y(y), z(z), w(w) {}
+    constexpr MatT(T xx, T xy, T xz, T xw, VecT<T, 4> y, VecT<T, 4> z, VecT<T, 4> w) noexcept : x(xx, xy, xz, xw), y(y), z(z), w(w) {}
+    constexpr MatT(VecT<T, 4> x, T yx, T yy, T yz, T yw, VecT<T, 4> z, VecT<T, 4> w) noexcept : x(x), y(yx, yy, yz, yw), z(z), w(w) {}
+    constexpr MatT(VecT<T, 4> x, VecT<T, 4> y, T zx, T zy, T zz, T zw, VecT<T, 4> w) noexcept : x(x), y(y), z(zx, zy, zz, zw), w(w) {}
+    constexpr MatT(VecT<T, 4> x, VecT<T, 4> y, VecT<T, 4> z, T wx, T wy, T wz, T ww) noexcept : x(x), y(y), z(z), w(wx, wy, wz, ww) {}
+    constexpr MatT(T xx, T xy, T xz, T xw, T yx, T yy, T yz, T yw, VecT<T, 4> z, VecT<T, 4> w) noexcept : x(xx, xy, xz, xw), y(yx, yy, yz, yw), z(z), w(w) {}
+    constexpr MatT(T xx, T xy, T xz, T xw, VecT<T, 4> y, T zx, T zy, T zz, T zw, VecT<T, 4> w) noexcept : x(xx, xy, xz, xw), y(y), z(zx, zy, zz, zw), w(w) {}
+    constexpr MatT(T xx, T xy, T xz, T xw, VecT<T, 4> y, VecT<T, 4> z, T wx, T wy, T wz, T ww) noexcept : x(xx, xy, xz, xw), y(y), z(z), w(wx, wy, wz, ww) {}
+    constexpr MatT(VecT<T, 4> x, T yx, T yy, T yz, T yw, T zx, T zy, T zz, T zw, VecT<T, 4> w) noexcept : x(x), y(yx, yy, yz, yw), z(zx, zy, zz, zw), w(w) {}
+    constexpr MatT(VecT<T, 4> x, T yx, T yy, T yz, T yw, VecT<T, 4> z, T wx, T wy, T wz, T ww) noexcept : x(x), y(yx, yy, yz, yw), z(z), w(wx, wy, wz, ww) {}
+    constexpr MatT(VecT<T, 4> x, VecT<T, 4> y, T zx, T zy, T zz, T zw, T wx, T wy, T wz, T ww) noexcept : x(x), y(y), z(zx, zy, zz, zw), w(wx, wy, wz, ww) {}
+    constexpr MatT(T xx, T xy, T xz, T xw, T yx, T yy, T yz, T yw, T zx, T zy, T zz, T zw, VecT<T, 4> w) noexcept : x(xx, xy, xz, xw), y(yx, yy, yz, yw), z(zx, zy, zz, zw), w(w) {}
+    constexpr MatT(T xx, T xy, T xz, T xw, T yx, T yy, T yz, T yw, VecT<T, 4> z, T wx, T wy, T wz, T ww) noexcept : x(xx, xy, xz, xw), y(yx, yy, yz, yw), z(z), w(wx, wy, wz, ww) {}
+    constexpr MatT(T xx, T xy, T xz, T xw, VecT<T, 4> y, T zx, T zy, T zz, T zw, T wx, T wy, T wz, T ww) noexcept : x(xx, xy, xz, xw), y(y), z(zx, zy, zz, zw), w(wx, wy, wz, ww) {}
+    constexpr MatT(VecT<T, 4> x, T yx, T yy, T yz, T yw, T zx, T zy, T zz, T zw, T wx, T wy, T wz, T ww) noexcept : x(x), y(yx, yy, yz, yw), z(zx, zy, zz, zw), w(wx, wy, wz, ww) {}
+};
+
+static_assert(sizeof(Mat2) == sizeof(float) * 4);
+static_assert(sizeof(Mat3) == sizeof(float) * 9);
+static_assert(sizeof(Mat4) == sizeof(float) * 16);
+
+template <class T, std::size_t C, std::size_t R>
+inline constexpr bool operator==(const MatT<T, C, R>& lhs, const MatT<T, C, R>& rhs) noexcept {
+    return reinterpret_cast<const std::array<T, C * R>&>(lhs) == reinterpret_cast<const std::array<T, C * R>&>(rhs);
+}
+
+template <class CharT, class Traits, class T, std::size_t C, std::size_t R>
+inline std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& os, const MatT<T, C, R>& m) {
     os << '|' << m[0][0];
-    for (std::size_t j = 1; j < N; ++j) {
+    for (std::size_t j = 1; j < R; ++j) {
         os << ' ' << m[0][j];
     }
-    for (std::size_t i = 1; i < N; ++i) {
+    for (std::size_t i = 1; i < C; ++i) {
         os << '|' << m[i][0];
-        for (std::size_t j = 1; j < N; ++j) {
+        for (std::size_t j = 1; j < R; ++j) {
             os << ' ' << m[i][j];
         }
     }
     return os << '|';
 }
-
-using Mat2 = MatT<float, 2>;
-using Mat3 = MatT<float, 3>;
-using Mat4 = MatT<float, 4>;
 
 } // namespace gm
 } // namespace esl
