@@ -1,0 +1,24 @@
+Language:        Cpp
+Standard:        Cpp11
+TabWidth:        4
+UseTab:          Never
+ColumnLimit:     160
+
+IndentWidth:     4
+AccessModifierOffset: -4
+IndentCaseLabels: false
+IndentPPDirectives: AfterHash
+IndentWrappedFunctionNames: false
+NamespaceIndentation: None
+
+PointerAlignment: Left
+AlwaysBreakTemplateDeclarations: Yes
+FixNamespaceComments: true
+ReflowComments: false
+
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+
