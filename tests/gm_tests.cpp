@@ -16,6 +16,11 @@ TEST(GMTest, vec4) {
         ASSERT_EQ(v[1], 1);
         ASSERT_EQ(v[2], 1);
         ASSERT_EQ(v[3], 1);
+
+        gm::Vec4 v1(1, 1, 1, 1);
+        gm::Vec4 v2(1, 1, 1, 2);
+        ASSERT_EQ(v, v1);
+        ASSERT_NE(v1, v2);
     }
 
     {
@@ -42,6 +47,33 @@ TEST(GMTest, vec4) {
 
         v *= 2.0;
         ASSERT_EQ(v, gm::Vec4(2, 4, 6, 8));
+    }
+
+    {
+        gm::Vec4 v(1, 2, 3, 4);
+        gm::Vec4 v0 = v;
+        ASSERT_EQ(+v, v0);
+        ASSERT_EQ(v, v0);
+    }
+
+    {
+        gm::Vec4 v(1, 2, 3, 4);
+        gm::Vec4 v0 = v;
+        gm::Vec4 v1(-1, -2, -3, -4);
+        ASSERT_NE(-v, v0);
+        ASSERT_EQ(-v, v1);
+        ASSERT_EQ(v, v0);
+    }
+
+    {
+        gm::Vec4 v(1, 2, 3, 4);
+        gm::Vec4 v0 = v;
+        gm::Vec4 v1(2, 3, 4, 5);
+        gm::Vec4 v2(3, 4, 5, 6);
+        ASSERT_EQ(v++, v0);
+        ASSERT_EQ(v, v1);
+        ASSERT_EQ(++v, v2);
+        ASSERT_EQ(v, v2);
     }
 }
 

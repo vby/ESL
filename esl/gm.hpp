@@ -597,14 +597,86 @@ inline constexpr bool operator==(const VecT<T, N>& lhs, const VecT<T, N>& rhs) n
 
 // Vec == Swizzle
 template <class T, std::size_t N, std::size_t... Is>
-inline constexpr bool operator==(const VecT<T, sizeof...(Is)>& v, const SwizzleT<T, N, Is...>& s) noexcept {
-    return v == VecT<T, sizeof...(Is)>(s);
+inline constexpr bool operator==(const VecT<T, sizeof...(Is)>& lhs, const SwizzleT<T, N, Is...>& rhs) noexcept {
+    return lhs == VecT<T, sizeof...(Is)>(rhs);
 }
 
 // Swizzle == Vec
 template <class T, std::size_t N, std::size_t... Is>
-inline constexpr bool operator==(const SwizzleT<T, N, Is...>& s, const VecT<T, sizeof...(Is)>& v) noexcept {
-    return v == s;
+inline constexpr bool operator==(const SwizzleT<T, N, Is...>& lhs, const VecT<T, sizeof...(Is)>& rhs) noexcept {
+    return rhs == lhs;
+}
+
+// Vec != Vec
+template <class T, std::size_t N>
+inline constexpr bool operator!=(const VecT<T, N>& lhs, const VecT<T, N>& rhs) noexcept {
+    return !(lhs == rhs);
+}
+
+// Vec != Swizzle
+template <class T, std::size_t N, std::size_t... Is>
+inline constexpr bool operator!=(const VecT<T, sizeof...(Is)>& lhs, const SwizzleT<T, N, Is...>& rhs) noexcept {
+    return !(lhs == rhs);
+}
+
+// Swizzle != Vec
+template <class T, std::size_t N, std::size_t... Is>
+inline constexpr bool operator!=(const SwizzleT<T, N, Is...>& lhs, const VecT<T, sizeof...(Is)>& rhs) noexcept {
+    return !(lhs == rhs);
+}
+
+// +Vec
+template <class T, std::size_t N>
+inline constexpr VecT<T, N> operator+(const VecT<T, N>& lhs) noexcept {
+    return lhs;
+}
+
+// +Swizzle
+template <class T, std::size_t N, std::size_t... Is>
+inline constexpr VecT<T, N> operator+(const SwizzleT<T, N, Is...>& lhs) noexcept {
+    return lhs;
+}
+
+// -Vec
+template <class T, std::size_t N>
+inline constexpr VecT<T, N> operator-(const VecT<T, N>& lhs) noexcept {
+    return details::VecOp<T, N>::RSub(lhs.data, 0);
+}
+
+// -Swizzle
+template <class T, std::size_t N, std::size_t... Is>
+inline constexpr VecT<T, N> operator-(const SwizzleT<T, N, Is...>& lhs) noexcept {
+    return details::VecOp<T, N, std::index_sequence<Is...>>::RSub(lhs.data, 0);
+}
+
+// ++Vec
+template <class T, std::size_t N>
+inline constexpr VecT<T, N>& operator++(VecT<T, N>& lhs) noexcept {
+    details::VecOp<T, N>::AddA(lhs.data, 1);
+    return lhs;
+}
+
+// Vec++
+template <class T, std::size_t N>
+inline constexpr VecT<T, N> operator++(VecT<T, N>& lhs, int) noexcept {
+    auto prev = lhs;
+    details::VecOp<T, N>::AddA(lhs.data, 1);
+    return prev;
+}
+
+// ++Swizzle
+template <class T, std::size_t N, std::size_t... Is>
+inline constexpr SwizzleT<T, N, Is...>& operator++(SwizzleT<T, N, Is...>& lhs) noexcept {
+    details::VecOp<T, N, std::index_sequence<Is...>>::AddA(lhs.data, 1);
+    return lhs;
+}
+
+// Swizzle++
+template <class T, std::size_t N, std::size_t... Is>
+inline constexpr VecT<T, N> operator++(SwizzleT<T, N, Is...>& lhs, int) noexcept {
+    VecT<T, N> prev = lhs;
+    details::VecOp<T, N, std::index_sequence<Is...>>::AddA(lhs.data, 1);
+    return prev;
 }
 
 // Vec + Vec
@@ -1026,10 +1098,14 @@ struct MatT<T, 4, 4> : details::VecBase<VecT<T, 4>, 4> {
     constexpr MatT(VecT<T, 4> x, T yx, T yy, T yz, T yw, T zx, T zy, T zz, T zw, VecT<T, 4> w) noexcept : x(x), y(yx, yy, yz, yw), z(zx, zy, zz, zw), w(w) {}
     constexpr MatT(VecT<T, 4> x, T yx, T yy, T yz, T yw, VecT<T, 4> z, T wx, T wy, T wz, T ww) noexcept : x(x), y(yx, yy, yz, yw), z(z), w(wx, wy, wz, ww) {}
     constexpr MatT(VecT<T, 4> x, VecT<T, 4> y, T zx, T zy, T zz, T zw, T wx, T wy, T wz, T ww) noexcept : x(x), y(y), z(zx, zy, zz, zw), w(wx, wy, wz, ww) {}
-    constexpr MatT(T xx, T xy, T xz, T xw, T yx, T yy, T yz, T yw, T zx, T zy, T zz, T zw, VecT<T, 4> w) noexcept : x(xx, xy, xz, xw), y(yx, yy, yz, yw), z(zx, zy, zz, zw), w(w) {}
-    constexpr MatT(T xx, T xy, T xz, T xw, T yx, T yy, T yz, T yw, VecT<T, 4> z, T wx, T wy, T wz, T ww) noexcept : x(xx, xy, xz, xw), y(yx, yy, yz, yw), z(z), w(wx, wy, wz, ww) {}
-    constexpr MatT(T xx, T xy, T xz, T xw, VecT<T, 4> y, T zx, T zy, T zz, T zw, T wx, T wy, T wz, T ww) noexcept : x(xx, xy, xz, xw), y(y), z(zx, zy, zz, zw), w(wx, wy, wz, ww) {}
-    constexpr MatT(VecT<T, 4> x, T yx, T yy, T yz, T yw, T zx, T zy, T zz, T zw, T wx, T wy, T wz, T ww) noexcept : x(x), y(yx, yy, yz, yw), z(zx, zy, zz, zw), w(wx, wy, wz, ww) {}
+    constexpr MatT(T xx, T xy, T xz, T xw, T yx, T yy, T yz, T yw, T zx, T zy, T zz, T zw, VecT<T, 4> w) noexcept
+        : x(xx, xy, xz, xw), y(yx, yy, yz, yw), z(zx, zy, zz, zw), w(w) {}
+    constexpr MatT(T xx, T xy, T xz, T xw, T yx, T yy, T yz, T yw, VecT<T, 4> z, T wx, T wy, T wz, T ww) noexcept
+        : x(xx, xy, xz, xw), y(yx, yy, yz, yw), z(z), w(wx, wy, wz, ww) {}
+    constexpr MatT(T xx, T xy, T xz, T xw, VecT<T, 4> y, T zx, T zy, T zz, T zw, T wx, T wy, T wz, T ww) noexcept
+        : x(xx, xy, xz, xw), y(y), z(zx, zy, zz, zw), w(wx, wy, wz, ww) {}
+    constexpr MatT(VecT<T, 4> x, T yx, T yy, T yz, T yw, T zx, T zy, T zz, T zw, T wx, T wy, T wz, T ww) noexcept
+        : x(x), y(yx, yy, yz, yw), z(zx, zy, zz, zw), w(wx, wy, wz, ww) {}
 };
 
 static_assert(sizeof(Mat2) == sizeof(float) * 4);
