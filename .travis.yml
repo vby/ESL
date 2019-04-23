@@ -22,10 +22,10 @@ matrix:
       osx_image: xcode10.2
 
     # OSX GCC 8 
-    - env: COMPILER=g++-8 BUILD_TYPE=Debug MATRIX_EVAL="brew install gcc@8"
+    - env: COMPILER=g++-8 BUILD_TYPE=Debug
       os: osx
       osx_image: xcode10.2
-    - env: COMPILER=g++-8 BUILD_TYPE=Release MATRIX_EVAL="brew install gcc@8"
+    - env: COMPILER=g++-8 BUILD_TYPE=Release
       os: osx
       osx_image: xcode10.2
 

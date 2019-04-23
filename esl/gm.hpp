@@ -182,7 +182,7 @@ struct VecT<T, 2> : details::VecBase<T, 2> {
 
     constexpr VecT() noexcept = default;
     constexpr VecT(T x, T y) noexcept : x(x), y(y) {}
-    constexpr VecT(T x) noexcept : VecT(x, x) {}
+    constexpr explicit VecT(T x) noexcept : VecT(x, x) {}
 };
 
 template <class T>
@@ -236,7 +236,7 @@ struct VecT<T, 3> : details::VecBase<T, 3> {
 
     constexpr VecT() noexcept = default;
     constexpr VecT(T x, T y, T z) noexcept : x(x), y(y), z(z) {}
-    constexpr VecT(T x) noexcept : VecT(x, x, x) {}
+    constexpr explicit VecT(T x) noexcept : VecT(x, x, x) {}
 
     constexpr VecT(VecT<T, 2> xy, T z) noexcept : VecT(xy[0], xy[1], z) {}
     constexpr VecT(T x, VecT<T, 2> yz) noexcept : VecT(x, yz[0], yz[1]) {}
@@ -573,7 +573,7 @@ struct VecT<T, 4> : details::VecBase<T, 4> {
 
     constexpr VecT() noexcept = default;
     constexpr VecT(T x, T y, T z, T w) noexcept : x(x), y(y), z(z), w(w) {}
-    constexpr VecT(T x) noexcept : VecT(x, x, x, x) {}
+    constexpr explicit VecT(T x) noexcept : VecT(x, x, x, x) {}
 
     constexpr VecT(VecT<T, 2> xy, T z, T w) noexcept : VecT(xy[0], xy[1], z, w) {}
     constexpr VecT(T x, VecT<T, 2> yz, T w) noexcept : VecT(x, yz[0], yz[1], w) {}
@@ -1026,7 +1026,7 @@ struct MatT<T, 2, 2> : details::VecBase<VecT<T, 2>, 2> {
 
     constexpr MatT() noexcept = default;
     constexpr MatT(T xx, T xy, T yx, T yy) noexcept : x(xx, xy), y(yx, yy) {}
-    constexpr MatT(T x) noexcept : MatT(x, 0, 0, x) {}
+    constexpr explicit MatT(T x) noexcept : MatT(x, 0, 0, x) {}
 
     constexpr MatT(VecT<T, 2> x, VecT<T, 2> y) noexcept : x(x), y(y) {}
     constexpr MatT(T xx, T xy, VecT<T, 2> y) noexcept : x(xx, xy), y(y) {}
@@ -1051,8 +1051,8 @@ struct MatT<T, 3, 3> : details::VecBase<VecT<T, 3>, 3> {
 
     constexpr MatT() noexcept = default;
     constexpr MatT(T xx, T xy, T xz, T yx, T yy, T yz, T zx, T zy, T zz) noexcept : x(xx, xy, xz), y(yx, yy, yz), z(zx, zy, zz) {}
-    constexpr MatT(T x) noexcept : MatT(x, 0, 0, 0, x, 0, 0, 0, x) {}
-    constexpr MatT(MatT<T, 2> m2) noexcept : MatT(m2.x.x, m2.x.y, 0, m2.y.x, m2.y.y, 0, 0, 0, 1) {}
+    constexpr explicit MatT(T x) noexcept : MatT(x, 0, 0, 0, x, 0, 0, 0, x) {}
+    constexpr explicit MatT(MatT<T, 2> m2) noexcept : MatT(m2.x.x, m2.x.y, 0, m2.y.x, m2.y.y, 0, 0, 0, 1) {}
 
     constexpr MatT(VecT<T, 3> x, VecT<T, 3> y, VecT<T, 3> z) noexcept : x(x), y(y), z(z) {}
     constexpr MatT(T xx, T xy, T xz, VecT<T, 3> y, VecT<T, 3> z) noexcept : x(xx, xy, xz), y(y), z(z) {}
@@ -1083,9 +1083,9 @@ struct MatT<T, 4, 4> : details::VecBase<VecT<T, 4>, 4> {
     constexpr MatT() noexcept = default;
     constexpr MatT(T xx, T xy, T xz, T xw, T yx, T yy, T yz, T yw, T zx, T zy, T zz, T zw, T wx, T wy, T wz, T ww) noexcept
         : x(xx, xy, xz, xw), y(yx, yy, yz, yw), z(zx, zy, zz, zw), w(wx, wy, wz, ww) {}
-    constexpr MatT(T x) noexcept : MatT(x, 0, 0, 0, 0, x, 0, 0, 0, 0, x, 0, 0, 0, 0, x) {}
-    constexpr MatT(MatT<T, 2> m2) noexcept : MatT(m2.x.x, m2.x.y, 0, 0, m2.y.x, m2.y.y, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) {}
-    constexpr MatT(MatT<T, 3> m3) noexcept : MatT(m3.x.x, m3.x.y, m3.x.z, 0, m3.y.x, m3.y.y, m3.y.z, 0, m3.z.x, m3.z.y, m3.z.z, 0, 0, 0, 0, 1) {}
+    constexpr explicit MatT(T x) noexcept : MatT(x, 0, 0, 0, 0, x, 0, 0, 0, 0, x, 0, 0, 0, 0, x) {}
+    constexpr explicit MatT(MatT<T, 2> m2) noexcept : MatT(m2.x.x, m2.x.y, 0, 0, m2.y.x, m2.y.y, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) {}
+    constexpr explicit MatT(MatT<T, 3> m3) noexcept : MatT(m3.x.x, m3.x.y, m3.x.z, 0, m3.y.x, m3.y.y, m3.y.z, 0, m3.z.x, m3.z.y, m3.z.z, 0, 0, 0, 0, 1) {}
 
     constexpr MatT(VecT<T, 4> x, VecT<T, 4> y, VecT<T, 4> z, VecT<T, 4> w) noexcept : x(x), y(y), z(z), w(w) {}
     constexpr MatT(T xx, T xy, T xz, T xw, VecT<T, 4> y, VecT<T, 4> z, VecT<T, 4> w) noexcept : x(xx, xy, xz, xw), y(y), z(z), w(w) {}

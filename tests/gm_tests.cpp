@@ -45,7 +45,7 @@ TEST(GMTest, vec4) {
         v.xyzw -= v2;
         ASSERT_EQ(v, v1);
 
-        v *= 2.0;
+        v *= 2.0f;
         ASSERT_EQ(v, gm::Vec4(2, 4, 6, 8));
     }
 
